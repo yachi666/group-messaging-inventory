@@ -9,7 +9,7 @@ html {
 
 body {
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   color: var(--color-ink);
   background: var(--color-canvas);
@@ -26,11 +26,11 @@ button {
 }
 
 #root {
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .app-canvas {
-  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--color-canvas);
 }
 
@@ -38,16 +38,20 @@ button {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   width: 100%;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow: visible;
   background: var(--color-app-shell);
 }
 
 .sidebar {
+  position: sticky;
+  top: 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-xl);
+  height: 100dvh;
   padding: 24px 18px;
+  overflow-y: auto;
   background: var(--color-sidebar);
   border-right: 1px solid var(--color-hairline);
 }
@@ -96,7 +100,6 @@ button {
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
   height: 42px;
   width: 100%;
   padding: 0 14px;
@@ -127,14 +130,6 @@ button {
 
 .nav-item[aria-current='page']:hover {
   background: var(--color-accent);
-}
-
-.nav-dot {
-  width: 8px;
-  height: 8px;
-  background: currentColor;
-  border-radius: var(--radius-pill);
-  opacity: 0.72;
 }
 
 .sidebar-panel {
@@ -271,8 +266,10 @@ button {
 .button:focus-visible,
 .filter-pill:focus-visible,
 .language-control select:focus-visible,
-.nav-item:focus-visible {
-  outline: 3px solid var(--color-accent-soft);
+.nav-item:focus-visible,
+.queue-card:focus-visible,
+.row-action:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-focus) 42%, transparent);
   outline-offset: 2px;
 }
 
@@ -352,6 +349,7 @@ button {
   font-size: 28px;
   font-weight: 850;
   line-height: 1.05;
+  font-variant-numeric: tabular-nums;
 }
 
 .metric-note {
@@ -369,6 +367,7 @@ button {
   padding: 0 10px;
   font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
   line-height: 1.35;
   border-radius: var(--radius-pill);
 }
@@ -458,14 +457,25 @@ button {
   height: 100%;
 }
 
-.coverage-stack {
+.coverage-stack-frame {
   display: flex;
-  flex-direction: column;
+  align-items: end;
   justify-content: end;
   height: 210px;
   overflow: hidden;
   background: var(--color-surface-tint);
+  border: 1px solid var(--color-hairline);
   border-radius: var(--radius-pill);
+}
+
+.coverage-stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: end;
+  width: 100%;
+  min-height: 8px;
+  overflow: hidden;
+  border-radius: inherit;
 }
 
 .coverage-segment {
@@ -591,9 +601,22 @@ button {
   border-radius: inherit;
 }
 
+.progress-fill-success {
+  background: var(--color-success);
+}
+
+.progress-fill-warning {
+  background: var(--color-warning);
+}
+
+.progress-fill-danger {
+  background: var(--color-danger);
+}
+
 .table-card {
   padding: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .table-header {
@@ -608,6 +631,7 @@ button {
 
 .data-table {
   width: 100%;
+  min-width: 700px;
   border-collapse: collapse;
 }
 
@@ -631,6 +655,25 @@ button {
   background: var(--color-surface);
 }
 
+.data-table tbody tr {
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.data-table tbody tr:hover td {
+  background: var(--color-surface-soft);
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table .selected-row td {
+  background: var(--color-accent-subtle);
+  box-shadow: inset 3px 0 0 var(--color-accent);
+}
+
 .row-action {
   display: block;
   width: 100%;
@@ -639,11 +682,6 @@ button {
   text-align: left;
   cursor: pointer;
   background: transparent;
-}
-
-.row-action:focus-visible {
-  outline: 3px solid var(--color-accent-soft);
-  outline-offset: 4px;
 }
 
 .use-case-name {
@@ -693,6 +731,27 @@ button {
   font-size: 12px;
   font-weight: 650;
   line-height: 1.35;
+}
+
+.meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+}
+
+.meta-line span + span {
+  position: relative;
+}
+
+.meta-line span + span::before {
+  display: inline-block;
+  width: 1px;
+  height: 10px;
+  margin-right: 10px;
+  vertical-align: -1px;
+  content: '';
+  background: var(--color-hairline-strong);
 }
 
 .detail-panel {
@@ -834,6 +893,10 @@ button {
   font-weight: 700;
 }
 
+.queue-card small.meta-line {
+  display: flex;
+}
+
 .readiness-list {
   display: grid;
   gap: 14px;
@@ -899,6 +962,25 @@ button {
   box-shadow: var(--shadow-card);
 }
 
+.empty-state {
+  display: grid;
+  gap: 6px;
+  padding: 32px 18px;
+  color: var(--color-muted);
+  text-align: center;
+  background: var(--color-surface);
+}
+
+.empty-state strong {
+  color: var(--color-body);
+  font-size: 14px;
+}
+
+.empty-state span {
+  font-size: 12px;
+  font-weight: 650;
+}
+
 .placeholder-panel h1 {
   max-width: 680px;
   margin: 18px 0 10px;
@@ -922,11 +1004,13 @@ button {
 
   .app-shell {
     grid-template-columns: 1fr;
-    min-height: 100vh;
+    min-height: 100dvh;
     border-radius: 0;
   }
 
   .sidebar {
+    position: static;
+    height: auto;
     border-right: 0;
     border-bottom: 1px solid var(--color-hairline);
   }
@@ -973,20 +1057,12 @@ button {
     min-height: auto;
   }
 
-  .coverage-stack {
+  .coverage-stack-frame {
     height: 160px;
   }
 
   .donut-wrap {
     grid-template-columns: 1fr;
-  }
-
-  .data-table {
-    min-width: 820px;
-  }
-
-  .table-card {
-    overflow-x: auto;
   }
 
   .field-grid,
@@ -1000,5 +1076,16 @@ button {
 
   .policy-item {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

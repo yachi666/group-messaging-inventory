@@ -313,7 +313,10 @@ function InventoryPage() {
               </thead>
               <tbody>
                 {visibleUseCases.map((useCase) => (
-                  <tr key={useCase.id}>
+                  <tr
+                    className={selectedUseCase.id === useCase.id ? 'selected-row' : undefined}
+                    key={useCase.id}
+                  >
                     <td>
                       <button
                         className="row-action"
@@ -349,6 +352,16 @@ function InventoryPage() {
                     </td>
                   </tr>
                 ))}
+                {visibleUseCases.length === 0 ? (
+                  <tr>
+                    <td colSpan={7}>
+                      <div className="empty-state">
+                        <strong>{t('inventory.emptyTitle')}</strong>
+                        <span>{t('inventory.emptyBody')}</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </article>
@@ -368,8 +381,10 @@ function UseCaseInspector({ useCase }: { useCase: CandidateUseCase }) {
       <div className="card-header">
         <div>
           <h2 className="card-title">{t('inventory.inspectorTitle')}</h2>
-          <p className="card-kicker">
-            {useCase.id} · {useCase.platform} · {useCase.channel}
+          <p className="card-kicker meta-line">
+            <span>{useCase.id}</span>
+            <span>{useCase.platform}</span>
+            <span>{useCase.channel}</span>
           </p>
         </div>
         <StatusChip tone={getStatusTone(useCase.status)}>{t(statusLabelKeys[useCase.status])}</StatusChip>
@@ -481,8 +496,10 @@ function TriagePage() {
                 >
                   <span>
                     <strong>{getTranslatedValue(t, triageTitleKeys, item.id, item.title)}</strong>
-                    <small>
-                      {t(driftLabelKeys[item.type])} · {item.market} · {item.platform}
+                    <small className="meta-line">
+                      <span>{t(driftLabelKeys[item.type])}</span>
+                      <span>{item.market}</span>
+                      <span>{item.platform}</span>
                     </small>
                   </span>
                   <StatusChip tone={isReviewed ? 'success' : item.ageingDays > 7 ? 'danger' : 'warning'}>
@@ -498,9 +515,11 @@ function TriagePage() {
           <div className="card-header">
             <div>
               <h2 className="card-title">{t('triage.detailTitle')}</h2>
-              <p className="card-kicker">
-                {selectedItem.id} · {formatPercentage(selectedItem.confidence)}{' '}
-                {t('triage.confidenceSuffix')}
+              <p className="card-kicker meta-line">
+                <span>{selectedItem.id}</span>
+                <span>
+                  {formatPercentage(selectedItem.confidence)} {t('triage.confidenceSuffix')}
+                </span>
               </p>
             </div>
             <StatusChip tone={selectedItem.ageingDays > 7 ? 'danger' : 'warning'}>
@@ -641,8 +660,10 @@ function EvidencePage() {
                   </p>
                   <StatusChip tone="danger">{t(auditStatusLabelKeys[useCase.auditStatus])}</StatusChip>
                 </div>
-                <p className="triage-meta">
-                  {useCase.market} · {useCase.platform} · {useCase.templateReference}
+                <p className="triage-meta meta-line">
+                  <span>{useCase.market}</span>
+                  <span>{useCase.platform}</span>
+                  <span>{useCase.templateReference}</span>
                 </p>
               </article>
             ))}

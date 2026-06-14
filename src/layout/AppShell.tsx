@@ -56,7 +56,6 @@ export function AppShell({ activeView, children, isPending, onViewChange }: AppS
                 onClick={() => onViewChange(item.id)}
                 type="button"
               >
-                <span className="nav-dot" aria-hidden="true" />
                 {t(item.labelKey)}
               </button>
             ))}

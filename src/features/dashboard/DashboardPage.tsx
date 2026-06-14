@@ -7,7 +7,7 @@ import {
   dashboardMetrics,
   triageItems,
 } from '../../data/mockInventory';
-import type { CandidateUseCase, Classification, DriftType } from '../../domain/inventory';
+import type { CandidateUseCase, DriftType } from '../../domain/inventory';
 import { useI18n } from '../../i18n/LanguageProvider';
 import type { MessageKey } from '../../i18n/messages';
 import { formatPercentage, formatVolume } from '../../lib/format';
@@ -57,12 +57,6 @@ const approvalStatusLabelKeys = {
   submitted: 'status.submitted',
   rejected: 'status.needsEvidence',
 } satisfies Record<(typeof auditRecords)[number]['approvalStatus'], MessageKey>;
-
-const classificationLabelKeys = {
-  Regulatory: 'classification.regulatory',
-  Servicing: 'classification.servicing',
-  Marketing: 'classification.marketing',
-} satisfies Record<Classification, MessageKey>;
 
 const monthLabelKeys: Record<string, MessageKey> = {
   Jan: 'month.jan',
@@ -246,18 +240,19 @@ export function DashboardPage() {
                     aria-label={`${monthLabel}: ${matchedVolume} ${t(
                       'chart.matched',
                     )}, ${unknownVolume} ${t('chart.unknown')}`}
-                    className="coverage-stack"
-                    style={{ height: `${stackHeight}%` }}
+                    className="coverage-stack-frame"
                     title={`${monthLabel}: ${totalVolume} ${t('chart.totalVolume')}`}
                   >
-                    <span
-                      className="coverage-segment coverage-segment-unknown"
-                      style={{ height: `${unknownHeight}%` }}
-                    />
-                    <span
-                      className="coverage-segment coverage-segment-matched"
-                      style={{ height: `${matchedHeight}%` }}
-                    />
+                    <span className="coverage-stack" style={{ height: `${stackHeight}%` }}>
+                      <span
+                        className="coverage-segment coverage-segment-unknown"
+                        style={{ height: `${unknownHeight}%` }}
+                      />
+                      <span
+                        className="coverage-segment coverage-segment-matched"
+                        style={{ height: `${matchedHeight}%` }}
+                      />
+                    </span>
                   </div>
                   <span className="coverage-label">{monthLabel}</span>
                 </div>
@@ -323,7 +318,10 @@ export function DashboardPage() {
                     <StatusChip tone={band.tone}>{formatPercentage(band.value)}</StatusChip>
                   </div>
                   <div className="progress-track">
-                    <div className="progress-fill" style={{ width: `${band.value}%` }} />
+                    <div
+                      className={`progress-fill progress-fill-${band.tone}`}
+                      style={{ width: `${band.value}%` }}
+                    />
                   </div>
                 </div>
               ))}
@@ -351,10 +349,7 @@ export function DashboardPage() {
                 <th>{t('table.status')}</th>
                 <th>{t('table.market')}</th>
                 <th>{t('table.platform')}</th>
-                <th>{t('table.sender')}</th>
                 <th>{t('table.volume')}</th>
-                <th>{t('table.classification')}</th>
-                <th>{t('table.confidence')}</th>
                 <th>{t('table.owner')}</th>
                 <th>{t('table.audit')}</th>
               </tr>
@@ -377,10 +372,7 @@ export function DashboardPage() {
                   </td>
                   <td>{useCase.market}</td>
                   <td>{useCase.platform}</td>
-                  <td>{useCase.senderIdentity}</td>
                   <td>{formatVolume(useCase.monthlyVolume, locale)}</td>
-                  <td>{t(classificationLabelKeys[useCase.classification])}</td>
-                  <td>{formatPercentage(useCase.confidence)}</td>
                   <td>
                     <StatusChip tone={getOwnerTone(useCase.ownerStatus)}>
                       {t(ownerStatusLabelKeys[useCase.ownerStatus])}
@@ -423,10 +415,14 @@ export function DashboardPage() {
                       {t('date.daysShort')}
                     </StatusChip>
                   </div>
-                  <p className="triage-meta">
-                    {t(driftLabelKeys[item.type])} · {item.market} · {item.platform} ·{' '}
-                    {item.channel} · {formatPercentage(item.confidence)}{' '}
-                    {t('triage.confidenceSuffix')}
+                  <p className="triage-meta meta-line">
+                    <span>{t(driftLabelKeys[item.type])}</span>
+                    <span>{item.market}</span>
+                    <span>{item.platform}</span>
+                    <span>{item.channel}</span>
+                    <span>
+                      {formatPercentage(item.confidence)} {t('triage.confidenceSuffix')}
+                    </span>
                   </p>
                   <p className="triage-action">
                     {getTranslatedValue(t, triageActionKeys, item.id, item.recommendedAction)}
@@ -459,8 +455,10 @@ export function DashboardPage() {
                       {t(approvalStatusLabelKeys[record.approvalStatus])}
                     </StatusChip>
                   </div>
-                  <p className="triage-meta">
-                    {record.target} · {record.actor} · {record.timestamp}
+                  <p className="triage-meta meta-line">
+                    <span>{record.target}</span>
+                    <span>{record.actor}</span>
+                    <span>{record.timestamp}</span>
                   </p>
                 </article>
               ))}

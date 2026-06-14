@@ -64,6 +64,8 @@ export const enMessages = {
   'inventory.validationDate': 'Latest validation',
   'inventory.deliveryOutcomes': 'Delivery outcomes',
   'inventory.rulesHit': 'Rules hit',
+  'inventory.emptyTitle': 'No inventory rows match this filter',
+  'inventory.emptyBody': 'Switch filters or wait for the next ingestion cycle.',
   'triage.eyebrow': 'Triage workflow',
   'triage.title': 'Resolve exceptions before they age',
   'triage.subtitle':
@@ -309,6 +311,8 @@ export const zhMessages: Record<MessageKey, string> = {
   'inventory.validationDate': '最近验证',
   'inventory.deliveryOutcomes': '投递结果',
   'inventory.rulesHit': '命中规则',
+  'inventory.emptyTitle': '当前筛选无匹配清单项',
+  'inventory.emptyBody': '请切换筛选条件，或等待下一轮日志接入。',
   'triage.eyebrow': '分诊流程',
   'triage.title': '在异常老化前完成处理',
   'triage.subtitle':
