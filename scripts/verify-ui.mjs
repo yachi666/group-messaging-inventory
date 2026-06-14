@@ -1,0 +1,63 @@
+import { mkdir } from 'node:fs/promises';
+import { chromium } from 'playwright';
+
+const baseUrl = process.env.APP_URL ?? 'http://127.0.0.1:5173';
+const screenshotPath = '/tmp/gmi-product-workspace.png';
+const errors = [];
+
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+
+page.on('console', (message) => {
+  if (message.type() === 'error') {
+    errors.push(message.text());
+  }
+});
+
+await page.goto(baseUrl, { waitUntil: 'networkidle' });
+await page.getByRole('heading', { name: 'Messaging inventory baseline' }).waitFor();
+
+await page.getByLabel('Language').selectOption('zh-CN');
+await page.getByRole('heading', { name: '消息清单基线' }).waitFor();
+
+await page.getByTestId('nav-inventory').click();
+await page.getByRole('heading', { name: '确认用例与负责人' }).waitFor();
+await page.getByTestId('inventory-filter-candidate').click();
+await page.getByTestId('use-case-UC-1040').click();
+await page.getByTestId('use-case-inspector').getByText('房贷续约营销').waitFor();
+
+await page.getByTestId('nav-triage').click();
+await page.getByRole('heading', { name: '在异常老化前完成处理' }).waitFor();
+await page.getByTestId('triage-item-TRI-224').click();
+await page.getByTestId('mark-reviewed').click();
+await page.getByTestId('triage-item-TRI-224').getByText('已批准').waitFor();
+
+await page.getByTestId('nav-evidence').click();
+await page.getByRole('heading', { name: '准备监管响应包' }).waitFor();
+await page.getByTestId('evidence-export-preview').waitFor();
+
+await page.getByTestId('nav-analytics').click();
+await page.getByRole('heading', { name: '确定下一步治理迭代优先级' }).waitFor();
+await page.getByTestId('analytics-signal-board').getByText('未知短信聚类超过 SLA 老化阈值').waitFor();
+await page.getByTestId('analytics-decision-brief').waitFor();
+
+await page.getByTestId('nav-audit-trail').click();
+await page.getByRole('heading', { name: '展示清单背后的控制历史' }).waitFor();
+await page.getByTestId('audit-ledger').getByText('批准证据响应包导出').waitFor();
+await page.getByTestId('audit-control-summary').waitFor();
+
+await page.getByTestId('nav-settings').click();
+await page.getByRole('heading', { name: '配置 MVP 控制默认项' }).waitFor();
+await page.getByTestId('policy-controls').getByText('消息内容 PII 最小化').waitFor();
+await page.getByTestId('settings-impact').waitFor();
+
+await page.waitForTimeout(250);
+await mkdir('/tmp', { recursive: true });
+await page.screenshot({ fullPage: true, path: screenshotPath });
+await browser.close();
+
+if (errors.length > 0) {
+  throw new Error(`Browser console errors:\n${errors.join('\n')}`);
+}
+
+console.log(`Playwright verification passed. Screenshot: ${screenshotPath}`);
