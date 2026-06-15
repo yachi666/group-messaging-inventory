@@ -7,6 +7,8 @@ import type {
   EvidenceMarketReadiness,
   GovernanceEvent,
   PolicyControl,
+  CsvUploadJob,
+  ReportQuerySummary,
   TriageItem,
 } from '../domain/inventory';
 
@@ -351,3 +353,44 @@ export const policyControls: PolicyControl[] = [
     impact: 'Improves owner attribution for future non-Messaging-owned platforms.',
   },
 ];
+
+export const reportQuerySummaries: ReportQuerySummary[] = [
+  {
+    timeRange: 'last-30-days',
+    owner: 'A. Morgan',
+    classification: 'Servicing',
+    totalVolume: 784_200,
+    useCaseCount: 1,
+    topMarket: 'UK',
+    topChannel: 'SMS',
+  },
+  {
+    timeRange: 'last-90-days',
+    owner: 'All',
+    classification: 'Regulatory',
+    totalVolume: 650_640,
+    useCaseCount: 1,
+    topMarket: 'HK',
+    topChannel: 'Email',
+  },
+  {
+    timeRange: 'last-6-months',
+    owner: 'All',
+    classification: 'All',
+    totalVolume: 6_684_920,
+    useCaseCount: 4,
+    topMarket: 'UK',
+    topChannel: 'SMS',
+  },
+];
+
+export const csvUploadJob: CsvUploadJob = {
+  id: 'UPL-2048',
+  fileName: 'templates_june_volume.csv',
+  status: 'idle',
+  progress: 0,
+  rowsReceived: 0,
+  templatesDetected: 0,
+  readyForAiAnalysis: 0,
+  rejectedRows: 0,
+};

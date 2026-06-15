@@ -5,17 +5,21 @@ import {
   analyticsSignals,
   auditRecords,
   candidateUseCases,
+  csvUploadJob,
   evidenceReadiness,
   governanceEvents,
   policyControls,
+  reportQuerySummaries,
   triageItems,
 } from '../../data/mockInventory';
 import type {
   CandidateUseCase,
   Classification,
+  CsvUploadJob,
   DriftType,
   MakerCheckerStatus,
   PolicyControl,
+  ReportTimeRange,
   SignalSeverity,
 } from '../../domain/inventory';
 import { useI18n } from '../../i18n/LanguageProvider';
@@ -35,6 +39,8 @@ type TemplateRegistryDraft = Pick<
   CandidateUseCase,
   'classification' | 'contactPoint' | 'messageOwner' | 'templateFormat'
 >;
+
+type QueryClassificationFilter = Classification | 'All';
 
 const inventoryFilters = [
   { id: 'all', labelKey: 'filter.all' },
@@ -146,6 +152,12 @@ const classificationLabelKeys = {
   Servicing: 'classification.servicing',
   Marketing: 'classification.marketing',
 } satisfies Record<Classification, MessageKey>;
+
+const timeRangeLabelKeys = {
+  'last-30-days': 'analytics.last30Days',
+  'last-90-days': 'analytics.last90Days',
+  'last-6-months': 'analytics.lastSixMonths',
+} satisfies Record<ReportTimeRange, MessageKey>;
 
 const driftLabelKeys = {
   'retired-but-live': 'drift.retiredButLive',
@@ -871,12 +883,55 @@ function EvidencePage() {
 }
 
 function AnalyticsPage() {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const [timeRange, setTimeRange] = useState<ReportTimeRange>('last-6-months');
+  const [ownerFilter, setOwnerFilter] = useState('All');
+  const [classificationFilter, setClassificationFilter] =
+    useState<QueryClassificationFilter>('All');
+  const [chatPrompt, setChatPrompt] = useState('');
+  const [isReportGenerated, setIsReportGenerated] = useState(false);
+  const [isReportExportReady, setIsReportExportReady] = useState(false);
   const highRiskSignals = analyticsSignals.filter((signal) => signal.severity === 'high').length;
   const ownerGaps = candidateUseCases.filter((useCase) => useCase.ownerStatus !== 'confirmed').length;
   const evidenceGaps = candidateUseCases.filter(
     (useCase) => useCase.auditStatus === 'needs-evidence',
   ).length;
+  const ownerOptions = ['All', ...candidateUseCases.map((useCase) => useCase.messageOwner)].filter(
+    (owner, index, owners) => owners.indexOf(owner) === index,
+  );
+  const selectedQuerySummary =
+    reportQuerySummaries.find(
+      (summary) =>
+        summary.timeRange === timeRange &&
+        summary.owner === ownerFilter &&
+        summary.classification === classificationFilter,
+    ) ??
+    reportQuerySummaries.find((summary) => summary.timeRange === 'last-6-months') ??
+    reportQuerySummaries[0];
+  const visibleUseCases = candidateUseCases.filter(
+    (useCase) =>
+      (ownerFilter === 'All' || useCase.messageOwner === ownerFilter) &&
+      (classificationFilter === 'All' || useCase.classification === classificationFilter),
+  );
+  const volumeByClassification = (['Regulatory', 'Servicing', 'Marketing'] as const).map(
+    (classification) => ({
+      classification,
+      volume: visibleUseCases
+        .filter((useCase) => useCase.classification === classification)
+        .reduce((sum, useCase) => sum + useCase.monthlyVolume, 0),
+    }),
+  );
+  const maxClassificationVolume = Math.max(1, ...volumeByClassification.map((item) => item.volume));
+
+  function runQuery() {
+    setIsReportGenerated(false);
+    setIsReportExportReady(false);
+  }
+
+  function generateReport() {
+    setIsReportGenerated(true);
+    setIsReportExportReady(false);
+  }
 
   return (
     <>
@@ -894,73 +949,255 @@ function AnalyticsPage() {
         <MetricLite label={t('analytics.readyMarkets')} tone="success" value="1 / 4" />
       </section>
 
-      <section className="workspace-grid">
-        <article className="card table-card" data-testid="analytics-signal-board">
-          <div className="table-header">
-            <div>
-              <h2 className="card-title">{t('analytics.signalBoard')}</h2>
-              <p className="card-kicker">{t('analytics.signalBoardKicker')}</p>
-            </div>
-            <StatusChip tone="accent">{analyticsSignals.length}</StatusChip>
-          </div>
-
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>{t('table.signal')}</th>
-                <th>{t('table.market')}</th>
-                <th>{t('table.platform')}</th>
-                <th>{t('table.current')}</th>
-                <th>{t('table.baseline')}</th>
-                <th>{t('table.severity')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {analyticsSignals.map((signal) => (
-                <tr key={signal.id}>
-                  <td>
-                    <span className="use-case-name">
-                      <strong>
-                        {getTranslatedValue(t, analyticsSignalLabelKeys, signal.id, signal.label)}
-                      </strong>
-                      <span>
-                        {getTranslatedValue(
-                          t,
-                          analyticsSignalActionKeys,
-                          signal.id,
-                          signal.recommendedAction,
-                        )}
-                      </span>
-                    </span>
-                  </td>
-                  <td>{signal.market}</td>
-                  <td>{signal.platform}</td>
-                  <td>{signal.currentValue}</td>
-                  <td>{signal.baselineValue}</td>
-                  <td>
-                    <StatusChip tone={getSeverityTone(signal.severity)}>
-                      {t(severityLabelKeys[signal.severity])}
-                    </StatusChip>
-                  </td>
-                </tr>
+      <section className="query-panel" data-testid="analytics-query-panel">
+        <div>
+          <h2 className="card-title">{t('analytics.queryPanel')}</h2>
+          <p className="card-kicker">{t('analytics.queryPanelKicker')}</p>
+        </div>
+        <div className="query-controls">
+          <label className="filter-control">
+            <span>{t('analytics.timeRange')}</span>
+            <select
+              className="filter-select"
+              data-testid="query-time-range"
+              onChange={(event) => setTimeRange(event.target.value as ReportTimeRange)}
+              value={timeRange}
+            >
+              {(['last-30-days', 'last-90-days', 'last-6-months'] as const).map((range) => (
+                <option key={range} value={range}>
+                  {t(timeRangeLabelKeys[range])}
+                </option>
               ))}
-            </tbody>
-          </table>
-        </article>
+            </select>
+          </label>
+          <label className="filter-control">
+            <span>{t('analytics.templateOwner')}</span>
+            <select
+              className="filter-select"
+              data-testid="query-owner"
+              onChange={(event) => setOwnerFilter(event.target.value)}
+              value={ownerFilter}
+            >
+              {ownerOptions.map((owner) => (
+                <option key={owner} value={owner}>
+                  {owner === 'All' ? t('filter.all') : owner}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="filter-control">
+            <span>{t('analytics.messageType')}</span>
+            <select
+              className="filter-select"
+              data-testid="query-message-type"
+              onChange={(event) =>
+                setClassificationFilter(event.target.value as QueryClassificationFilter)
+              }
+              value={classificationFilter}
+            >
+              <option value="All">{t('filter.all')}</option>
+              <option value="Regulatory">{t('classification.regulatory')}</option>
+              <option value="Servicing">{t('classification.servicing')}</option>
+              <option value="Marketing">{t('classification.marketing')}</option>
+            </select>
+          </label>
+          <button className="button button-primary" data-testid="run-query" onClick={runQuery} type="button">
+            {t('analytics.runQuery')}
+          </button>
+        </div>
 
-        <aside className="card detail-panel" data-testid="analytics-decision-brief">
+        <div className="query-stat-grid">
+          <MetricLite
+            label={t('analytics.queryVolume')}
+            tone="accent"
+            value={formatVolume(selectedQuerySummary.totalVolume, locale)}
+          />
+          <div data-testid="query-volume-stat" className="metric-card metric-card-compact">
+            <div className="metric-card-top">
+              <h3 className="metric-label">{t('analytics.filteredVolume')}</h3>
+              <StatusChip tone="accent">{t(timeRangeLabelKeys[timeRange])}</StatusChip>
+            </div>
+            <p className="metric-value">{formatVolume(selectedQuerySummary.totalVolume, locale)}</p>
+            <p className="metric-note">
+              {selectedQuerySummary.useCaseCount} {t('analytics.useCases')} ·{' '}
+              {selectedQuerySummary.topMarket} · {selectedQuerySummary.topChannel}
+            </p>
+          </div>
+          <MetricLite
+            label={t('analytics.templateOwner')}
+            tone="success"
+            value={ownerFilter === 'All' ? String(ownerOptions.length - 1) : ownerFilter}
+          />
+          <MetricLite
+            label={t('analytics.messageType')}
+            tone="warning"
+            value={
+              classificationFilter === 'All'
+                ? String(volumeByClassification.filter((item) => item.volume > 0).length)
+                : t(classificationLabelKeys[classificationFilter])
+            }
+          />
+        </div>
+      </section>
+
+      <section className="workspace-grid">
+        <div className="workspace-main">
+          <article className="card" data-testid="type-volume-breakdown">
+            <div className="card-header">
+              <div>
+                <h2 className="card-title">{t('analytics.typeVolumeStats')}</h2>
+                <p className="card-kicker">{t('analytics.typeVolumeStatsKicker')}</p>
+              </div>
+            </div>
+            <div className="breakdown-list">
+              {volumeByClassification.map((item) => (
+                <div className="progress-row" key={item.classification}>
+                  <div className="progress-label">
+                    <span>{t(classificationLabelKeys[item.classification])}</span>
+                    <StatusChip tone={item.volume > 0 ? 'accent' : 'neutral'}>
+                      {formatVolume(item.volume, locale)}
+                    </StatusChip>
+                  </div>
+                  <div className="progress-track">
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${(item.volume / maxClassificationVolume) * 100}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="card table-card" data-testid="analytics-signal-board">
+            <div className="table-header">
+              <div>
+                <h2 className="card-title">{t('analytics.signalBoard')}</h2>
+                <p className="card-kicker">{t('analytics.signalBoardKicker')}</p>
+              </div>
+              <StatusChip tone="accent">{analyticsSignals.length}</StatusChip>
+            </div>
+
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>{t('table.signal')}</th>
+                  <th>{t('table.market')}</th>
+                  <th>{t('table.platform')}</th>
+                  <th>{t('table.current')}</th>
+                  <th>{t('table.baseline')}</th>
+                  <th>{t('table.severity')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {analyticsSignals.map((signal) => (
+                  <tr key={signal.id}>
+                    <td>
+                      <span className="use-case-name">
+                        <strong>
+                          {getTranslatedValue(t, analyticsSignalLabelKeys, signal.id, signal.label)}
+                        </strong>
+                        <span>
+                          {getTranslatedValue(
+                            t,
+                            analyticsSignalActionKeys,
+                            signal.id,
+                            signal.recommendedAction,
+                          )}
+                        </span>
+                      </span>
+                    </td>
+                    <td>{signal.market}</td>
+                    <td>{signal.platform}</td>
+                    <td>{signal.currentValue}</td>
+                    <td>{signal.baselineValue}</td>
+                    <td>
+                      <StatusChip tone={getSeverityTone(signal.severity)}>
+                        {t(severityLabelKeys[signal.severity])}
+                      </StatusChip>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </article>
+        </div>
+
+        <aside className="card detail-panel" data-testid="analytics-chat-report">
           <div className="card-header">
             <div>
-              <h2 className="card-title">{t('analytics.decisionBrief')}</h2>
-              <p className="card-kicker">{t('analytics.decisionBriefKicker')}</p>
+              <h2 className="card-title">{t('analytics.chatReport')}</h2>
+              <p className="card-kicker">{t('analytics.chatReportKicker')}</p>
             </div>
-            <StatusChip tone="warning">{t(severityLabelKeys.medium)}</StatusChip>
+            <StatusChip tone={isReportGenerated ? 'success' : 'info'}>
+              {isReportGenerated ? t('status.approved') : t('status.draft')}
+            </StatusChip>
           </div>
 
-          <div className="decision-list">
-            <DecisionItem label={t('analytics.focusNow')} value={t('analytics.focusNowValue')} />
-            <DecisionItem label={t('analytics.releaseRisk')} value={t('analytics.releaseRiskValue')} />
-            <DecisionItem label={t('analytics.nextMetric')} value={t('analytics.nextMetricValue')} />
+          <label className="form-field">
+            <span>{t('analytics.naturalLanguageQuery')}</span>
+            <textarea
+              data-testid="chat-query-input"
+              onChange={(event) => setChatPrompt(event.target.value)}
+              rows={4}
+              value={chatPrompt}
+            />
+          </label>
+
+          <div className="action-strip">
+            <button
+              className="button button-primary"
+              data-testid="generate-chat-report"
+              onClick={generateReport}
+              type="button"
+            >
+              {t('analytics.generateReport')}
+            </button>
+            <button
+              className="button"
+              data-testid="export-chat-report"
+              disabled={!isReportGenerated}
+              onClick={() => setIsReportExportReady(true)}
+              type="button"
+            >
+              {t('analytics.exportReport')}
+            </button>
+          </div>
+
+          {isReportExportReady ? (
+            <div className="status-banner compact-banner" data-testid="report-export-status">
+              <div>
+                <strong>{t('analytics.reportExportReady')}</strong>
+                <span>{t('analytics.reportExportReadyBody')}</span>
+              </div>
+            </div>
+          ) : null}
+
+          <div data-testid="analytics-decision-brief">
+            <div className="decision-list" data-testid="dynamic-report">
+              {isReportGenerated ? (
+                <>
+                  <DecisionItem
+                    label={t('analytics.dynamicSummary')}
+                    value="Servicing volume is concentrated in UK WPB, with A. Morgan owning the largest template slice."
+                  />
+                  <DecisionItem
+                    label={t('analytics.dynamicRisk')}
+                    value="Owner risk is low for servicing templates, but no-template clusters still need AI review before export."
+                  />
+                  <DecisionItem
+                    label={t('analytics.dynamicNextAction')}
+                    value="Export the filtered report and schedule CSV ingestion for the next monthly volume refresh."
+                  />
+                </>
+              ) : (
+                <>
+                  <DecisionItem label={t('analytics.focusNow')} value={t('analytics.focusNowValue')} />
+                  <DecisionItem label={t('analytics.releaseRisk')} value={t('analytics.releaseRiskValue')} />
+                  <DecisionItem label={t('analytics.nextMetric')} value={t('analytics.nextMetricValue')} />
+                </>
+              )}
+            </div>
           </div>
         </aside>
       </section>
@@ -1053,6 +1290,19 @@ function AuditTrailPage() {
 
 function SettingsPage() {
   const { t } = useI18n();
+  const [uploadJob, setUploadJob] = useState<CsvUploadJob>(csvUploadJob);
+
+  function startCsvUpload() {
+    setUploadJob({
+      ...csvUploadJob,
+      status: 'complete',
+      progress: 100,
+      rowsReceived: 1840,
+      templatesDetected: 18,
+      readyForAiAnalysis: 16,
+      rejectedRows: 2,
+    });
+  }
 
   return (
     <>
@@ -1120,6 +1370,73 @@ function SettingsPage() {
                 </p>
               </article>
             ))}
+          </div>
+        </aside>
+      </section>
+
+      <section className="workspace-grid">
+        <article className="card" data-testid="csv-upload-panel">
+          <div className="card-header">
+            <div>
+              <h2 className="card-title">{t('settings.csvUpload')}</h2>
+              <p className="card-kicker">{t('settings.csvUploadKicker')}</p>
+            </div>
+            <StatusChip tone={uploadJob.status === 'complete' ? 'success' : 'info'}>
+              {uploadJob.status === 'complete' ? t('settings.uploadComplete') : t('status.draft')}
+            </StatusChip>
+          </div>
+
+          <div className="upload-dropzone">
+            <div>
+              <strong>{uploadJob.fileName}</strong>
+              <span>{t('settings.csvUploadBody')}</span>
+            </div>
+            <button
+              className="button button-primary"
+              data-testid="start-csv-upload"
+              onClick={startCsvUpload}
+              type="button"
+            >
+              {t('settings.startUpload')}
+            </button>
+          </div>
+
+          <div className="progress-row" data-testid="csv-upload-progress">
+            <div className="progress-label">
+              <span>{t('settings.importProgress')}</span>
+              <StatusChip tone={uploadJob.progress === 100 ? 'success' : 'warning'}>
+                {uploadJob.progress}%
+              </StatusChip>
+            </div>
+            <div className="progress-track">
+              <div className="progress-fill" style={{ width: `${uploadJob.progress}%` }} />
+            </div>
+          </div>
+        </article>
+
+        <aside className="card detail-panel" data-testid="csv-result-preview">
+          <div className="card-header">
+            <div>
+              <h2 className="card-title">{t('settings.processingPreview')}</h2>
+              <p className="card-kicker">{uploadJob.fileName}</p>
+            </div>
+            <StatusChip tone="accent">{uploadJob.id}</StatusChip>
+          </div>
+
+          <div className="field-grid">
+            <Field label={t('settings.rowsReceived')} value={String(uploadJob.rowsReceived)} />
+            <Field label={t('settings.templatesDetected')} value={String(uploadJob.templatesDetected)} />
+            <Field label={t('settings.readyForAi')} value={String(uploadJob.readyForAiAnalysis)} />
+            <Field label={t('settings.rejectedRows')} value={String(uploadJob.rejectedRows)} />
+          </div>
+
+          <div className="detail-block">
+            <h3>{t('settings.processingResult')}</h3>
+            <p>
+              {uploadJob.status === 'complete'
+                ? 'Ready for AI analysis'
+                : t('settings.processingPending')}
+            </p>
           </div>
         </aside>
       </section>

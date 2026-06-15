@@ -55,6 +55,16 @@ await page.getByTestId('nav-analytics').click();
 await page.getByRole('heading', { name: '确定下一步治理迭代优先级' }).waitFor();
 await page.getByTestId('analytics-signal-board').getByText('未知短信聚类超过 SLA 老化阈值').waitFor();
 await page.getByTestId('analytics-decision-brief').waitFor();
+await page.getByTestId('query-time-range').selectOption('last-30-days');
+await page.getByTestId('query-owner').selectOption('A. Morgan');
+await page.getByTestId('query-message-type').selectOption('Servicing');
+await page.getByTestId('run-query').click();
+await page.getByTestId('query-volume-stat').getByText('784,200').waitFor();
+await page.getByTestId('chat-query-input').fill('按市场总结 servicing 模板的 volume 和 owner 风险');
+await page.getByTestId('generate-chat-report').click();
+await page.getByTestId('dynamic-report').getByText('Servicing volume is concentrated in UK WPB').waitFor();
+await page.getByTestId('export-chat-report').click();
+await page.getByTestId('report-export-status').getByText('报告导出已准备').waitFor();
 
 await page.getByTestId('nav-audit-trail').click();
 await page.getByRole('heading', { name: '展示清单背后的控制历史' }).waitFor();
@@ -65,6 +75,10 @@ await page.getByTestId('nav-settings').click();
 await page.getByRole('heading', { name: '配置 MVP 控制默认项' }).waitFor();
 await page.getByTestId('policy-controls').getByText('消息内容 PII 最小化').waitFor();
 await page.getByTestId('settings-impact').waitFor();
+await page.getByTestId('start-csv-upload').click();
+await page.getByTestId('csv-upload-progress').getByText('100%').waitFor();
+await page.getByTestId('csv-result-preview').getByText('templates_june_volume.csv').waitFor();
+await page.getByTestId('csv-result-preview').getByText('Ready for AI analysis').waitFor();
 
 await page.waitForTimeout(250);
 await mkdir('/tmp', { recursive: true });

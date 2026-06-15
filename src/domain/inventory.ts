@@ -18,6 +18,10 @@ export type LifecycleStatus = 'active' | 'no-traffic' | 'demise-pending' | 'demi
 
 export type MakerCheckerStatus = 'draft' | 'pending-checker' | 'approved' | 'rejected';
 
+export type ReportTimeRange = 'last-30-days' | 'last-90-days' | 'last-6-months';
+
+export type CsvUploadStatus = 'idle' | 'processing' | 'complete';
+
 export type DriftType =
   | 'retired-but-live'
   | 'new-sender-identity'
@@ -135,4 +139,25 @@ export type PolicyControl = {
   owner: string;
   status: 'enabled' | 'monitoring' | 'draft';
   impact: string;
+};
+
+export type ReportQuerySummary = {
+  timeRange: ReportTimeRange;
+  owner: string;
+  classification: Classification | 'All';
+  totalVolume: number;
+  useCaseCount: number;
+  topMarket: string;
+  topChannel: Channel;
+};
+
+export type CsvUploadJob = {
+  id: string;
+  fileName: string;
+  status: CsvUploadStatus;
+  progress: number;
+  rowsReceived: number;
+  templatesDetected: number;
+  readyForAiAnalysis: number;
+  rejectedRows: number;
 };
