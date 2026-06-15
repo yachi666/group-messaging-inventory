@@ -256,6 +256,15 @@ button {
   box-shadow: var(--shadow-control);
 }
 
+.button:disabled {
+  color: var(--color-muted-soft);
+  cursor: not-allowed;
+  background: var(--color-neutral-chip);
+  border-color: var(--color-hairline);
+  box-shadow: none;
+  transform: none;
+}
+
 .button:active,
 .filter-pill:active,
 .nav-item:active,
@@ -284,6 +293,44 @@ button {
   border-radius: var(--radius-lg);
 }
 
+.filter-control {
+  display: inline-grid;
+  gap: 5px;
+  min-width: 144px;
+}
+
+.filter-control span {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.filter-select {
+  min-height: 36px;
+  padding: 0 34px 0 14px;
+  color: var(--color-body);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-pill);
+  outline: none;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.filter-select:hover {
+  border-color: var(--color-accent-soft);
+}
+
+.filter-select:focus-visible {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
 .filter-pill {
   min-height: 36px;
   padding: 0 14px;
@@ -308,6 +355,50 @@ button {
   color: var(--color-accent-active);
   background: var(--color-accent-soft);
   border-color: transparent;
+}
+
+.role-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.role-toggle > span {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.status-banner {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  align-items: center;
+  padding: 14px 16px;
+  background: color-mix(in srgb, var(--color-accent-soft) 72%, var(--color-surface));
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+}
+
+.status-banner div {
+  display: grid;
+  gap: 4px;
+}
+
+.status-banner strong {
+  color: var(--color-ink);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.status-banner span {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
 .kpi-grid {
@@ -645,6 +736,11 @@ button {
   border-bottom: 1px solid var(--color-hairline);
 }
 
+.data-table th:first-child,
+.data-table td:first-child {
+  min-width: 180px;
+}
+
 .data-table th {
   color: var(--color-muted);
   background: var(--color-table-header);
@@ -761,6 +857,12 @@ button {
   gap: var(--space-md);
 }
 
+.status-stack {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
 .detail-title {
   margin: 0;
   color: var(--color-ink);
@@ -827,6 +929,65 @@ button {
   font-size: 12px;
   font-weight: 650;
   line-height: 1.45;
+}
+
+.registry-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.form-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.form-field-wide {
+  grid-column: 1 / -1;
+}
+
+.form-field span {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  color: var(--color-body);
+  font-size: 12px;
+  font-weight: 750;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.form-field input,
+.form-field select {
+  min-height: 40px;
+}
+
+.form-field textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  background: var(--color-surface);
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
 }
 
 .action-strip {
@@ -1040,6 +1201,10 @@ button {
   .header-actions {
     justify-content: flex-start;
   }
+
+  .status-banner {
+    align-items: flex-start;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1076,6 +1241,15 @@ button {
 
   .policy-item {
     grid-template-columns: 1fr;
+  }
+
+  .filter-control,
+  .filter-select {
+    width: 100%;
+  }
+
+  .status-banner {
+    display: grid;
   }
 }
 

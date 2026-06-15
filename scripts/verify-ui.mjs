@@ -16,6 +16,13 @@ page.on('console', (message) => {
 
 await page.goto(baseUrl, { waitUntil: 'networkidle' });
 await page.getByRole('heading', { name: 'Messaging inventory baseline' }).waitFor();
+await page.getByTestId('dashboard-platform-filter').selectOption('SFMC');
+await page.getByTestId('dashboard-inventory-table').getByText('Card fraud alert').waitFor();
+await page.getByTestId('dashboard-inventory-table').getByText('Payment due reminder').waitFor({
+  state: 'detached',
+});
+await page.getByRole('button', { name: 'Build response pack' }).click();
+await page.getByTestId('response-pack-status').getByText('Response pack staged').waitFor();
 
 await page.getByLabel('Language').selectOption('zh-CN');
 await page.getByRole('heading', { name: '消息清单基线' }).waitFor();
@@ -25,6 +32,14 @@ await page.getByRole('heading', { name: '确认用例与负责人' }).waitFor();
 await page.getByTestId('inventory-filter-candidate').click();
 await page.getByTestId('use-case-UC-1040').click();
 await page.getByTestId('use-case-inspector').getByText('房贷续约营销').waitFor();
+await page.getByTestId('message-owner-input').fill('L. Zhang');
+await page.getByTestId('contact-point-input').fill('mortgage-ops@example.com');
+await page.getByTestId('template-format-input').fill('您的房贷 {accountLast4} 将于 {renewalDate} 到期');
+await page.getByTestId('submit-template-change').click();
+await page.getByTestId('maker-checker-status').getByText('待复核').waitFor();
+await page.getByTestId('role-checker').click();
+await page.getByTestId('approve-template-change').click();
+await page.getByTestId('maker-checker-status').getByText('已批准').waitFor();
 
 await page.getByTestId('nav-triage').click();
 await page.getByRole('heading', { name: '在异常老化前完成处理' }).waitFor();

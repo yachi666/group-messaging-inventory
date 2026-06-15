@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { StatusChip } from '../../components/StatusChip';
 import {
@@ -14,6 +14,7 @@ import type {
   CandidateUseCase,
   Classification,
   DriftType,
+  MakerCheckerStatus,
   PolicyControl,
   SignalSeverity,
 } from '../../domain/inventory';
@@ -27,6 +28,13 @@ type ProductWorkspaceProps = {
 };
 
 type InventoryFilter = 'all' | 'candidate' | 'needs-evidence' | 'pending-checker';
+
+type RegistryRole = 'maker' | 'checker';
+
+type TemplateRegistryDraft = Pick<
+  CandidateUseCase,
+  'classification' | 'contactPoint' | 'messageOwner' | 'templateFormat'
+>;
 
 const inventoryFilters = [
   { id: 'all', labelKey: 'filter.all' },
@@ -113,6 +121,13 @@ const auditStatusLabelKeys = {
   'pending-checker': 'status.pendingChecker',
   'needs-evidence': 'status.needsEvidence',
 } satisfies Record<CandidateUseCase['auditStatus'], MessageKey>;
+
+const makerCheckerStatusLabelKeys = {
+  draft: 'status.draft',
+  'pending-checker': 'status.pendingChecker',
+  approved: 'status.approved',
+  rejected: 'status.rejected',
+} satisfies Record<MakerCheckerStatus, MessageKey>;
 
 const policyStatusLabelKeys = {
   enabled: 'status.enabled',
@@ -253,17 +268,51 @@ export function ProductWorkspace({ activeView }: ProductWorkspaceProps) {
 function InventoryPage() {
   const { locale, t } = useI18n();
   const [filter, setFilter] = useState<InventoryFilter>('all');
+  const [registryRole, setRegistryRole] = useState<RegistryRole>('maker');
+  const [registryUseCases, setRegistryUseCases] =
+    useState<ReadonlyArray<CandidateUseCase>>(candidateUseCases);
   const [selectedUseCaseId, setSelectedUseCaseId] = useState(candidateUseCases[0].id);
 
   const visibleUseCases = useMemo(
-    () => candidateUseCases.filter((useCase) => matchesInventoryFilter(useCase, filter)),
-    [filter],
+    () => registryUseCases.filter((useCase) => matchesInventoryFilter(useCase, filter)),
+    [filter, registryUseCases],
   );
 
   const selectedUseCase =
-    candidateUseCases.find((useCase) => useCase.id === selectedUseCaseId) ??
+    registryUseCases.find((useCase) => useCase.id === selectedUseCaseId) ??
     visibleUseCases[0] ??
-    candidateUseCases[0];
+    registryUseCases[0];
+
+  function submitTemplateChange(useCaseId: string, draft: TemplateRegistryDraft) {
+    setRegistryUseCases((currentUseCases) =>
+      currentUseCases.map((useCase) =>
+        useCase.id === useCaseId
+          ? {
+              ...useCase,
+              ...draft,
+              auditStatus: 'pending-checker',
+              makerCheckerStatus: 'pending-checker',
+              ownerStatus: 'pending-checker',
+            }
+          : useCase,
+      ),
+    );
+  }
+
+  function approveTemplateChange(useCaseId: string) {
+    setRegistryUseCases((currentUseCases) =>
+      currentUseCases.map((useCase) =>
+        useCase.id === useCaseId
+          ? {
+              ...useCase,
+              auditStatus: 'approved',
+              makerCheckerStatus: 'approved',
+              ownerStatus: 'confirmed',
+            }
+          : useCase,
+      ),
+    );
+  }
 
   return (
     <>
@@ -288,15 +337,35 @@ function InventoryPage() {
                 {t(item.labelKey)}
               </button>
             ))}
+
+            <div className="role-toggle" aria-label={t('inventory.roleMode')}>
+              <span>{t('inventory.roleMode')}</span>
+              <button
+                className={`filter-pill ${registryRole === 'maker' ? 'filter-pill-active' : ''}`}
+                data-testid="role-maker"
+                onClick={() => setRegistryRole('maker')}
+                type="button"
+              >
+                {t('role.maker')}
+              </button>
+              <button
+                className={`filter-pill ${registryRole === 'checker' ? 'filter-pill-active' : ''}`}
+                data-testid="role-checker"
+                onClick={() => setRegistryRole('checker')}
+                type="button"
+              >
+                {t('role.checker')}
+              </button>
+            </div>
           </div>
 
           <article className="card table-card" data-testid="inventory-table">
             <div className="table-header">
               <div>
-                <h2 className="card-title">{t('section.inventoryCandidates')}</h2>
-                <p className="card-kicker">{t('section.inventoryCandidatesKicker')}</p>
+                <h2 className="card-title">{t('inventory.registryTitle')}</h2>
+                <p className="card-kicker">{t('inventory.registryKicker')}</p>
               </div>
-              <StatusChip tone="info">{visibleUseCases.length} / {candidateUseCases.length}</StatusChip>
+              <StatusChip tone="info">{visibleUseCases.length} / {registryUseCases.length}</StatusChip>
             </div>
 
             <table className="data-table">
@@ -367,14 +436,46 @@ function InventoryPage() {
           </article>
         </div>
 
-        <UseCaseInspector useCase={selectedUseCase} />
+        <UseCaseInspector
+          onApprove={approveTemplateChange}
+          onSubmit={submitTemplateChange}
+          role={registryRole}
+          useCase={selectedUseCase}
+        />
       </section>
     </>
   );
 }
 
-function UseCaseInspector({ useCase }: { useCase: CandidateUseCase }) {
+function UseCaseInspector({
+  onApprove,
+  onSubmit,
+  role,
+  useCase,
+}: {
+  onApprove: (useCaseId: string) => void;
+  onSubmit: (useCaseId: string, draft: TemplateRegistryDraft) => void;
+  role: RegistryRole;
+  useCase: CandidateUseCase;
+}) {
   const { locale, t } = useI18n();
+  const [draft, setDraft] = useState<TemplateRegistryDraft>({
+    classification: useCase.classification,
+    contactPoint: useCase.contactPoint,
+    messageOwner: useCase.messageOwner,
+    templateFormat: useCase.templateFormat,
+  });
+
+  useEffect(() => {
+    setDraft({
+      classification: useCase.classification,
+      contactPoint: useCase.contactPoint,
+      messageOwner: useCase.messageOwner,
+      templateFormat: useCase.templateFormat,
+    });
+  }, [useCase]);
+
+  const canApprove = role === 'checker' && useCase.makerCheckerStatus === 'pending-checker';
 
   return (
     <aside className="card detail-panel" data-testid="use-case-inspector">
@@ -387,7 +488,14 @@ function UseCaseInspector({ useCase }: { useCase: CandidateUseCase }) {
             <span>{useCase.channel}</span>
           </p>
         </div>
-        <StatusChip tone={getStatusTone(useCase.status)}>{t(statusLabelKeys[useCase.status])}</StatusChip>
+        <div className="status-stack">
+          <StatusChip tone={getStatusTone(useCase.status)}>{t(statusLabelKeys[useCase.status])}</StatusChip>
+          <span data-testid="maker-checker-status">
+            <StatusChip tone={getAuditTone(useCase.auditStatus)}>
+              {t(makerCheckerStatusLabelKeys[useCase.makerCheckerStatus])}
+            </StatusChip>
+          </span>
+        </div>
       </div>
 
       <h3 className="detail-title">
@@ -397,12 +505,76 @@ function UseCaseInspector({ useCase }: { useCase: CandidateUseCase }) {
       <div className="field-grid">
         <Field label={t('field.market')} value={`${useCase.market} · ${useCase.entity}`} />
         <Field label={t('field.lob')} value={useCase.lob} />
+        <Field label={t('field.sourceSystem')} value={useCase.sourceSystem} />
+        <Field label={t('field.templateStorage')} value={useCase.templateStorage} />
         <Field label={t('field.tenant')} value={useCase.tenant} />
-        <Field label={t('field.owner')} value={useCase.messageOwner} />
         <Field label={t('field.integratingOwner')} value={useCase.integratingSystemOwner} />
         <Field label={t('field.evidence')} value={useCase.evidenceReference} />
         <Field label={t('inventory.validationDate')} value={useCase.latestValidationDate} />
         <Field label={t('table.confidence')} value={formatPercentage(useCase.confidence)} />
+      </div>
+
+      <div className="detail-block">
+        <h3>{t('inventory.registryEditor')}</h3>
+        <div className="registry-form">
+          <label className="form-field">
+            <span>{t('field.owner')}</span>
+            <input
+              data-testid="message-owner-input"
+              onChange={(event) =>
+                setDraft((currentDraft) => ({
+                  ...currentDraft,
+                  messageOwner: event.target.value,
+                }))
+              }
+              value={draft.messageOwner}
+            />
+          </label>
+          <label className="form-field">
+            <span>{t('field.contactPoint')}</span>
+            <input
+              data-testid="contact-point-input"
+              onChange={(event) =>
+                setDraft((currentDraft) => ({
+                  ...currentDraft,
+                  contactPoint: event.target.value,
+                }))
+              }
+              value={draft.contactPoint}
+            />
+          </label>
+          <label className="form-field">
+            <span>{t('field.messageType')}</span>
+            <select
+              data-testid="message-type-select"
+              onChange={(event) =>
+                setDraft((currentDraft) => ({
+                  ...currentDraft,
+                  classification: event.target.value as Classification,
+                }))
+              }
+              value={draft.classification}
+            >
+              <option value="Regulatory">{t('classification.regulatory')}</option>
+              <option value="Servicing">{t('classification.servicing')}</option>
+              <option value="Marketing">{t('classification.marketing')}</option>
+            </select>
+          </label>
+          <label className="form-field form-field-wide">
+            <span>{t('field.templateFormat')}</span>
+            <textarea
+              data-testid="template-format-input"
+              onChange={(event) =>
+                setDraft((currentDraft) => ({
+                  ...currentDraft,
+                  templateFormat: event.target.value,
+                }))
+              }
+              rows={4}
+              value={draft.templateFormat}
+            />
+          </label>
+        </div>
       </div>
 
       <div className="detail-block">
@@ -439,8 +611,23 @@ function UseCaseInspector({ useCase }: { useCase: CandidateUseCase }) {
         <button className="button" type="button">
           {t('action.linkEvidence')}
         </button>
-        <button className="button button-primary" type="button">
+        <button
+          className="button button-primary"
+          data-testid="submit-template-change"
+          disabled={role !== 'maker'}
+          onClick={() => onSubmit(useCase.id, draft)}
+          type="button"
+        >
           {t('action.submitChecker')}
+        </button>
+        <button
+          className="button button-primary"
+          data-testid="approve-template-change"
+          disabled={!canApprove}
+          onClick={() => onApprove(useCase.id)}
+          type="button"
+        >
+          {t('action.approveChange')}
         </button>
       </div>
     </aside>

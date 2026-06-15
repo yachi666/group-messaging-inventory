@@ -1,3 +1,5 @@
+import { useMemo, useState } from 'react';
+
 import { MetricCard } from '../../components/MetricCard';
 import { StatusChip } from '../../components/StatusChip';
 import {
@@ -7,7 +9,7 @@ import {
   dashboardMetrics,
   triageItems,
 } from '../../data/mockInventory';
-import type { CandidateUseCase, DriftType } from '../../domain/inventory';
+import type { CandidateUseCase, Channel, DriftType, Platform } from '../../domain/inventory';
 import { useI18n } from '../../i18n/LanguageProvider';
 import type { MessageKey } from '../../i18n/messages';
 import { formatPercentage, formatVolume } from '../../lib/format';
@@ -66,6 +68,22 @@ const monthLabelKeys: Record<string, MessageKey> = {
   May: 'month.may',
   Jun: 'month.jun',
 };
+
+type DashboardPlatformFilter = 'all' | Platform;
+type DashboardChannelFilter = 'all' | Channel;
+type DashboardMarketFilter = 'all' | string;
+
+const platformOptions = ['all', 'MDP', 'SFMC', 'ICCM', 'IRIS'] as const satisfies ReadonlyArray<
+  DashboardPlatformFilter
+>;
+
+const channelOptions = ['all', 'SMS', 'Email', 'Push'] as const satisfies ReadonlyArray<
+  DashboardChannelFilter
+>;
+
+const marketOptions = ['all', 'UK', 'HK', 'SG', 'UAE'] as const satisfies ReadonlyArray<
+  DashboardMarketFilter
+>;
 
 const useCaseNameKeys: Record<string, MessageKey> = {
   'UC-1024': 'useCase.UC-1024.name',
@@ -138,8 +156,168 @@ function getTranslatedValue(
   return messageKey ? t(messageKey) : fallback;
 }
 
+function isUseCaseVisible(
+  useCase: CandidateUseCase,
+  platformFilter: DashboardPlatformFilter,
+  channelFilter: DashboardChannelFilter,
+  marketFilter: DashboardMarketFilter,
+) {
+  return (
+    (platformFilter === 'all' || useCase.platform === platformFilter) &&
+    (channelFilter === 'all' || useCase.channel === channelFilter) &&
+    (marketFilter === 'all' || useCase.market === marketFilter)
+  );
+}
+
+function isTriageVisible(
+  item: (typeof triageItems)[number],
+  platformFilter: DashboardPlatformFilter,
+  channelFilter: DashboardChannelFilter,
+  marketFilter: DashboardMarketFilter,
+) {
+  return (
+    (platformFilter === 'all' || item.platform === platformFilter) &&
+    (channelFilter === 'all' || item.channel === channelFilter) &&
+    (marketFilter === 'all' || item.market === marketFilter)
+  );
+}
+
+function getWeightedConfidence(useCases: CandidateUseCase[]) {
+  const totalVolume = useCases.reduce((sum, useCase) => sum + useCase.monthlyVolume, 0);
+
+  if (totalVolume === 0) {
+    return 0;
+  }
+
+  return Math.round(
+    useCases.reduce(
+      (sum, useCase) => sum + useCase.monthlyVolume * useCase.confidence,
+      0,
+    ) / totalVolume,
+  );
+}
+
+function getOwnerConfirmedPercentage(useCases: CandidateUseCase[]) {
+  if (useCases.length === 0) {
+    return 0;
+  }
+
+  const confirmedCount = useCases.filter((useCase) => useCase.ownerStatus === 'confirmed').length;
+  return Math.round((confirmedCount / useCases.length) * 100);
+}
+
+function downloadInventoryCsv(useCases: CandidateUseCase[]) {
+  const rows = [
+    [
+      'Use case',
+      'Status',
+      'Market',
+      'Platform',
+      'Channel',
+      'Sender identity',
+      'Template reference',
+      'Monthly volume',
+      'Classification',
+      'Confidence',
+      'Owner status',
+      'Audit status',
+    ],
+    ...useCases.map((useCase) => [
+      useCase.name,
+      useCase.status,
+      useCase.market,
+      useCase.platform,
+      useCase.channel,
+      useCase.senderIdentity,
+      useCase.templateReference,
+      String(useCase.monthlyVolume),
+      useCase.classification,
+      String(useCase.confidence),
+      useCase.ownerStatus,
+      useCase.auditStatus,
+    ]),
+  ];
+
+  const csv = rows
+    .map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'messaging-inventory-baseline.csv';
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export function DashboardPage() {
   const { locale, t } = useI18n();
+  const [platformFilter, setPlatformFilter] = useState<DashboardPlatformFilter>('all');
+  const [channelFilter, setChannelFilter] = useState<DashboardChannelFilter>('all');
+  const [marketFilter, setMarketFilter] = useState<DashboardMarketFilter>('all');
+  const [isPackStaged, setIsPackStaged] = useState(false);
+  const [isCsvReady, setIsCsvReady] = useState(false);
+
+  const filteredUseCases = useMemo(
+    () =>
+      candidateUseCases.filter((useCase) =>
+        isUseCaseVisible(useCase, platformFilter, channelFilter, marketFilter),
+      ),
+    [channelFilter, marketFilter, platformFilter],
+  );
+
+  const filteredTriageItems = useMemo(
+    () =>
+      triageItems.filter((item) =>
+        isTriageVisible(item, platformFilter, channelFilter, marketFilter),
+      ),
+    [channelFilter, marketFilter, platformFilter],
+  );
+
+  const totalUseCaseVolume = candidateUseCases.reduce(
+    (sum, useCase) => sum + useCase.monthlyVolume,
+    0,
+  );
+  const filteredUseCaseVolume = filteredUseCases.reduce(
+    (sum, useCase) => sum + useCase.monthlyVolume,
+    0,
+  );
+  const coverageScale = totalUseCaseVolume > 0 ? filteredUseCaseVolume / totalUseCaseVolume : 1;
+  const visibleCoverageFlow = coverageFlow.map((point) => ({
+    ...point,
+    matched: Math.max(0, Math.round(point.matched * coverageScale)),
+    unknown: Math.max(0, Math.round(point.unknown * coverageScale)),
+  }));
+  const visibleMaxCoverageVolume = Math.max(
+    1,
+    ...visibleCoverageFlow.map((point) => point.matched + point.unknown),
+  );
+  const trafficMatchedPercentage =
+    filteredUseCases.length === candidateUseCases.length
+      ? dashboardMetrics.trafficMatchedPercentage
+      : getWeightedConfidence(filteredUseCases);
+  const ownerConfirmedPercentage =
+    filteredUseCases.length === candidateUseCases.length
+      ? dashboardMetrics.ownerConfirmedPercentage
+      : getOwnerConfirmedPercentage(filteredUseCases);
+  const evidenceGapCount = filteredUseCases.filter(
+    (useCase) => useCase.auditStatus === 'needs-evidence',
+  ).length;
+  const ownerGapCount = filteredUseCases.filter(
+    (useCase) => useCase.ownerStatus !== 'confirmed',
+  ).length;
+
+  function resetPilotScope() {
+    setPlatformFilter('all');
+    setChannelFilter('all');
+    setMarketFilter('all');
+    setIsPackStaged(false);
+  }
+
+  function handleExportCsv() {
+    downloadInventoryCsv(filteredUseCases);
+    setIsCsvReady(true);
+  }
 
   return (
     <>
@@ -151,32 +329,100 @@ export function DashboardPage() {
         </div>
 
         <div className="header-actions" aria-label={t('nav.dashboard')}>
-          <button className="button" type="button">
+          <button className="button" onClick={handleExportCsv} type="button">
             {t('action.exportCsv')}
           </button>
-          <button className="button button-primary" type="button">
+          <button className="button button-primary" onClick={() => setIsPackStaged(true)} type="button">
             {t('action.buildResponsePack')}
           </button>
         </div>
       </header>
 
       <section className="filters" aria-label={t('nav.dashboard')}>
-        <button className="filter-pill filter-pill-active" type="button">
+        <button
+          className={`filter-pill ${
+            platformFilter === 'all' && channelFilter === 'all' && marketFilter === 'all'
+              ? 'filter-pill-active'
+              : ''
+          }`}
+          onClick={resetPilotScope}
+          type="button"
+        >
           {t('filter.pilotMarkets')}
         </button>
-        <button className="filter-pill" type="button">
-          {t('filter.allPlatforms')}
-        </button>
-        <button className="filter-pill" type="button">
-          {t('filter.smsEmail')}
-        </button>
-        <button className="filter-pill" type="button">
-          {t('filter.ownerStatus')}
-        </button>
-        <button className="filter-pill" type="button">
-          {t('filter.lastSixMonths')}
-        </button>
+
+        <label className="filter-control">
+          <span>{t('filter.platformLabel')}</span>
+          <select
+            className="filter-select"
+            data-testid="dashboard-platform-filter"
+            onChange={(event) =>
+              setPlatformFilter(event.target.value as DashboardPlatformFilter)
+            }
+            value={platformFilter}
+          >
+            {platformOptions.map((platform) => (
+              <option key={platform} value={platform}>
+                {platform === 'all' ? t('filter.allPlatforms') : platform}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="filter-control">
+          <span>{t('filter.channelLabel')}</span>
+          <select
+            className="filter-select"
+            data-testid="dashboard-channel-filter"
+            onChange={(event) => setChannelFilter(event.target.value as DashboardChannelFilter)}
+            value={channelFilter}
+          >
+            {channelOptions.map((channel) => (
+              <option key={channel} value={channel}>
+                {channel === 'all' ? t('filter.allChannels') : channel}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="filter-control">
+          <span>{t('filter.marketLabel')}</span>
+          <select
+            className="filter-select"
+            data-testid="dashboard-market-filter"
+            onChange={(event) => setMarketFilter(event.target.value as DashboardMarketFilter)}
+            value={marketFilter}
+          >
+            {marketOptions.map((market) => (
+              <option key={market} value={market}>
+                {market === 'all' ? t('filter.allMarkets') : market}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <StatusChip tone="info">
+          {filteredUseCases.length} {t('dashboard.useCasesSelected')}
+        </StatusChip>
       </section>
+
+      {(isPackStaged || isCsvReady) && (
+        <section className="status-banner" data-testid="response-pack-status">
+          <div>
+            <strong>
+              {isPackStaged ? t('responsePack.staged') : t('responsePack.csvReady')}
+            </strong>
+            <span>
+              {t('responsePack.scope')}: {filteredUseCases.length}{' '}
+              {t('responsePack.inventoryRows')} · {ownerGapCount} {t('responsePack.ownerGaps')} ·{' '}
+              {evidenceGapCount} {t('responsePack.evidenceGaps')}
+            </span>
+          </div>
+          <StatusChip tone={evidenceGapCount === 0 ? 'success' : 'warning'}>
+            {evidenceGapCount === 0 ? t('legend.approved') : t('legend.needsEvidence')}
+          </StatusChip>
+        </section>
+      )}
 
       <section className="kpi-grid" aria-label={t('nav.analytics')}>
         <MetricCard
@@ -184,28 +430,36 @@ export function DashboardPage() {
           note={t('kpi.trafficMatchedNote')}
           tone="success"
           trend="+4.8%"
-          value={formatPercentage(dashboardMetrics.trafficMatchedPercentage)}
+          value={formatPercentage(trafficMatchedPercentage)}
         />
         <MetricCard
           label={t('kpi.unknownTraffic')}
           note={t('kpi.unknownTrafficNote')}
           tone="warning"
-          trend="-28"
-          value={String(dashboardMetrics.unknownTrafficCount)}
+          trend={filteredUseCases.length === candidateUseCases.length ? '-28' : 'scope'}
+          value={String(
+            filteredUseCases.length === candidateUseCases.length
+              ? dashboardMetrics.unknownTrafficCount
+              : filteredTriageItems.filter((item) => item.type === 'unknown-traffic').length,
+          )}
         />
         <MetricCard
           label={t('kpi.driftExceptions')}
           note={t('kpi.driftExceptionsNote')}
           tone="danger"
-          trend="+3"
-          value={String(dashboardMetrics.driftExceptionCount)}
+          trend={filteredUseCases.length === candidateUseCases.length ? '+3' : 'scope'}
+          value={String(
+            filteredUseCases.length === candidateUseCases.length
+              ? dashboardMetrics.driftExceptionCount
+              : filteredTriageItems.length,
+          )}
         />
         <MetricCard
           label={t('kpi.ownerConfirmed')}
           note={t('kpi.ownerConfirmedNote')}
           tone="accent"
           trend="+9.1%"
-          value={formatPercentage(dashboardMetrics.ownerConfirmedPercentage)}
+          value={formatPercentage(ownerConfirmedPercentage)}
         />
       </section>
 
@@ -219,16 +473,16 @@ export function DashboardPage() {
               <p className="card-kicker">{t('section.coverageFlowKicker')}</p>
             </div>
             <StatusChip tone="accent">
-              {formatPercentage(dashboardMetrics.trafficMatchedPercentage)} {t('chart.matched')}
+              {formatPercentage(trafficMatchedPercentage)} {t('chart.matched')}
             </StatusChip>
           </div>
 
           <div className="coverage-chart" aria-label={t('section.coverageFlow')}>
-            {coverageFlow.map((point) => {
+            {visibleCoverageFlow.map((point) => {
               const total = point.matched + point.unknown;
-              const stackHeight = (total / maxCoverageVolume) * 100;
-              const matchedHeight = (point.matched / total) * 100;
-              const unknownHeight = (point.unknown / total) * 100;
+              const stackHeight = (total / visibleMaxCoverageVolume) * 100;
+              const matchedHeight = total > 0 ? (point.matched / total) * 100 : 0;
+              const unknownHeight = total > 0 ? (point.unknown / total) * 100 : 0;
               const monthLabel = t(monthLabelKeys[point.month]);
               const matchedVolume = formatVolume(point.matched, locale);
               const unknownVolume = formatVolume(point.unknown, locale);
@@ -342,7 +596,7 @@ export function DashboardPage() {
             <StatusChip tone="info">{t('source.count')}</StatusChip>
           </div>
 
-          <table className="data-table">
+          <table className="data-table" data-testid="dashboard-inventory-table">
             <thead>
               <tr>
                 <th>{t('table.useCase')}</th>
@@ -355,7 +609,7 @@ export function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {candidateUseCases.map((useCase) => (
+              {filteredUseCases.map((useCase) => (
                 <tr key={useCase.id}>
                   <td>
                     <span className="use-case-name">
@@ -385,6 +639,16 @@ export function DashboardPage() {
                   </td>
                 </tr>
               ))}
+              {filteredUseCases.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>
+                    <div className="empty-state">
+                      <strong>{t('inventory.emptyTitle')}</strong>
+                      <span>{t('inventory.emptyBody')}</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </article>
@@ -404,7 +668,7 @@ export function DashboardPage() {
             </div>
 
             <div className="triage-list">
-              {triageItems.map((item) => (
+              {filteredTriageItems.map((item) => (
                 <article className="triage-item" key={item.id}>
                   <div className="triage-title-row">
                     <p className="triage-title">
@@ -429,6 +693,12 @@ export function DashboardPage() {
                   </p>
                 </article>
               ))}
+              {filteredTriageItems.length === 0 ? (
+                <div className="empty-state">
+                  <strong>{t('triage.emptyTitle')}</strong>
+                  <span>{t('triage.emptyBody')}</span>
+                </div>
+              ) : null}
             </div>
           </article>
 

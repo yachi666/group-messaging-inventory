@@ -14,6 +14,10 @@ export type ConfidenceBand = 'high' | 'medium' | 'low';
 
 export type SignalSeverity = 'high' | 'medium' | 'low';
 
+export type LifecycleStatus = 'active' | 'no-traffic' | 'demise-pending' | 'demised';
+
+export type MakerCheckerStatus = 'draft' | 'pending-checker' | 'approved' | 'rejected';
+
 export type DriftType =
   | 'retired-but-live'
   | 'new-sender-identity'
@@ -30,9 +34,13 @@ export type CandidateUseCase = {
   lob: string;
   platform: Platform;
   channel: Channel;
+  sourceSystem: string;
+  hasTemplate: boolean;
+  templateStorage: string;
   tenant: string;
   senderIdentity: string;
   templateReference: string;
+  templateFormat: string;
   monthlyVolume: number;
   deliveryOutcomes: {
     sent: number;
@@ -42,8 +50,11 @@ export type CandidateUseCase = {
   };
   messageOwner: string;
   integratingSystemOwner: string;
+  contactPoint: string;
   classification: Classification;
   confidence: number;
+  lifecycleStatus: LifecycleStatus;
+  makerCheckerStatus: MakerCheckerStatus;
   ownerStatus: OwnerStatus;
   auditStatus: AuditStatus;
   evidenceReference: string;
