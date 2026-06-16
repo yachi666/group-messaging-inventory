@@ -1,198 +1,204 @@
 ---
 version: alpha
 name: Group Messaging Inventory Design System
-description: A soft open-canvas dashboard language for the Group Messaging Inventory MVP. The visual style is extracted from the supplied reference screen: a pale mist canvas, pill-shaped top navigation, white glass cards, low-saturation cyan and periwinkle gradients, delicate shadows, compact operational data, and black used sparingly for the active route or primary circular controls.
+description: A clean, near-white SaaS dashboard language for the Group Messaging Inventory MVP. The visual style is extracted from the supplied reference screen: fixed light sidebar, thin global top bar, project header with tabs, white metric cards, broad map/chart modules, low-contrast dividers, compact tables, dark floating chart labels, and restrained blue-green operational accents.
 ---
 
 # Reference Image Extraction
 
-The reference interface reads as a friendly education dashboard, but the style can be translated to a governance product without copying the subject matter.
+The reference interface is a polished campaign analytics dashboard. For this product, translate the visual language into a messaging inventory and governance workspace without copying the campaign subject matter.
 
 Key traits to preserve:
 
-- **Open canvas layout**: the product sits directly on a pale mist canvas. Do not place the whole product inside a large white background vessel.
-- **Pill navigation**: navigation appears as detached top pills. The active item is a black pill with white text and a small leading icon.
-- **Soft glass modules**: cards are white or barely tinted, with very light borders, inner highlights, and shadows so subtle they feel like raised porcelain.
-- **Pastel data surfaces**: key modules use misty cyan, aqua, blue, and lavender gradients rather than saturated brand blocks.
-- **Rounded controls and modules**: cards, inputs, chart bars, avatars, and icon buttons use large radii or full pills.
-- **Compact friendliness**: the layout is dense enough for dashboard work, but labels, icons, avatars, and chips keep it approachable.
-- **Black as a control accent**: black is reserved for selected navigation, one high-priority floating control, and chart markers. It should not become a dark theme.
-- **Low-contrast depth**: shadows are wide and diffused; borders are hairline and cool-toned.
-- **Avatar-like ownership cues**: use small owner initials, avatars, or identity dots where the product needs human accountability.
+- **Near-white SaaS canvas**: the whole app sits on a very pale gray-white background with white modules and almost invisible borders.
+- **Fixed left sidebar**: navigation is quiet, narrow, and persistent. The selected route is a soft gray row, not a saturated brand block.
+- **Thin global top bar**: search, notifications, and organization controls live in a slim header with a bottom hairline.
+- **Project workspace header**: each main screen begins with a compact object header: back affordance, circular identity badge, title, subtitle, metadata, status, and overflow action.
+- **Underlined tabs**: tabs are simple text labels with a thin dark underline for the active tab.
+- **KPI tile grid**: small white square cards use faint icons, pale labels, and strong black numbers.
+- **Primary analytic card**: the most important module is wider than the KPI tiles and combines summary copy with a map or chart.
+- **Compact secondary cards**: tables and charts use dense, clean layouts with subtle row separators and little ornament.
+- **Low-contrast depth**: card shadows are soft and diffuse; borders are hairline and cool gray.
+- **Dark chart callouts**: maps and charts can use small charcoal floating tooltips with white text.
+- **Sparse color**: blue, teal, green, and occasional red identity marks provide focus. The interface should otherwise stay white, gray, and black.
 
 # Design Principles
 
-- **Dashboard first**: open directly on usable inventory, coverage, triage, evidence, and audit data. Avoid marketing-page structure.
-- **Friendly governance**: make audit and compliance data feel approachable without becoming childish or decorative.
-- **Open command surface**: use a centered max-width layout on the pale canvas without a visible app-shell background.
-- **Top navigation by default**: prefer horizontal pill navigation over a sidebar for the MVP dashboard.
-- **Cards for data modules only**: use cards for KPIs, charts, tables, inspectors, queues, and schedules. Do not nest cards.
-- **Readable density**: keep enough information on screen for governance work, but use whitespace, row separators, compact pills, and soft section rhythm to preserve scanning.
-- **Pastel operational accent**: use aqua and periwinkle as the core data palette. Purple may appear as a supporting lavender, not as a generic gradient theme.
-- **Evidence over decoration**: charts and status chips should communicate coverage, unknown traffic, confidence, drift, ownership, evidence, and audit readiness.
+- **Operational first**: open directly on inventory, coverage, triage, evidence, and audit data. Avoid landing-page or marketing composition.
+- **Quiet governance**: make complex compliance and messaging inventory work feel calm, legible, and repeatable.
+- **Sidebar as orientation**: use the left rail for product areas and settings. Keep it visually light so the dashboard content remains dominant.
+- **Header as context**: the object header should clarify which market, workspace, or inventory baseline the user is viewing.
+- **Dense but breathable**: show many useful data modules above the fold, but keep each card simple and separated by generous gutters.
+- **Neutral surfaces first**: white cards, pale labels, hairlines, and subtle shadows carry the style. Accents are for state, charts, identity, and action.
+- **Evidence over decoration**: charts and status indicators should communicate coverage, unknown traffic, confidence, drift, ownership, evidence, and audit readiness.
+- **No nested-card clutter**: cards can sit in a grid, but avoid cards inside cards unless the inner element is a chart tooltip or small chip.
 
 # Visual Language
 
-The main product view should feel like a premium, friendly operations dashboard arranged directly on a calm mist canvas.
+The main product should feel like a premium analytics console: precise, quiet, bright, and easy to scan.
 
 Use:
 
-- a pale gray-blue page canvas with a centered max-width product layout
-- no full-page white vessel, app-shell panel, or large blank white background behind all content
-- detached pill navigation, search fields, filters, and icon buttons
-- white glass cards with large radius, faint borders, and diffused shadows
-- pastel cyan, aqua, blue, and lavender gradients for highlighted modules
-- black selected states used with restraint
-- soft chart shapes: rounded bars, pill markers, thin dashed reference lines, and light gridlines
-- compact status chips and owner/accountability markers
-- avatar, initials, or small person chips for ownership and maker-checker state
+- a near-white app background
+- a fixed white sidebar with grouped navigation
+- a slim top bar with search and account controls
+- a compact workspace header with metadata and status
+- tab labels with a dark underline for active state
+- white cards with 8-14px radii and soft shadows
+- KPI cards in a 2x2 or horizontal strip layout
+- wide map, flow, coverage, and chart modules
+- light table row separators and small uppercase column labels
+- charcoal floating tooltips on maps and charts
+- blue and teal chart series with green success states
+- red, blue, or green circular badges only for object identity or alert emphasis
 
 Avoid:
 
 - dark cyber/security dashboard styling
-- heavy enterprise sidebars unless a later product screen truly needs one
-- generic purple gradient blobs
-- beige, brown, or orange-heavy themes
-- harsh gray borders or dark shadows
-- full-page white shells that create empty background behind the dashboard
-- nested cards
-- oversized hero typography
-- page sections that look like marketing content
-- dense enterprise gray tables with no visual hierarchy
+- large pill navigation as the primary app structure
+- heavy saturated sidebars
+- colorful full-card gradients
+- decorative blobs, orbs, or atmospheric backgrounds
+- beige, brown, orange, or one-note purple themes
+- thick borders, heavy shadows, or high-contrast table grids
+- oversized hero type
+- marketing copy inside the dashboard
+- rounded cards larger than 16px unless the existing implementation requires it
 
 # Color Tokens
 
 ```yaml
 colors:
-  canvas: "#eef1f7"
-  canvas-wash: "#f7f9fd"
-  canvas-cool-shadow: "#c9d1df"
-
-  app-shell: "transparent"
-  app-shell-solid: "transparent"
-  shell-border: "transparent"
+  canvas: "#f8f9fb"
+  canvas-subtle: "#fbfcfe"
+  sidebar: "#ffffff"
+  topbar: "#ffffff"
 
   surface: "#ffffff"
-  surface-glass: "rgba(255, 255, 255, 0.78)"
-  surface-soft: "#f8faff"
-  surface-tint: "#f1f5ff"
-  surface-raised: "#ffffff"
-  table-header: "#f5f8ff"
+  surface-soft: "#f7f8fa"
+  surface-muted: "#f3f5f8"
+  surface-hover: "#f5f6f8"
+  surface-selected: "#f1f3f6"
+  table-header: "#fafbfc"
 
-  hairline: "#e8edf5"
-  hairline-strong: "#d9e1ee"
-  inner-highlight: "rgba(255, 255, 255, 0.86)"
+  hairline: "#edf0f4"
+  hairline-strong: "#e3e7ee"
+  divider: "#f0f2f5"
 
-  ink: "#141418"
-  body: "#373a44"
-  muted: "#777e8b"
-  muted-soft: "#a4abba"
+  ink: "#191c22"
+  body: "#343945"
+  muted: "#7f8794"
+  muted-soft: "#a8b0bd"
+  placeholder: "#bec4ce"
   inverse: "#ffffff"
 
-  active: "#141418"
-  active-soft: "#23242a"
+  active: "#191c22"
+  active-soft: "#303647"
+  tooltip: "#303647"
 
-  accent: "#76d8dc"
-  accent-active: "#26aab1"
-  accent-soft: "#dcfbfb"
-  accent-subtle: "#f0fdfd"
+  brand-red: "#e73545"
+  brand-red-soft: "#fff0f2"
+  brand-blue: "#2f66e8"
+  brand-blue-soft: "#eef3ff"
+  brand-green: "#21bd75"
+  brand-green-soft: "#e9f8f1"
+  teal: "#35c6a6"
+  teal-soft: "#e8faf6"
 
-  periwinkle: "#9fb5ff"
-  periwinkle-active: "#6f86e8"
-  periwinkle-soft: "#eef2ff"
-
-  lavender: "#c8d0ff"
-  lavender-soft: "#f2f4ff"
-
-  success: "#1d9d67"
-  success-soft: "#e6f7ef"
+  success: "#18a66a"
+  success-soft: "#e8f7ef"
   warning: "#c98a1d"
-  warning-soft: "#fff4dc"
-  danger: "#d84b4b"
+  warning-soft: "#fff5df"
+  danger: "#d94343"
   danger-soft: "#fdecec"
-  info: "#3478f6"
-  info-soft: "#e9f1ff"
-  neutral-chip: "#f2f5fa"
+  info: "#2f66e8"
+  info-soft: "#eef3ff"
+  neutral-chip: "#f2f4f7"
 
-  chart-cyan: "#76d8dc"
-  chart-aqua: "#a6edf0"
-  chart-periwinkle: "#9fb5ff"
-  chart-lavender: "#c8d0ff"
-  chart-ink: "#141418"
-  chart-muted: "#e7ecf5"
+  chart-blue: "#2563d8"
+  chart-blue-soft: "#dbe6ff"
+  chart-teal: "#35c6a6"
+  chart-teal-soft: "#d9f6ee"
+  chart-green: "#21bd75"
+  chart-navy: "#303647"
+  chart-red: "#e73545"
+  chart-grid: "#edf1f6"
+  map-land: "#e8ebf0"
+  map-dot: "#485064"
 ```
 
-## Gradient Recipes
+## Gradients
+
+Use gradients rarely. The reference screen is mostly flat white and gray.
 
 ```yaml
 gradients:
-  aqua-card: "linear-gradient(135deg, #a7eef0 0%, #dffbfb 52%, #c8f3f4 100%)"
-  blue-card: "linear-gradient(135deg, #dce8ff 0%, #b8c9ff 48%, #e6edff 100%)"
-  lavender-card: "linear-gradient(135deg, #edf0ff 0%, #c9d4ff 52%, #f5f7ff 100%)"
-  shell-sheen: "none"
-  chart-fill: "linear-gradient(180deg, rgba(118,216,220,0.16) 0%, rgba(159,181,255,0.08) 100%)"
+  page-wash: "linear-gradient(180deg, #ffffff 0%, #f8f9fb 100%)"
+  card-highlight: "linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%)"
+  chart-fill-blue: "linear-gradient(180deg, rgba(37, 99, 216, 0.16) 0%, rgba(37, 99, 216, 0.02) 100%)"
+  chart-fill-teal: "linear-gradient(180deg, rgba(53, 198, 166, 0.18) 0%, rgba(53, 198, 166, 0.03) 100%)"
 ```
 
 # Typography
 
-Use system fonts to keep the Apple-like product feel. Letter spacing stays at `0`; the reference relies on clean weight contrast rather than tracking.
+Use system fonts to keep the crisp SaaS feel. Letter spacing stays at `0`; hierarchy comes from size, weight, and color.
 
 ```yaml
 typography:
-  fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter, Segoe UI, sans-serif"
+  fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', Inter, Segoe UI, sans-serif"
 
-  page-title:
-    fontSize: 30px
-    fontWeight: 750
-    lineHeight: 1.1
+  workspace-title:
+    fontSize: 18px
+    fontWeight: 760
+    lineHeight: 1.2
     letterSpacing: 0
-  eyebrow:
-    fontSize: 14px
-    fontWeight: 500
-    lineHeight: 1.35
+  page-title:
+    fontSize: 22px
+    fontWeight: 760
+    lineHeight: 1.18
     letterSpacing: 0
   section-title:
-    fontSize: 19px
-    fontWeight: 720
-    lineHeight: 1.25
-    letterSpacing: 0
-  card-title:
-    fontSize: 15px
+    fontSize: 13px
     fontWeight: 720
     lineHeight: 1.3
     letterSpacing: 0
+  card-label:
+    fontSize: 12px
+    fontWeight: 560
+    lineHeight: 1.35
+    letterSpacing: 0
   metric:
-    fontSize: 28px
-    fontWeight: 800
-    lineHeight: 1.05
+    fontSize: 24px
+    fontWeight: 760
+    lineHeight: 1.08
     letterSpacing: 0
   metric-small:
-    fontSize: 22px
-    fontWeight: 780
-    lineHeight: 1.1
+    fontSize: 18px
+    fontWeight: 740
+    lineHeight: 1.12
     letterSpacing: 0
   body:
-    fontSize: 14px
+    fontSize: 13px
     fontWeight: 500
     lineHeight: 1.45
     letterSpacing: 0
   body-strong:
-    fontSize: 14px
+    fontSize: 13px
     fontWeight: 700
     lineHeight: 1.45
     letterSpacing: 0
   caption:
-    fontSize: 12px
-    fontWeight: 600
+    fontSize: 11px
+    fontWeight: 560
     lineHeight: 1.35
     letterSpacing: 0
   table:
-    fontSize: 12px
-    fontWeight: 600
+    fontSize: 11px
+    fontWeight: 560
     lineHeight: 1.35
     letterSpacing: 0
   button:
-    fontSize: 13px
+    fontSize: 12px
     fontWeight: 700
     lineHeight: 1
     letterSpacing: 0
@@ -202,21 +208,20 @@ typography:
 
 ```yaml
 rounded:
-  xs: 8px
-  sm: 12px
-  md: 16px
-  lg: 22px
-  xl: 28px
-  shell: 34px
+  xs: 6px
+  sm: 8px
+  md: 10px
+  lg: 14px
+  xl: 18px
   pill: 999px
 
 shadows:
-  shell: "none"
-  shell-inner: "none"
-  card: "0 12px 28px rgba(88, 99, 124, 0.07)"
-  card-soft: "0 8px 22px rgba(88, 99, 124, 0.05)"
-  floating-control: "0 10px 22px rgba(28, 30, 38, 0.12)"
-  active-pill: "0 10px 20px rgba(20, 20, 24, 0.20)"
+  card: "0 16px 34px rgba(32, 39, 55, 0.055)"
+  card-soft: "0 10px 24px rgba(32, 39, 55, 0.045)"
+  sidebar: "1px 0 0 rgba(237, 240, 244, 0.95)"
+  topbar: "0 1px 0 rgba(237, 240, 244, 0.95)"
+  tooltip: "0 10px 20px rgba(25, 28, 34, 0.18)"
+  floating-control: "0 8px 18px rgba(25, 28, 34, 0.10)"
 
 spacing:
   xxs: 4px
@@ -226,7 +231,6 @@ spacing:
   lg: 20px
   xl: 24px
   xxl: 32px
-  shell-padding: 0
 ```
 
 # Layout
@@ -234,97 +238,95 @@ spacing:
 ```yaml
 desktopShell:
   canvas:
-    background: "radial-gradient(circle at 50% 0%, #f8fbff 0%, {colors.canvas} 70%)"
+    background: "{colors.canvas}"
     minHeight: "100vh"
-    padding: "56px 72px"
-  appShell:
-    background: "{colors.app-shell}"
-    border: "0"
-    borderRadius: "0"
-    boxShadow: "none"
-    maxWidth: "1180px"
-    margin: "0 auto"
-    padding: "0"
+  app:
     display: "grid"
-    gridTemplateRows: "auto auto 1fr"
-    overflow: "visible"
+    gridTemplateColumns: "188px minmax(0, 1fr)"
+    gridTemplateRows: "48px minmax(0, 1fr)"
+  sidebar:
+    gridRow: "1 / -1"
+    width: "188px"
+    background: "{colors.sidebar}"
+    borderRight: "1px solid {colors.hairline}"
+    padding: "14px 10px"
+  topbar:
+    height: "48px"
+    background: "{colors.topbar}"
+    borderBottom: "1px solid {colors.hairline}"
+    padding: "0 24px"
+    display: "flex"
+    alignItems: "center"
+    justifyContent: "space-between"
+  main:
+    padding: "18px 28px 28px"
+    display: "grid"
+    gap: "16px"
+    overflow: "auto"
 
-topNav:
-  height: "40px"
-  display: "flex"
-  alignItems: "center"
-  justifyContent: "space-between"
-  gap: "10px"
-  navItemHeight: "38px"
-  navItemPadding: "0 16px"
-  activeBackground: "{colors.active}"
-  activeText: "{colors.inverse}"
-  inactiveBackground: "rgba(255,255,255,0.82)"
-  inactiveText: "{colors.body}"
-  radius: "{rounded.pill}"
-
-main:
-  padding: "18px 0 0"
+workspaceHeader:
+  minHeight: "82px"
+  background: "{colors.surface}"
+  borderBottom: "1px solid {colors.hairline}"
   display: "grid"
+  gridTemplateRows: "1fr 36px"
+  padding: "14px 28px 0"
+
+dashboardGrid:
+  display: "grid"
+  gridTemplateColumns: "300px minmax(0, 1fr)"
   gap: "16px"
+  kpiGrid:
+    display: "grid"
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))"
+    gap: "12px"
+  lowerGrid:
+    display: "grid"
+    gridTemplateColumns: "300px minmax(0, 1fr) 300px"
+    gap: "16px"
 ```
 
-The default dashboard grid should use:
+Responsive rules:
 
-- a top pill navigation row with logo, product areas, notification/theme/profile controls
-- a welcome/header row with title, membership or status chip, search, and a circular settings/filter action
-- a two-column upper dashboard row: highlighted module cards on the left and a primary chart on the right
-- a lower row of compact operational modules such as messages/triage, calendar/timeline, and schedule/queue
-- responsive single-column stacking below tablet width while preserving card radius and pill controls
+- Collapse the app to one column below tablet width.
+- Convert the sidebar into a top or drawer navigation on small screens.
+- Stack KPI tiles above the primary analytic card on narrow layouts.
+- Preserve fixed heights for charts, maps, and metric tiles so content does not jump.
 
 # Components
 
-## App Shell
+## Sidebar
 
 ```yaml
-app-shell:
-  background: "{colors.app-shell}"
-  border: "0"
-  borderRadius: "0"
-  boxShadow: "none"
-  overflow: "visible"
-```
+sidebar-profile:
+  display: "grid"
+  gridTemplateColumns: "32px 1fr auto"
+  gap: "8px"
+  minHeight: "40px"
 
-The shell is a layout constraint only. It should not render as a visible white object or create empty white background behind the dashboard.
-
-## Top Navigation
-
-```yaml
-top-nav-logo:
-  size: "34px"
-  background: "{colors.surface}"
+sidebar-search:
+  height: "32px"
+  radius: "{rounded.sm}"
+  background: "{colors.canvas-subtle}"
   border: "1px solid {colors.hairline}"
+  placeholderColor: "{colors.placeholder}"
+
+sidebar-item:
+  height: "34px"
+  padding: "0 10px"
+  radius: "{rounded.xs}"
+  textColor: "{colors.muted}"
+  iconColor: "{colors.muted-soft}"
+
+sidebar-item-active:
+  background: "{colors.surface-selected}"
   textColor: "{colors.ink}"
-  radius: "{rounded.pill}"
-  boxShadow: "{shadows.card-soft}"
-
-top-nav-item:
-  height: "38px"
-  padding: "0 15px"
-  radius: "{rounded.pill}"
-  typography: "{typography.button}"
-  background: "rgba(255, 255, 255, 0.82)"
-  border: "1px solid rgba(232, 237, 245, 0.88)"
-
-top-nav-item-active:
-  background: "{colors.active}"
-  textColor: "{colors.inverse}"
-  boxShadow: "{shadows.active-pill}"
-
-top-nav-icon-button:
-  size: "38px"
-  radius: "{rounded.pill}"
-  background: "rgba(255,255,255,0.84)"
-  activeBackground: "{colors.active}"
+  iconColor: "{colors.ink}"
 ```
 
 Navigation labels for this product:
 
+- Home
 - Dashboard
 - Inventory
 - Triage
@@ -332,68 +334,86 @@ Navigation labels for this product:
 - Analytics
 - Audit Trail
 - Settings
+- Connected Services
+- Password & Security
+- Team
 
-## Header
-
-```yaml
-page-header:
-  eyebrow: "{typography.eyebrow}"
-  title: "{typography.page-title}"
-  subtitle: "{typography.body}"
-  controls:
-    height: "42px"
-    radius: "{rounded.pill}"
-```
-
-Common actions:
-
-- Manage widgets
-- Export CSV
-- Export pack
-- Build response pack
-- Resolve selected
-
-Primary actions can use the black circular control pattern when they represent global filtering or command settings. Text actions use pastel tinted pills unless they are destructive.
-
-## Highlight Cards
+## Top Bar
 
 ```yaml
-highlight-card:
-  background: "{gradients.aqua-card}"
-  border: "1px solid rgba(255,255,255,0.58)"
-  borderRadius: "{rounded.lg}"
-  boxShadow: "{shadows.card}"
-  padding: "18px"
-  minHeight: "218px"
+topbar-search:
+  width: "min(420px, 42vw)"
+  height: "34px"
+  background: "transparent"
+  border: "0"
+  iconColor: "{colors.placeholder}"
+  placeholderColor: "{colors.placeholder}"
+
+topbar-icon-button:
+  size: "34px"
+  radius: "{rounded.pill}"
+  background: "transparent"
+  hoverBackground: "{colors.surface-hover}"
+
+org-switcher:
+  height: "38px"
+  display: "grid"
+  gridTemplateColumns: "32px auto"
+  gap: "8px"
 ```
 
-Use highlight cards for two or three dashboard modules that deserve emotional weight, such as audit readiness, owner coverage, or evidence completion. Each card should contain:
+The top bar should feel functional and almost invisible. Avoid heavy buttons here.
 
-- a leading icon badge
-- concise title
-- 2-3 tiny category labels or chips
-- a bottom progress bar
-- one top-right overflow action
+## Workspace Header
+
+```yaml
+object-badge:
+  size: "36px"
+  radius: "{rounded.pill}"
+  background: "{colors.brand-red}"
+  textColor: "{colors.inverse}"
+
+workspace-meta:
+  display: "flex"
+  alignItems: "center"
+  gap: "18px"
+  typography: "{typography.caption}"
+  textColor: "{colors.muted}"
+
+workspace-tabs:
+  height: "36px"
+  gap: "28px"
+  activeUnderline: "2px solid {colors.ink}"
+```
+
+For this product, the object header can represent a baseline, market, program, or inventory workspace.
+
+Recommended tabs:
+
+- Overview
+- Markets
+- Platforms
+- Evidence
+- Audit
 
 ## KPI Cards
 
 ```yaml
 kpi-card:
-  background: "{colors.surface-glass}"
+  background: "{colors.surface}"
   border: "1px solid {colors.hairline}"
   borderRadius: "{rounded.lg}"
   boxShadow: "{shadows.card-soft}"
-  padding: "16px"
-  minHeight: "116px"
+  padding: "18px"
+  minHeight: "118px"
 ```
 
 KPI cards should contain:
 
-- short label
-- large metric
-- trend chip
-- small comparison text
-- optional top-right icon button
+- faint icon badge at top-left
+- pale label
+- strong black metric
+- optional subtle trend or comparison caption
 
 Recommended KPIs:
 
@@ -406,39 +426,62 @@ Recommended KPIs:
 - Low confidence
 - Parser errors
 
-## Chart Cards
+## Primary Map Or Coverage Card
 
 ```yaml
-chart-card:
-  background: "{colors.surface-glass}"
+coverage-card:
+  background: "{colors.surface}"
   border: "1px solid {colors.hairline}"
   borderRadius: "{rounded.lg}"
   boxShadow: "{shadows.card-soft}"
-  padding: "18px"
+  padding: "18px 20px"
+  minHeight: "250px"
+  display: "grid"
+  gridTemplateColumns: "160px minmax(0, 1fr)"
+  gap: "20px"
+
+map-tooltip:
+  background: "{colors.tooltip}"
+  color: "{colors.inverse}"
+  borderRadius: "{rounded.xs}"
+  boxShadow: "{shadows.tooltip}"
+  padding: "8px 10px"
 ```
 
-Charts should use rounded bars, thin dashed target lines, soft gridlines, and close legends. Prefer:
+Use this module for market coverage, region readiness, channel reach, or traffic baseline.
 
-- grouped bar chart for matched vs unknown traffic
-- donut for audit readiness or exception mix
-- stacked bar for unknown ageing
-- horizontal progress bars for confidence bands
-- compact sparklines for volume anomaly
-- schedule-style lanes for maker-checker queues or evidence deadlines
+Suggested content:
 
-## Data Table
+- Market coverage count
+- Messages classified
+- Reporting period
+- Last refreshed timestamp
+- map with region dots
+- 3-5 dark floating callouts for important markets
+
+## Table Cards
 
 ```yaml
-data-table:
-  background: "{colors.surface-glass}"
+table-card:
+  background: "{colors.surface}"
   border: "1px solid {colors.hairline}"
   borderRadius: "{rounded.lg}"
-  headerBackground: "{colors.table-header}"
-  rowHeight: "46px"
-  separator: "1px solid {colors.hairline}"
+  boxShadow: "{shadows.card-soft}"
+  padding: "0"
+  overflow: "hidden"
+
+table-header:
+  height: "42px"
+  padding: "0 16px"
+  borderBottom: "1px solid {colors.hairline}"
+
+table-row:
+  minHeight: "44px"
+  padding: "0 16px"
+  borderBottom: "1px solid {colors.divider}"
 ```
 
-Tables should be compact, rounded, and friendly. Use chips instead of long status text when possible. In this style, large tables can appear as a glass card with a tinted header, but avoid making the table visually heavier than the dashboard cards.
+Tables should be compact, rounded, and friendly. Use avatars, initials, or small owner dots where accountability matters.
 
 Core inventory columns:
 
@@ -455,12 +498,33 @@ Core inventory columns:
 - Owner status
 - Audit status
 
+## Chart Cards
+
+```yaml
+chart-card:
+  background: "{colors.surface}"
+  border: "1px solid {colors.hairline}"
+  borderRadius: "{rounded.lg}"
+  boxShadow: "{shadows.card-soft}"
+  padding: "16px"
+  minHeight: "190px"
+```
+
+Prefer:
+
+- horizontal split bars for matched vs unknown traffic
+- centered diverging bars for owner and checker status
+- radar chart only for compact comparison summaries
+- donut chart for audit readiness or exception mix
+- stacked bar for unknown ageing
+- sparklines for volume anomaly
+
 ## Status Chips
 
 ```yaml
 chip:
-  height: "24px"
-  padding: "0 10px"
+  height: "22px"
+  padding: "0 8px"
   radius: "{rounded.pill}"
   typography: "{typography.caption}"
 
@@ -479,16 +543,11 @@ chip-info:
 chip-neutral:
   background: "{colors.neutral-chip}"
   textColor: "{colors.body}"
-chip-accent:
-  background: "{colors.accent-soft}"
-  textColor: "{colors.accent-active}"
-chip-periwinkle:
-  background: "{colors.periwinkle-soft}"
-  textColor: "{colors.periwinkle-active}"
 ```
 
 Common chip labels:
 
+- Active
 - Confirmed
 - Candidate
 - Retired
@@ -505,16 +564,17 @@ Common chip labels:
 
 ## Dashboard
 
-The dashboard is the first screen. It should show the live traffic baseline and audit readiness.
+The dashboard is the first screen. It should show the live traffic baseline and audit readiness in the same calm analytics structure as the reference screen.
 
 Required modules:
 
-- KPI strip: matched traffic, unknown traffic, drift exceptions, owner confirmed
-- Coverage flow: monthly matched vs unknown volume
-- Audit readiness donut
-- Recent triage items
-- Confidence bands
-- Top sender IDs or top templates
+- object header for the current inventory baseline
+- tabs for overview, markets, platforms, evidence, and audit
+- KPI grid for matched traffic, unknown traffic, drift exceptions, owner confirmed
+- large market coverage card with map or region summary
+- owner/accountability table
+- confidence or maker-checker split chart
+- audit readiness or evidence interest radar/donut equivalent
 
 ## Inventory
 
@@ -538,7 +598,7 @@ Required modules:
 
 - exception KPI strip
 - unknown ageing chart
-- exception mix donut
+- exception mix chart
 - grouped queue for retired but live, new sender identity, new template, unknown traffic, volume anomaly
 - selected exception detail
 - resolve selected action
@@ -557,16 +617,17 @@ Required modules:
 
 # Data Visualization Rules
 
-- Use aqua and periwinkle tones for primary series.
-- Use success for matched/confirmed/completed.
-- Use warning for unknown/pending/ageing.
+- Use blue as the primary quantitative series.
+- Use teal or green for confirmed, reached, completed, or active states.
+- Use warning for unknown, pending, or ageing states.
 - Use danger only for high-risk drift or SLA breach.
-- Use black sparingly for selected chart markers, threshold callouts, or the current timeline point.
+- Use charcoal callouts for selected map or chart points.
 - Keep legends small and close to charts.
 - Show real units: percentage, monthly volume, item count, ageing days.
 - Annotate the most important insight, not every data point.
-- Prefer 5-7 visible bars or rows in compact modules.
-- Use rounded chart geometry wherever feasible: bars, progress tracks, timeline lanes, and selected-state markers.
+- Prefer 4-7 visible bars or rows in compact modules.
+- Use pale gridlines and rounded bar geometry wherever feasible.
+- Do not use gradient-heavy chart backgrounds.
 
 # Content Guidelines
 
@@ -580,7 +641,7 @@ Use concise operational language:
 - "Owner confirmed"
 - "Audit readiness"
 - "Recent triage items"
-- "Coverage flow"
+- "Coverage by market"
 - "Build response pack"
 
 Avoid vague marketing language:
@@ -592,21 +653,21 @@ Avoid vague marketing language:
 
 # Interaction Guidelines
 
-- Filters are pill controls.
-- Primary global control can be a black circular icon button.
-- Search is a soft pill field in the header.
+- Sidebar rows use soft gray hover and selected states.
+- Search appears in the sidebar and top bar where useful.
+- Header tabs use a thin underline, not filled pills.
 - KPI cards can drill into filtered views.
 - Table rows open a right-side inspector.
 - Charts should support hover tooltips in prototypes when feasible.
 - Export actions should show CSV and regulator response pack choices.
 - Triage actions should include assign owner, mark reviewed, link evidence, and submit for checker.
-- Hover and active states should feel physical: slight lift, gentle scale, and no harsh color jumps.
+- Hover states should be restrained: subtle background shift, slight lift on cards, and no harsh color jumps.
 
 # Accessibility
 
 - Text contrast must pass WCAG AA on neutral and tinted surfaces.
 - Do not rely on color alone for status; combine color with label text.
-- Keep table text at 12px minimum and body text at 14px minimum.
-- Interactive targets should be at least 36px high on desktop.
-- Preserve focus states for pills, buttons, table rows, and navigation items.
-- Pastel gradient cards need solid text overlays or scrims if contrast falls below AA.
+- Keep table text at 11px minimum and body text at 13px minimum on desktop.
+- Interactive targets should be at least 34px high on desktop and 44px on touch layouts.
+- Preserve focus states for navigation items, tabs, buttons, table rows, and chart controls.
+- Map and chart tooltips need text equivalents or persistent summaries for keyboard and screen reader access.

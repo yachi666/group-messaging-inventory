@@ -22,6 +22,7 @@ import type {
   ReportTimeRange,
   SignalSeverity,
 } from '../../domain/inventory';
+import { useAiChat } from '../ai/AiChatProvider';
 import { useI18n } from '../../i18n/LanguageProvider';
 import type { MessageKey } from '../../i18n/messages';
 import type { AppView } from '../../layout/AppShell';
@@ -41,13 +42,6 @@ type TemplateRegistryDraft = Pick<
 >;
 
 type QueryClassificationFilter = Classification | 'All';
-
-type ChatMessage = {
-  id: string;
-  meta: string;
-  sender: 'assistant' | 'user';
-  text: string;
-};
 
 const inventoryFilters = [
   { id: 'all', labelKey: 'filter.all' },
@@ -895,11 +889,7 @@ function AnalyticsPage() {
   const [ownerFilter, setOwnerFilter] = useState('All');
   const [classificationFilter, setClassificationFilter] =
     useState<QueryClassificationFilter>('All');
-  const [chatPrompt, setChatPrompt] = useState('');
-  const [chatMessages, setChatMessages] = useState<ReadonlyArray<ChatMessage>>([]);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [isReportGenerated, setIsReportGenerated] = useState(false);
-  const [isReportExportReady, setIsReportExportReady] = useState(false);
+  const { isReportExportReady, isReportGenerated, runQuery, setIsReportExportReady } = useAiChat();
   const highRiskSignals = analyticsSignals.filter((signal) => signal.severity === 'high').length;
   const ownerGaps = candidateUseCases.filter((useCase) => useCase.ownerStatus !== 'confirmed').length;
   const evidenceGaps = candidateUseCases.filter(
@@ -931,63 +921,6 @@ function AnalyticsPage() {
     }),
   );
   const maxClassificationVolume = Math.max(1, ...volumeByClassification.map((item) => item.volume));
-  const visibleChatMessages = [
-    {
-      id: 'assistant-welcome',
-      meta: t('analytics.chatBotMeta'),
-      sender: 'assistant',
-      text: t('analytics.botWelcome'),
-    },
-    ...chatMessages,
-  ] satisfies ReadonlyArray<ChatMessage>;
-
-  function runQuery() {
-    setIsReportGenerated(false);
-    setIsReportExportReady(false);
-  }
-
-  function sendChatMessage() {
-    const prompt = chatPrompt.trim();
-
-    if (!prompt) {
-      return;
-    }
-
-    setChatMessages((currentMessages) => [
-      ...currentMessages,
-      {
-        id: `user-${currentMessages.length}`,
-        meta: t('analytics.chatUserMeta'),
-        sender: 'user',
-        text: prompt,
-      },
-      {
-        id: `assistant-report-${currentMessages.length}`,
-        meta: t('analytics.chatBotMeta'),
-        sender: 'assistant',
-        text: t('analytics.chatGeneratedReply'),
-      },
-    ]);
-    setChatPrompt('');
-    setIsChatOpen(true);
-    setIsReportGenerated(true);
-    setIsReportExportReady(false);
-  }
-
-  function addOwnerRiskMessage() {
-    setChatMessages((currentMessages) => [
-      ...currentMessages,
-      {
-        id: `assistant-owner-risk-${currentMessages.length}`,
-        meta: t('analytics.chatBotMeta'),
-        sender: 'assistant',
-        text: t('analytics.chatOwnerRiskReply'),
-      },
-    ]);
-    setIsReportGenerated(true);
-    setIsReportExportReady(false);
-  }
-
   return (
     <>
       <PageHeader
@@ -1237,97 +1170,6 @@ function AnalyticsPage() {
         </aside>
       </section>
 
-      <div className="floating-chat-widget" data-testid="analytics-chat-report">
-        {isChatOpen ? (
-          <section
-            aria-label={t('analytics.chatReport')}
-            className="floating-chat-panel"
-            data-testid="floating-chat-panel"
-          >
-            <div className="floating-chat-header">
-              <div>
-                <h2>{t('analytics.chatReport')}</h2>
-                <p>{t('analytics.chatReportKicker')}</p>
-              </div>
-              <button
-                aria-label={t('analytics.closeChat')}
-                className="chat-close-button"
-                data-testid="close-chat-widget"
-                onClick={() => setIsChatOpen(false)}
-                type="button"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="chat-thread" data-testid="chat-thread">
-              {visibleChatMessages.map((message) => (
-                <article
-                  className={`chat-message chat-message-${message.sender}`}
-                  key={message.id}
-                >
-                  <div className="chat-avatar" aria-hidden="true">
-                    {message.sender === 'assistant' ? 'AI' : 'ME'}
-                  </div>
-                  <div className="chat-bubble">
-                    <span>{message.meta}</span>
-                    <p>{message.text}</p>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            <div className="chat-action-card" data-testid="chat-action-card">
-              <div>
-                <strong>{t('analytics.chatActionTitle')}</strong>
-                <span>{t('analytics.chatActionBody')}</span>
-              </div>
-              <button
-                className="button"
-                data-testid="quick-action-owner-risk"
-                onClick={addOwnerRiskMessage}
-                type="button"
-              >
-                {t('analytics.ownerRiskAction')}
-              </button>
-            </div>
-
-            <div className="chat-composer">
-              <label className="form-field">
-                <span>{t('analytics.naturalLanguageQuery')}</span>
-                <textarea
-                  data-testid="chat-query-input"
-                  onChange={(event) => setChatPrompt(event.target.value)}
-                  placeholder={t('analytics.chatPlaceholder')}
-                  rows={3}
-                  value={chatPrompt}
-                />
-              </label>
-              <button
-                className="button button-primary"
-                data-testid="send-chat-message"
-                onClick={sendChatMessage}
-                type="button"
-              >
-                {t('analytics.sendMessage')}
-              </button>
-            </div>
-          </section>
-        ) : null}
-
-        <button
-          aria-expanded={isChatOpen}
-          aria-label={t('analytics.openChat')}
-          className="chat-launcher"
-          data-testid="chat-launcher"
-          onClick={() => setIsChatOpen((currentOpen) => !currentOpen)}
-          type="button"
-        >
-          <span className="chat-launcher-mark">AI</span>
-          <span className="chat-launcher-copy">{t('analytics.chatLauncherLabel')}</span>
-          {!isReportGenerated ? <span className="chat-launcher-dot" aria-hidden="true" /> : null}
-        </button>
-      </div>
     </>
   );
 }

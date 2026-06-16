@@ -326,24 +326,62 @@ export function DashboardPage() {
 
   return (
     <>
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">{t('dashboard.eyebrow')}</p>
-          <h1 className="page-title">{t('dashboard.title')}</h1>
-          <p className="page-subtitle">{t('dashboard.subtitle')}</p>
+      <header className="workspace-header">
+        <div className="workspace-header-main">
+          <button className="back-button" type="button" aria-label="Back">
+            <span aria-hidden="true" />
+          </button>
+          <span className="object-badge" aria-hidden="true">
+            MI
+          </span>
+          <div className="workspace-copy">
+            <h1 className="page-title">{t('dashboard.title')}</h1>
+            <p className="page-subtitle">{t('dashboard.subtitle')}</p>
+          </div>
         </div>
 
-        <div className="header-actions" aria-label={t('nav.dashboard')}>
-          <button className="button" onClick={handleExportCsv} type="button">
-            {t('action.exportCsv')}
-          </button>
-          <button className="button button-primary" onClick={() => setIsPackStaged(true)} type="button">
-            {t('action.buildResponsePack')}
+        <div className="workspace-meta" aria-label={t('nav.dashboard')}>
+          <span>
+            {t('dashboard.statusLabel')}
+            <StatusChip tone="success">{t('dashboard.statusActive')}</StatusChip>
+          </span>
+          <span>
+            {t('dashboard.createdOn')} <strong>{t('dashboard.createdDate')}</strong>
+          </span>
+          <button className="icon-button workspace-menu" type="button" aria-label="More options">
+            ...
           </button>
         </div>
+
+        <nav className="workspace-tabs" aria-label={t('nav.dashboard')}>
+          <button className="workspace-tab workspace-tab-active" type="button">
+            {t('tab.overview')}
+          </button>
+          <button className="workspace-tab" type="button">
+            {t('tab.markets')}
+          </button>
+          <button className="workspace-tab" type="button">
+            {t('tab.platforms')}
+          </button>
+          <button className="workspace-tab" type="button">
+            {t('tab.evidence')}
+          </button>
+          <button className="workspace-tab" type="button">
+            {t('tab.audit')}
+          </button>
+        </nav>
       </header>
 
-      <section className="filters" aria-label={t('nav.dashboard')}>
+      <section className="header-actions" aria-label={t('nav.dashboard')}>
+        <button className="button" onClick={handleExportCsv} type="button">
+          {t('action.exportCsv')}
+        </button>
+        <button className="button button-primary" onClick={() => setIsPackStaged(true)} type="button">
+          {t('action.buildResponsePack')}
+        </button>
+      </section>
+
+      <section className="filters dashboard-filters" aria-label={t('nav.dashboard')}>
         <button
           className={`filter-pill ${
             platformFilter === 'all' && channelFilter === 'all' && marketFilter === 'all'
@@ -429,92 +467,6 @@ export function DashboardPage() {
         </section>
       )}
 
-      <section className="highlight-grid" aria-label={t('nav.dashboard')}>
-        <article className="highlight-card highlight-card-aqua">
-          <div className="highlight-card-top">
-            <span className="highlight-icon" aria-hidden="true">
-              84
-            </span>
-            <button
-              className="icon-button"
-              type="button"
-              aria-label={`${t('section.coverageFlow')} options`}
-            >
-              ...
-            </button>
-          </div>
-          <div>
-            <h2 className="highlight-title">{t('section.coverageFlow')}</h2>
-            <p className="highlight-copy">{t('section.coverageFlowKicker')}</p>
-          </div>
-          <div className="highlight-chip-row">
-            <StatusChip tone="success">{t('chart.matched')}</StatusChip>
-            <StatusChip tone="warning">{t('chart.unknown')}</StatusChip>
-          </div>
-          <div className="highlight-progress" aria-hidden="true">
-            <span style={{ width: formatPercentage(trafficMatchedPercentage) }} />
-          </div>
-        </article>
-
-        <article className="highlight-card highlight-card-blue">
-          <div className="highlight-card-top">
-            <span className="highlight-icon" aria-hidden="true">
-              67
-            </span>
-            <button
-              className="icon-button"
-              onClick={() => setIsPackStaged(true)}
-              type="button"
-              aria-label={`${t('section.auditReadiness')} options`}
-            >
-              ...
-            </button>
-          </div>
-          <div>
-            <h2 className="highlight-title">{t('section.auditReadiness')}</h2>
-            <p className="highlight-copy">{t('section.auditReadinessKicker')}</p>
-          </div>
-          <div className="highlight-chip-row">
-            <StatusChip tone="success">{t('legend.approved')}</StatusChip>
-            <StatusChip tone="danger">{t('legend.needsEvidence')}</StatusChip>
-          </div>
-          <div className="highlight-progress" aria-hidden="true">
-            <span style={{ width: '67%' }} />
-          </div>
-        </article>
-
-        <article className="highlight-card highlight-card-lavender">
-          <div className="highlight-card-top">
-            <span className="highlight-icon" aria-hidden="true">
-              {ownerConfirmedPercentage}
-            </span>
-            <button
-              className="icon-button"
-              onClick={resetPilotScope}
-              type="button"
-              aria-label={`${t('kpi.ownerConfirmed')} options`}
-            >
-              ...
-            </button>
-          </div>
-          <div>
-            <h2 className="highlight-title">{t('kpi.ownerConfirmed')}</h2>
-            <p className="highlight-copy">{t('kpi.ownerConfirmedNote')}</p>
-          </div>
-          <div className="highlight-chip-row">
-            <StatusChip tone="accent">
-              {filteredUseCases.length} {t('dashboard.useCasesSelected')}
-            </StatusChip>
-            <StatusChip tone={ownerGapCount === 0 ? 'success' : 'warning'}>
-              {ownerGapCount} {t('responsePack.ownerGaps')}
-            </StatusChip>
-          </div>
-          <div className="highlight-progress" aria-hidden="true">
-            <span style={{ width: formatPercentage(ownerConfirmedPercentage) }} />
-          </div>
-        </article>
-      </section>
-
       <section className="kpi-grid" aria-label={t('nav.analytics')}>
         <MetricCard
           label={t('kpi.trafficMatched')}
@@ -554,8 +506,8 @@ export function DashboardPage() {
         />
       </section>
 
-      <section className="dashboard-grid">
-        <article className="card" aria-labelledby="coverage-flow-title">
+      <section className="dashboard-grid dashboard-grid-primary">
+        <article className="card coverage-card" aria-labelledby="coverage-flow-title">
           <div className="card-header">
             <div>
               <h2 className="card-title" id="coverage-flow-title">
@@ -575,55 +527,73 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div className="coverage-chart" aria-label={t('section.coverageFlow')}>
-            <div className="coverage-axis" aria-hidden="true">
-              {coverageAxisValues.map((value) => (
-                <span key={value}>{formatVolume(value, locale)}</span>
-              ))}
+          <div className="coverage-card-body">
+            <div className="coverage-summary">
+              <span>{t('dashboard.reachMarkets')}</span>
+              <strong>{t('dashboard.reachMarketsValue')}</strong>
+              <span>{t('dashboard.userReached')}</span>
+              <strong>{formatVolume(filteredUseCaseVolume, locale)}</strong>
+              <span>{t('dashboard.period')}</span>
+              <strong>{t('dashboard.periodValue')}</strong>
+              <small>{t('dashboard.lastUpdated')}</small>
+              <button className="refresh-link" type="button">
+                {t('dashboard.refresh')}
+              </button>
             </div>
 
-            <div className="coverage-plot">
-              <span className="coverage-grid-line coverage-grid-line-top" aria-hidden="true" />
-              <span className="coverage-grid-line coverage-grid-line-middle" aria-hidden="true" />
-              <span className="coverage-grid-line coverage-grid-line-bottom" aria-hidden="true" />
+            <div className="coverage-chart" aria-label={t('section.coverageFlow')}>
+              <div className="coverage-axis" aria-hidden="true">
+                {coverageAxisValues.map((value) => (
+                  <span key={value}>{formatVolume(value, locale)}</span>
+                ))}
+              </div>
 
-              {visibleCoverageFlow.map((point) => {
-                const total = point.matched + point.unknown;
-                const stackHeight = (total / visibleMaxCoverageVolume) * 100;
-                const matchedHeight = total > 0 ? (point.matched / total) * 100 : 0;
-                const unknownHeight = total > 0 ? (point.unknown / total) * 100 : 0;
-                const unknownPercentage = total > 0 ? Math.round((point.unknown / total) * 100) : 0;
-                const monthLabel = t(monthLabelKeys[point.month]);
-                const matchedVolume = formatVolume(point.matched, locale);
-                const unknownVolume = formatVolume(point.unknown, locale);
-                const totalVolume = formatVolume(total, locale);
+              <div className="coverage-plot">
+                <span className="coverage-grid-line coverage-grid-line-top" aria-hidden="true" />
+                <span className="coverage-grid-line coverage-grid-line-middle" aria-hidden="true" />
+                <span className="coverage-grid-line coverage-grid-line-bottom" aria-hidden="true" />
 
-                return (
-                  <div className="coverage-bar-group" key={point.month}>
-                    <span className="coverage-total">{totalVolume}</span>
-                    <div
-                      aria-label={`${monthLabel}: ${matchedVolume} ${t(
-                        'chart.matched',
-                      )}, ${unknownVolume} ${t('chart.unknown')}`}
-                      className="coverage-stack-frame"
-                      title={`${monthLabel}: ${totalVolume} ${t('chart.totalVolume')}`}
-                    >
-                      <span className="coverage-stack" style={{ height: `${stackHeight}%` }}>
-                        <span
-                          className="coverage-segment coverage-segment-unknown"
-                          style={{ height: `${unknownHeight}%` }}
-                        />
-                        <span
-                          className="coverage-segment coverage-segment-matched"
-                          style={{ height: `${matchedHeight}%` }}
-                        />
+                {visibleCoverageFlow.map((point) => {
+                  const total = point.matched + point.unknown;
+                  const stackHeight = (total / visibleMaxCoverageVolume) * 100;
+                  const matchedHeight = total > 0 ? (point.matched / total) * 100 : 0;
+                  const unknownHeight = total > 0 ? (point.unknown / total) * 100 : 0;
+                  const unknownPercentage =
+                    total > 0 ? Math.round((point.unknown / total) * 100) : 0;
+                  const monthLabel = t(monthLabelKeys[point.month]);
+                  const matchedVolume = formatVolume(point.matched, locale);
+                  const unknownVolume = formatVolume(point.unknown, locale);
+                  const totalVolume = formatVolume(total, locale);
+
+                  return (
+                    <div className="coverage-bar-group" key={point.month}>
+                      <span className="coverage-total">{totalVolume}</span>
+                      <div
+                        aria-label={`${monthLabel}: ${matchedVolume} ${t(
+                          'chart.matched',
+                        )}, ${unknownVolume} ${t('chart.unknown')}`}
+                        className="coverage-stack-frame"
+                        title={`${monthLabel}: ${totalVolume} ${t('chart.totalVolume')}`}
+                      >
+                        <span className="coverage-stack" style={{ height: `${stackHeight}%` }}>
+                          <span
+                            className="coverage-segment coverage-segment-unknown"
+                            style={{ height: `${unknownHeight}%` }}
+                          />
+                          <span
+                            className="coverage-segment coverage-segment-matched"
+                            style={{ height: `${matchedHeight}%` }}
+                          />
+                        </span>
+                      </div>
+                      <span className="coverage-label">{monthLabel}</span>
+                      <span className="coverage-unknown">
+                        {formatPercentage(unknownPercentage)}
                       </span>
                     </div>
-                    <span className="coverage-label">{monthLabel}</span>
-                    <span className="coverage-unknown">{formatPercentage(unknownPercentage)}</span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
         </article>
