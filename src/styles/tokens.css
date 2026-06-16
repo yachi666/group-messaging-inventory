@@ -4,42 +4,65 @@
     -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', Inter,
     'Segoe UI', sans-serif;
 
-  --color-canvas: #f3f0ff;
-  --color-canvas-deep: #4b4864;
+  --color-canvas: #eef1f7;
+  --color-canvas-wash: #f7f9fd;
+  --color-canvas-cool-shadow: #c9d1df;
+  --color-canvas-deep: #141418;
   --color-app-shell: transparent;
-  --color-sidebar: #f6f4fb;
+  --color-app-shell-solid: transparent;
+  --color-shell-border: transparent;
+  --color-sidebar: rgba(255, 255, 255, 0.74);
   --color-surface: #ffffff;
-  --color-surface-soft: #fbfaff;
-  --color-surface-tint: #f2efff;
-  --color-table-header: #f7f4ff;
-  --color-hairline: #e8e5ef;
-  --color-hairline-strong: #d9d5e5;
+  --color-surface-glass: rgba(255, 255, 255, 0.78);
+  --color-surface-soft: #f8faff;
+  --color-surface-tint: #f1f5ff;
+  --color-surface-raised: #ffffff;
+  --color-table-header: #f5f8ff;
+  --color-hairline: #e8edf5;
+  --color-hairline-strong: #d9e1ee;
+  --color-inner-highlight: rgba(255, 255, 255, 0.86);
 
-  --color-ink: #17151f;
-  --color-body: #3d3948;
-  --color-muted: #777286;
-  --color-muted-soft: #a29dad;
+  --color-ink: #141418;
+  --color-body: #373a44;
+  --color-muted: #777e8b;
+  --color-muted-soft: #a4abba;
   --color-inverse: #ffffff;
 
-  --color-accent: #7b61ff;
-  --color-accent-active: #654ee8;
-  --color-accent-soft: #ece7ff;
-  --color-accent-subtle: #f6f2ff;
-  --color-focus: #3858d6;
+  --color-active: #141418;
+  --color-active-soft: #23242a;
+  --color-accent: #76d8dc;
+  --color-accent-active: #26aab1;
+  --color-accent-soft: #dcfbfb;
+  --color-accent-subtle: #f0fdfd;
+  --color-periwinkle: #9fb5ff;
+  --color-periwinkle-active: #6f86e8;
+  --color-periwinkle-soft: #eef2ff;
+  --color-lavender: #c8d0ff;
+  --color-lavender-soft: #f2f4ff;
+  --color-focus: #6f86e8;
 
   --color-success: #1f9d62;
   --color-success-soft: #e8f7ef;
-  --color-warning: #d98c17;
-  --color-warning-soft: #fff3dd;
+  --color-warning: #c67a11;
+  --color-warning-soft: #fff3d6;
   --color-danger: #d84b4b;
   --color-danger-soft: #fdecec;
   --color-info: #3578e5;
   --color-info-soft: #e9f1ff;
-  --color-neutral-chip: #f1eff6;
+  --color-neutral-chip: #f2f5fa;
 
-  --shadow-shell: 0 32px 80px rgba(61, 54, 96, 0.22);
-  --shadow-card: 0 10px 30px rgba(47, 43, 67, 0.06);
-  --shadow-control: 0 8px 18px rgba(47, 43, 67, 0.08);
+  --gradient-aqua-card: linear-gradient(135deg, #a7eef0 0%, #dffbfb 52%, #c8f3f4 100%);
+  --gradient-blue-card: linear-gradient(135deg, #dce8ff 0%, #b8c9ff 48%, #e6edff 100%);
+  --gradient-lavender-card: linear-gradient(135deg, #edf0ff 0%, #c9d4ff 52%, #f5f7ff 100%);
+  --gradient-shell-sheen: none;
+  --gradient-chart-fill: linear-gradient(180deg, rgba(118, 216, 220, 0.16) 0%, rgba(159, 181, 255, 0.08) 100%);
+
+  --shadow-shell: none;
+  --shadow-shell-inner: none;
+  --shadow-card: 0 12px 28px rgba(88, 99, 124, 0.07);
+  --shadow-card-soft: 0 8px 22px rgba(88, 99, 124, 0.05);
+  --shadow-control: 0 10px 22px rgba(28, 30, 38, 0.12);
+  --shadow-active-pill: 0 10px 20px rgba(20, 20, 24, 0.2);
 
   --radius-xs: 8px;
   --radius-sm: 12px;

@@ -35,7 +35,7 @@ export function AppShell({ activeView, children, isPending, onViewChange }: AppS
   return (
     <div className="app-canvas">
       <div className="app-shell">
-        <aside className="sidebar" aria-label={t('nav.dashboard')}>
+        <header className="top-nav" aria-label={t('nav.dashboard')}>
           <div className="brand-lockup">
             <div className="brand-mark" aria-hidden="true">
               GMI
@@ -46,7 +46,7 @@ export function AppShell({ activeView, children, isPending, onViewChange }: AppS
             </div>
           </div>
 
-          <nav className="sidebar-nav">
+          <nav className="nav-list" aria-label={t('nav.dashboard')}>
             {navItems.map((item) => (
               <button
                 aria-current={item.id === activeView ? 'page' : undefined}
@@ -61,23 +61,25 @@ export function AppShell({ activeView, children, isPending, onViewChange }: AppS
             ))}
           </nav>
 
-          <div className="sidebar-panel">
-            <strong>{t('app.sidebar.pilotTitle')}</strong>
-            <span>{t('app.sidebar.pilotText')}</span>
-          </div>
+          <div className="top-nav-actions">
+            <div className="pilot-chip">
+              <strong>{t('app.sidebar.pilotTitle')}</strong>
+              <span>{t('app.sidebar.pilotText')}</span>
+            </div>
 
-          <label className="language-control">
-            <span>{t('app.languageLabel')}</span>
-            <select
-              aria-label={t('app.languageLabel')}
-              onChange={(event) => setLocale(event.target.value as Locale)}
-              value={locale}
-            >
-              <option value="en">{t('app.language.en')}</option>
-              <option value="zh-CN">{t('app.language.zh')}</option>
-            </select>
-          </label>
-        </aside>
+            <label className="language-control">
+              <span>{t('app.languageLabel')}</span>
+              <select
+                aria-label={t('app.languageLabel')}
+                onChange={(event) => setLocale(event.target.value as Locale)}
+                value={locale}
+              >
+                <option value="en">{t('app.language.en')}</option>
+                <option value="zh-CN">{t('app.language.zh')}</option>
+              </select>
+            </label>
+          </div>
+        </header>
 
         <main aria-busy={isPending} className="main">
           {children}
