@@ -15,7 +15,7 @@ page.on('console', (message) => {
 });
 
 await page.goto(baseUrl, { waitUntil: 'networkidle' });
-await page.getByRole('heading', { name: 'Messaging inventory baseline' }).waitFor();
+await page.getByRole('heading', { name: 'Messaging inventory' }).waitFor();
 await page.getByTestId('dashboard-platform-filter').selectOption('SFMC');
 await page.getByTestId('dashboard-inventory-table').getByText('Card fraud alert').waitFor();
 await page.getByTestId('dashboard-inventory-table').getByText('Payment due reminder').waitFor({
@@ -25,7 +25,7 @@ await page.getByRole('button', { name: 'Build response pack' }).click();
 await page.getByTestId('response-pack-status').getByText('Response pack staged').waitFor();
 
 await page.getByLabel('Language').selectOption('zh-CN');
-await page.getByRole('heading', { name: '消息清单基线' }).waitFor();
+await page.getByRole('heading', { name: '消息清单' }).waitFor();
 
 await page.getByTestId('nav-inventory').click();
 await page.getByRole('heading', { name: '确认用例与负责人' }).waitFor();

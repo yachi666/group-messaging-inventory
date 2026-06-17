@@ -14,7 +14,7 @@ export const enMessages = {
   'nav.auditTrail': 'Audit Trail',
   'nav.settings': 'Settings',
   'dashboard.eyebrow': 'MVP pilot dashboard',
-  'dashboard.title': 'Messaging inventory baseline',
+  'dashboard.title': 'Messaging inventory',
   'dashboard.subtitle':
     'Pilot markets live traffic, use case matching, owner confirmation, and evidence readiness for MDP, SFMC, ICCM, and IRIS.',
   'dashboard.statusLabel': 'Status',
@@ -357,7 +357,7 @@ export const zhMessages: Record<MessageKey, string> = {
   'nav.auditTrail': '审计轨迹',
   'nav.settings': '设置',
   'dashboard.eyebrow': 'MVP 试点仪表盘',
-  'dashboard.title': '消息清单基线',
+  'dashboard.title': '消息清单',
   'dashboard.subtitle':
     '展示试点市场的实时流量、用例匹配、负责人确认，以及 MDP、SFMC、ICCM、IRIS 的证据就绪情况。',
   'dashboard.statusLabel': '状态',

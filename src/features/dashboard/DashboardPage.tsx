@@ -340,17 +340,38 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="workspace-meta" aria-label={t('nav.dashboard')}>
-          <span>
-            {t('dashboard.statusLabel')}
-            <StatusChip tone="success">{t('dashboard.statusActive')}</StatusChip>
-          </span>
-          <span>
-            {t('dashboard.createdOn')} <strong>{t('dashboard.createdDate')}</strong>
-          </span>
-          <button className="icon-button workspace-menu" type="button" aria-label="More options">
-            ...
-          </button>
+        <div className="dashboard-header-tools" aria-label={t('nav.dashboard')}>
+          <div className="workspace-meta">
+            <span>
+              {t('dashboard.statusLabel')}
+              <StatusChip tone="success">{t('dashboard.statusActive')}</StatusChip>
+            </span>
+            <span>
+              <strong>{filteredUseCases.length}</strong> {t('dashboard.useCasesSelected')}
+            </span>
+            <span>
+              <strong>{ownerGapCount}</strong> {t('responsePack.ownerGaps')}
+            </span>
+            <span>
+              <strong>{evidenceGapCount}</strong> {t('responsePack.evidenceGaps')}
+            </span>
+          </div>
+
+          <div className="dashboard-primary-actions">
+            <button className="button" onClick={handleExportCsv} type="button">
+              {t('action.exportCsv')}
+            </button>
+            <button
+              className="button button-primary"
+              onClick={() => setIsPackStaged(true)}
+              type="button"
+            >
+              {t('action.buildResponsePack')}
+            </button>
+            <button className="icon-button workspace-menu" type="button" aria-label="More options">
+              ...
+            </button>
+          </div>
         </div>
 
         <nav className="workspace-tabs" aria-label={t('nav.dashboard')}>
@@ -371,15 +392,6 @@ export function DashboardPage() {
           </button>
         </nav>
       </header>
-
-      <section className="header-actions" aria-label={t('nav.dashboard')}>
-        <button className="button" onClick={handleExportCsv} type="button">
-          {t('action.exportCsv')}
-        </button>
-        <button className="button button-primary" onClick={() => setIsPackStaged(true)} type="button">
-          {t('action.buildResponsePack')}
-        </button>
-      </section>
 
       <section className="filters dashboard-filters" aria-label={t('nav.dashboard')}>
         <button

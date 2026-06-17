@@ -505,8 +505,8 @@ button {
 .workspace-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-rows: minmax(58px, auto) 36px;
-  gap: 0 18px;
+  grid-template-rows: minmax(64px, auto) 36px;
+  gap: 0 22px;
   align-items: center;
   margin: -18px -28px 0;
   padding: 14px 28px 0;
@@ -558,7 +558,8 @@ button {
 
 .workspace-meta {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px 14px;
   align-items: center;
   justify-content: flex-end;
   color: var(--color-muted);
@@ -583,13 +584,28 @@ button {
   border: 0;
 }
 
+.dashboard-header-tools {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+  min-width: min(100%, 560px);
+}
+
+.dashboard-primary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .workspace-tabs {
   display: flex;
   grid-column: 1 / -1;
   gap: 30px;
   align-self: end;
   height: 36px;
-  padding-left: 54px;
+  padding-left: 76px;
 }
 
 .workspace-tab {
@@ -2398,6 +2414,14 @@ button {
     justify-content: flex-start;
   }
 
+  .dashboard-header-tools {
+    justify-items: start;
+  }
+
+  .dashboard-primary-actions {
+    justify-content: flex-start;
+  }
+
   .status-banner {
     align-items: flex-start;
   }
@@ -2458,10 +2482,28 @@ button {
     flex-wrap: wrap;
   }
 
+  .dashboard-header-tools {
+    width: 100%;
+  }
+
+  .dashboard-primary-actions,
+  .dashboard-primary-actions .button {
+    width: 100%;
+  }
+
+  .dashboard-primary-actions {
+    display: grid;
+    grid-template-columns: minmax(96px, 0.9fr) minmax(154px, 1.2fr) 28px;
+  }
+
+  .dashboard-primary-actions .workspace-menu {
+    justify-self: end;
+  }
+
   .workspace-tabs {
     gap: 24px;
     overflow-x: auto;
-    padding-left: 46px;
+    padding-left: 0;
   }
 
   .page-title {
