@@ -128,7 +128,7 @@ await page.getByTestId('csv-result-preview').getByText('templates_june_volume.cs
 await page.getByTestId('csv-result-preview').getByText('Ready for AI analysis').waitFor();
 
 await page.waitForTimeout(250);
-await page.screenshot({ fullPage: true, path: screenshotPath });
+await page.screenshot({ fullPage: true, path: '/tmp/gmi-product-final.png' });
 await browser.close();
 
 if (errors.length > 0) {
