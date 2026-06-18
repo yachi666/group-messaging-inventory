@@ -1254,9 +1254,13 @@ button {
 
 .analysis-workbench {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.92fr);
-  gap: var(--space-md);
-  align-items: start;
+grid-template-columns: minmax(620px, 1.55fr) minmax(340px, 0.85fr);
+min-height: 620px;
+overflow: hidden;
+background: var(--color-surface);
+border: 1px solid var(--color-hairline);
+border-radius: var(--radius-lg);
+box-shadow: var(--shadow-card-soft);
 }
 
 .analysis-results-panel {
