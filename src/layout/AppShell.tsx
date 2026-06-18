@@ -17,6 +17,7 @@ export type AppView =
   | 'triage'
   | 'evidence'
   | 'analytics'
+  | 'ai-template-analysis'
   | 'audit-trail'
   | 'settings';
 
@@ -26,16 +27,17 @@ const navItems = [
   { id: 'triage', labelKey: 'nav.triage', icon: 'queue' },
   { id: 'evidence', labelKey: 'nav.evidence', icon: 'file' },
   { id: 'analytics', labelKey: 'nav.analytics', icon: 'bars' },
+  { id: 'ai-template-analysis', labelKey: 'nav.aiTemplateAnalysis', icon: 'spark' },
   { id: 'audit-trail', labelKey: 'nav.auditTrail', icon: 'ledger' },
   { id: 'settings', labelKey: 'nav.settings', icon: 'dial' },
 ] as const satisfies ReadonlyArray<{
   id: AppView;
-  icon: 'grid' | 'rows' | 'queue' | 'file' | 'bars' | 'ledger' | 'dial';
+  icon: 'grid' | 'rows' | 'queue' | 'file' | 'bars' | 'spark' | 'ledger' | 'dial';
   labelKey: MessageKey;
 }>;
 
-const adminNavItems = navItems.slice(5);
-const workspaceNavItems = navItems.slice(0, 5);
+const adminNavItems = navItems.slice(6);
+const workspaceNavItems = navItems.slice(0, 6);
 
 export function AppShell({ activeView, children, isPending, onViewChange }: AppShellProps) {
   const { locale, setLocale, t } = useI18n();
