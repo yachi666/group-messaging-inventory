@@ -35,3 +35,14 @@ export type AiTemplateAnalysisResult = {
   lifecycleStatus: AnalysisLifecycleStatus;
   explanation: string[];
 };
+
+export type AiTemplateAnalysisFilter = {
+  templateId?: string;
+  channel?: 'SMS' | 'Email' | 'Push' | 'In-app';
+  aiMessageType?: AiMessageType;
+  reviewStatus?: AnalysisReviewStatus;
+  owner?: string;
+  minConfidence?: number;
+  maxConfidence?: number;
+  q?: string;
+};
