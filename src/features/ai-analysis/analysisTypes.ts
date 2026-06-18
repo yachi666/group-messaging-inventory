@@ -40,5 +40,5 @@ export type AiTemplateAnalysisResult = {
   owner: string;
   reviewStatus: AnalysisReviewStatus;
   lifecycleStatus: AnalysisLifecycleStatus;
-  explanation: string;
+  explanation: ReadonlyArray<string>;
 };

@@ -11,7 +11,7 @@ export const initialAnalysisResults = [
       'Your payment of £***.** is due on ** June. Please sign in to review your account.',
     extractedPattern:
       'Your payment of {amount} is due on {dueDate}. Please sign in to review your account.',
-    placeholders: ['amount', 'dueDate'],
+    placeholders: ['{amount}', '{dueDate}'],
     aiMessageType: 'Transaction',
     governanceClassification: 'Servicing',
     confidence: 97,
@@ -25,8 +25,11 @@ export const initialAnalysisResults = [
     owner: 'Collections Operations',
     reviewStatus: 'reviewed',
     lifecycleStatus: 'active',
-    explanation:
-      'The message provides an account-specific payment deadline and contains no promotional call to action.',
+    explanation: [
+      'Detected an account-specific payment amount and due date.',
+      'Identified the message purpose as a reminder for an existing obligation.',
+      'Classified it as servicing because it contains no promotional call to action.',
+    ],
   },
   {
     id: 'ATA-001249',
@@ -38,7 +41,7 @@ export const initialAnalysisResults = [
       'We noticed a card payment of £***.** at M******** for card ending ****. Was this you?',
     extractedPattern:
       'We noticed a card payment of {amount} at {merchant} for card ending {cardLast4}. Was this you?',
-    placeholders: ['amount', 'merchant', 'cardLast4'],
+    placeholders: ['{amount}', '{merchant}', '{cardLast4}'],
     aiMessageType: 'Alert',
     governanceClassification: 'Regulatory',
     confidence: 99,
@@ -52,8 +55,11 @@ export const initialAnalysisResults = [
     owner: 'Fraud Operations',
     reviewStatus: 'needs-review',
     lifecycleStatus: 'active',
-    explanation:
-      'The message warns about potentially unauthorised activity and supports a fraud-control obligation.',
+    explanation: [
+      'Detected transaction amount, merchant, and masked card-reference fields.',
+      'Identified a request to confirm potentially unauthorised card activity.',
+      'Classified it as regulatory because it supports the bank\'s fraud-control obligations.',
+    ],
   },
   {
     id: 'ATA-001250',
@@ -65,7 +71,7 @@ export const initialAnalysisResults = [
       'Your one-time passcode is ******. It expires in ** minutes. Never share this code.',
     extractedPattern:
       'Your one-time passcode is {otp}. It expires in {expiryMinutes} minutes. Never share this code.',
-    placeholders: ['otp', 'expiryMinutes'],
+    placeholders: ['{otp}', '{expiryMinutes}'],
     aiMessageType: 'OTP',
     governanceClassification: 'Servicing',
     confidence: 100,
@@ -74,8 +80,11 @@ export const initialAnalysisResults = [
     owner: 'Digital Identity',
     reviewStatus: 'merged',
     lifecycleStatus: 'active',
-    explanation:
-      'The short-lived credential and anti-sharing instruction identify an authentication service message.',
+    explanation: [
+      'Detected a one-time credential and an explicit expiry period.',
+      'Identified the anti-sharing instruction as an authentication safeguard.',
+      'Classified it as a servicing OTP used to complete a customer action.',
+    ],
   },
   {
     id: 'ATA-001251',
@@ -87,7 +96,7 @@ export const initialAnalysisResults = [
       'Your mortgage deal for account ending **** expires on **/**/****. Explore your renewal options.',
     extractedPattern:
       'Your mortgage deal for account ending {accountLast4} expires on {expiryDate}. Explore your renewal options.',
-    placeholders: ['accountLast4', 'expiryDate'],
+    placeholders: ['{accountLast4}', '{expiryDate}'],
     aiMessageType: 'Marketing',
     governanceClassification: 'Marketing',
     confidence: 82,
@@ -101,8 +110,11 @@ export const initialAnalysisResults = [
     owner: 'Mortgage Retention',
     reviewStatus: 'needs-review',
     lifecycleStatus: 'active',
-    explanation:
-      'Although triggered by a product expiry, the invitation to explore options makes the communication promotional.',
+    explanation: [
+      'Detected an account reference and a mortgage product expiry date.',
+      'Identified the invitation to explore renewal options as a promotional call to action.',
+      'Classified it as marketing despite the service-related expiry trigger.',
+    ],
   },
   {
     id: 'ATA-001252',
@@ -114,7 +126,11 @@ export const initialAnalysisResults = [
       'Your **** 2026 statement for account ending **** is ready to view securely in the app.',
     extractedPattern:
       'Your {statementMonth} {statementYear} statement for account ending {accountLast4} is ready to view securely in the app.',
-    placeholders: ['statementMonth', 'statementYear', 'accountLast4'],
+    placeholders: [
+      '{statementMonth}',
+      '{statementYear}',
+      '{accountLast4}',
+    ],
     aiMessageType: 'Alert',
     governanceClassification: 'Regulatory',
     confidence: 95,
@@ -123,8 +139,11 @@ export const initialAnalysisResults = [
     owner: 'Customer Statements',
     reviewStatus: 'reviewed',
     lifecycleStatus: 'active',
-    explanation:
-      'The message notifies the customer that a required account document is available through a secure channel.',
+    explanation: [
+      'Detected a statement period and masked account reference.',
+      'Identified notification that an account document is available securely.',
+      'Classified it as regulatory because it concerns delivery of a required statement.',
+    ],
   },
   {
     id: 'ATA-001253',
@@ -136,7 +155,12 @@ export const initialAnalysisResults = [
       'We sent £**,***.** to account ending **** on **/**/****. Reference: L********.',
     extractedPattern:
       'We sent {amount} to account ending {accountLast4} on {disbursementDate}. Reference: {loanReference}.',
-    placeholders: ['amount', 'accountLast4', 'disbursementDate', 'loanReference'],
+    placeholders: [
+      '{amount}',
+      '{accountLast4}',
+      '{disbursementDate}',
+      '{loanReference}',
+    ],
     aiMessageType: 'Transaction',
     governanceClassification: 'Servicing',
     confidence: 91,
@@ -150,7 +174,10 @@ export const initialAnalysisResults = [
     owner: 'Consumer Lending Operations',
     reviewStatus: 'merged',
     lifecycleStatus: 'demised',
-    explanation:
-      'The message confirms a completed loan transaction; the legacy version has been consolidated into a newer template.',
+    explanation: [
+      'Detected a disbursed amount, destination account, date, and loan reference.',
+      'Identified the message as confirmation of a completed loan transaction.',
+      'Classified it as servicing and noted that the legacy template was consolidated into a newer version.',
+    ],
   },
 ] as const satisfies ReadonlyArray<AiTemplateAnalysisResult>;
