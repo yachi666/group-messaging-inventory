@@ -1,11 +1,22 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+
+import {
+  ArrowLongRightIcon,
+  BuildingLibraryIcon,
+  CheckCircleIcon,
+  ClipboardDocumentCheckIcon,
+  DocumentDuplicateIcon,
+  DocumentTextIcon,
+  ExclamationTriangleIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline';
 
 import { StatusChip } from '../../components/StatusChip';
 import { useI18n } from '../../i18n/LanguageProvider';
 import type { MessageKey } from '../../i18n/messages';
 import { initialAnalysisResults } from './analysisData';
 import type {
-  AiMessageType,
   AiTemplateAnalysisResult,
   AnalysisLifecycleStatus,
   AnalysisReviewStatus,
@@ -13,14 +24,6 @@ import type {
 } from './analysisTypes';
 
 type StatusChipTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'accent';
-
-const messageTypes = [
-  'Alert',
-  'Marketing',
-  'OTP',
-  'Profile update',
-  'Transaction',
-] as const satisfies ReadonlyArray<AiMessageType>;
 
 const reviewStatusLabelKeys = {
   'needs-review': 'analysis.statusNeedsReview',
@@ -39,36 +42,68 @@ const lifecycleLabelKeys = {
   demised: 'analysis.lifecycleDemised',
 } satisfies Record<AnalysisLifecycleStatus, MessageKey>;
 
+const extractionSteps = [
+  'analysis.flowIngestion',
+  'analysis.flowNormalization',
+  'analysis.flowDetection',
+  'analysis.flowGeneralization',
+  'analysis.flowGenerated',
+] as const satisfies ReadonlyArray<MessageKey>;
+
+const extractionStepIcons = [
+  DocumentTextIcon,
+  DocumentDuplicateIcon,
+  ClipboardDocumentCheckIcon,
+  DocumentTextIcon,
+  SparklesIcon,
+] as const;
+
+const confidenceFactors = [
+  ['analysis.factorPlaceholder', 'High', 35],
+  ['analysis.factorSemantic', 'High', 30],
+  ['analysis.factorTraining', 'Medium', 15],
+  ['analysis.factorLength', 'High', 10],
+  ['analysis.factorChannel', 'High', 5],
+] as const;
+
 function getReviewTone(status: AnalysisReviewStatus): StatusChipTone {
-  if (status === 'merged') {
-    return 'success';
-  }
-
-  if (status === 'reviewed') {
-    return 'info';
-  }
-
+  if (status === 'merged') return 'success';
+  if (status === 'reviewed') return 'info';
   return 'warning';
 }
 
 function getLifecycleTone(status: AnalysisLifecycleStatus): StatusChipTone {
-  return status === 'active' ? 'accent' : 'danger';
+  return status === 'active' ? 'success' : 'danger';
 }
 
 function getGovernanceTone(classification: GovernanceClassification): StatusChipTone {
-  if (classification === 'Regulatory') {
-    return 'warning';
-  }
-
-  if (classification === 'Marketing') {
-    return 'accent';
-  }
-
+  if (classification === 'Regulatory') return 'warning';
+  if (classification === 'Marketing') return 'accent';
   return 'info';
 }
 
 function getScoreWidth(score: number) {
   return `${Math.max(0, Math.min(100, score))}%`;
+}
+
+function getPlaceholderKind(placeholder: string) {
+  const normalized = placeholder.toLowerCase();
+  if (normalized.includes('amount') || normalized.includes('balance')) return 'Currency';
+  if (normalized.includes('date') || normalized.includes('month') || normalized.includes('year')) {
+    return 'Date';
+  }
+  if (normalized.includes('otp') || normalized.includes('minutes')) return 'Numeric';
+  return 'Text';
+}
+
+function getPlaceholderExample(placeholder: string) {
+  const normalized = placeholder.toLowerCase();
+  if (normalized.includes('amount')) return '1,250.00';
+  if (normalized.includes('balance')) return '3,246.78';
+  if (normalized.includes('date')) return '05/12/2026';
+  if (normalized.includes('last4')) return '1234';
+  if (normalized.includes('otp')) return '482913';
+  return 'Sample value';
 }
 
 export function AiTemplateAnalysisPage() {
@@ -77,77 +112,43 @@ export function AiTemplateAnalysisPage() {
     initialAnalysisResults,
   );
   const [selectedId, setSelectedId] = useState<string>(initialAnalysisResults[0]?.id ?? '');
-  const [query, setQuery] = useState('');
-  const [messageType, setMessageType] = useState<AiMessageType | 'all'>('all');
-  const [reviewStatus, setReviewStatus] = useState<AnalysisReviewStatus | 'all'>('all');
-  const [owner, setOwner] = useState<string | 'all'>('all');
   const [isEditingOwner, setIsEditingOwner] = useState(false);
   const [ownerDraft, setOwnerDraft] = useState('');
   const [noticeKey, setNoticeKey] = useState<MessageKey | null>(null);
+  const [isEvidenceOpen, setIsEvidenceOpen] = useState(false);
+  const [showAllMatches, setShowAllMatches] = useState(true);
+  const [showLifecycle, setShowLifecycle] = useState(false);
 
-  const ownerOptions = useMemo(() => {
-    return Array.from(new Set(results.map((result) => result.owner))).sort((left, right) =>
-      left.localeCompare(right),
-    );
-  }, [results]);
+  const selectedResult =
+    results.find((result) => result.id === selectedId) ?? results[0] ?? null;
 
-  const visibleResults = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
+  const nearbyMatches = useMemo(() => {
+    if (!selectedResult) return [];
 
-    return results.filter((result) => {
-      const matchesQuery =
-        normalizedQuery.length === 0 ||
-        result.name.toLowerCase().includes(normalizedQuery) ||
-        result.templateId.toLowerCase().includes(normalizedQuery) ||
-        result.owner.toLowerCase().includes(normalizedQuery) ||
-        result.extractedPattern.toLowerCase().includes(normalizedQuery);
+    const primary = selectedResult.nearestMatch
+      ? [
+          {
+            templateId: selectedResult.nearestMatch.templateId,
+            name: selectedResult.nearestMatch.name,
+            similarity: selectedResult.nearestMatch.similarity,
+          },
+        ]
+      : [];
+    const secondary = results
+      .filter((result) => result.id !== selectedResult.id)
+      .map((result, index) => ({
+        templateId: result.templateId,
+        name: result.name,
+        similarity: Math.max(71, selectedResult.confidence - 5 - index * 5),
+      }));
+    return [...primary, ...secondary].slice(0, 5);
+  }, [results, selectedResult]);
 
-      return (
-        matchesQuery &&
-        (messageType === 'all' || result.aiMessageType === messageType) &&
-        (reviewStatus === 'all' || result.reviewStatus === reviewStatus) &&
-        (owner === 'all' || result.owner === owner)
-      );
-    });
-  }, [messageType, owner, query, results, reviewStatus]);
-
-  const selectedResult = useMemo(() => {
-    return (
-      results.find((result) => result.id === selectedId) ?? visibleResults[0] ?? results[0] ?? null
-    );
-  }, [results, selectedId, visibleResults]);
-
-  const highConfidenceCount = useMemo(() => {
-    return results.filter((result) => result.confidence >= 90).length;
-  }, [results]);
-
-  const needsReviewCount = useMemo(() => {
-    return results.filter((result) => result.reviewStatus === 'needs-review').length;
-  }, [results]);
-
-  useEffect(() => {
-    if (!selectedResult) {
-      return;
-    }
-
-    if (selectedResult.id !== selectedId) {
-      setSelectedId(selectedResult.id);
-    }
-  }, [selectedId, selectedResult]);
-
-  useEffect(() => {
-    if (!selectedResult || isEditingOwner) {
-      return;
-    }
-
-    setOwnerDraft(selectedResult.owner);
-  }, [isEditingOwner, selectedResult]);
+  if (!selectedResult) {
+    return null;
+  }
 
   function updateSelectedResult(changes: Partial<AiTemplateAnalysisResult>) {
-    if (!selectedResult) {
-      return;
-    }
-
     setResults((current) =>
       current.map((result) =>
         result.id === selectedResult.id ? { ...result, ...changes } : result,
@@ -155,20 +156,20 @@ export function AiTemplateAnalysisPage() {
     );
   }
 
-  function confirmAnalysis() {
-    if (!selectedResult || selectedResult.reviewStatus === 'merged') {
-      return;
-    }
+  function selectResult(resultId: string) {
+    setSelectedId(resultId);
+    setIsEditingOwner(false);
+    setNoticeKey(null);
+    setShowLifecycle(false);
+  }
 
+  function confirmAnalysis() {
     updateSelectedResult({ reviewStatus: 'reviewed' });
     setNoticeKey('analysis.noticeConfirmed');
   }
 
   function mergeCandidate() {
-    if (!selectedResult?.nearestMatch) {
-      return;
-    }
-
+    if (!selectedResult.nearestMatch) return;
     updateSelectedResult({ reviewStatus: 'merged' });
     setNoticeKey('analysis.noticeMerged');
   }
@@ -179,420 +180,253 @@ export function AiTemplateAnalysisPage() {
   }
 
   function startOwnerEdit() {
-    if (!selectedResult) {
-      return;
-    }
-
     setOwnerDraft(selectedResult.owner);
     setIsEditingOwner(true);
     setNoticeKey(null);
   }
 
-  function cancelOwnerEdit() {
-    setOwnerDraft(selectedResult?.owner ?? '');
-    setIsEditingOwner(false);
-  }
-
   function saveOwner() {
-    const trimmedOwner = ownerDraft.trim();
-
-    if (trimmedOwner.length === 0) {
+    const owner = ownerDraft.trim();
+    if (!owner) {
       setNoticeKey('analysis.noticeOwnerRequired');
       return;
     }
-
-    updateSelectedResult({ owner: trimmedOwner });
-    if (owner !== 'all' && owner === selectedResult?.owner && owner !== trimmedOwner) {
-      setOwner('all');
-    }
-    setOwnerDraft(trimmedOwner);
+    updateSelectedResult({ owner });
     setIsEditingOwner(false);
     setNoticeKey('analysis.noticeOwnerSaved');
   }
 
+  async function copyTemplate() {
+    await navigator.clipboard.writeText(selectedResult.extractedPattern);
+    setNoticeKey('analysis.noticeCopied');
+  }
+
+  const visibleMatches = showAllMatches ? nearbyMatches : nearbyMatches.slice(0, 3);
+  const variableDensity = Math.round(
+    (selectedResult.placeholders.length / Math.max(1, selectedResult.extractedPattern.split(' ').length)) *
+      100,
+  );
+
   return (
-    <section className="analysis-page" data-testid="ai-template-analysis-page">
-      <header className="page-header">
-        <div>
-          <p className="eyebrow">{t('analysis.eyebrow')}</p>
-          <h1 className="page-title">{t('analysis.title')}</h1>
-          <p className="page-subtitle">{t('analysis.subtitle')}</p>
+    <section className="analysis-page analysis-workbench-page" data-testid="ai-template-analysis-page">
+      <header className="analysis-workbench-header">
+        <div className="analysis-breadcrumb">
+          <span>{t('analysis.title')}</span>
+          <span aria-hidden="true">/</span>
+          <span>{t('analysis.templateLabel')} {selectedResult.templateId}</span>
         </div>
-        <div className="header-actions">
-          <StatusChip tone="info">
-            {visibleResults.length} / {results.length}
-          </StatusChip>
+        <div className="analysis-title-row">
+          <div className="analysis-title-group">
+            <h1>{t('analysis.templateLabel')} {selectedResult.templateId}</h1>
+            <StatusChip tone={getReviewTone(selectedResult.reviewStatus)}>
+              {t(reviewStatusLabelKeys[selectedResult.reviewStatus])}
+            </StatusChip>
+            <div className="analysis-header-confidence">
+              <span>{t('analysis.confidenceScore')}</span>
+              <strong>{selectedResult.confidence}%</strong>
+            </div>
+          </div>
+          <div className="analysis-header-actions">
+            <button className="button button-primary" data-testid="analysis-confirm" onClick={confirmAnalysis} type="button">
+              {t('analysis.confirmClassification')}
+            </button>
+            <button className="button" data-testid="analysis-edit-owner" onClick={startOwnerEdit} type="button">
+              {t('analysis.editOwner')}
+            </button>
+            <button className="button" data-testid="analysis-merge" disabled={!selectedResult.nearestMatch} onClick={mergeCandidate} type="button">
+              {t('analysis.mergeCandidate')}
+            </button>
+            <button className="button button-danger" data-testid="analysis-demise" disabled={selectedResult.lifecycleStatus === 'demised'} onClick={demiseTemplate} type="button">
+              {t('analysis.demise')}
+            </button>
+          </div>
         </div>
       </header>
 
-      {noticeKey ? (
-        <div className="analysis-notice card" data-testid="analysis-notice">
-          {t(noticeKey)}
+      {noticeKey ? <div className="analysis-workbench-notice" data-testid="analysis-notice">{t(noticeKey)}</div> : null}
+
+      <section className="analysis-recent-strip" data-testid="analysis-results-table">
+        <strong>{t('analysis.recentResults')}</strong>
+        <div className="analysis-recent-list">
+          {results.map((result) => (
+            <button
+              aria-pressed={result.id === selectedResult.id}
+              className="analysis-recent-item"
+              data-testid={`analysis-result-${result.id}`}
+              key={result.id}
+              onClick={() => selectResult(result.id)}
+              type="button"
+            >
+              <span><i aria-hidden="true" />{result.templateId}<b>{result.confidence}%</b></span>
+              <small>{result.name}</small>
+            </button>
+          ))}
         </div>
-      ) : null}
-
-      <section className="filters analysis-filters" aria-label={t('analysis.filters')}>
-        <label className="filter-control analysis-search-control">
-          <span>{t('analysis.searchLabel')}</span>
-          <input
-            className="analysis-search-input"
-            data-testid="analysis-search"
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={t('analysis.searchPlaceholder')}
-            type="search"
-            value={query}
-          />
-        </label>
-        <label className="filter-control">
-          <span>{t('analysis.messageType')}</span>
-          <select
-            className="filter-select"
-            data-testid="analysis-type-filter"
-            onChange={(event) => setMessageType(event.target.value as AiMessageType | 'all')}
-            value={messageType}
-          >
-            <option value="all">{t('analysis.allTypes')}</option>
-            {messageTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="filter-control">
-          <span>{t('analysis.reviewStatus')}</span>
-          <select
-            className="filter-select"
-            data-testid="analysis-status-filter"
-            onChange={(event) =>
-              setReviewStatus(event.target.value as AnalysisReviewStatus | 'all')
-            }
-            value={reviewStatus}
-          >
-            <option value="all">{t('analysis.allStatuses')}</option>
-            <option value="needs-review">{t('analysis.statusNeedsReview')}</option>
-            <option value="reviewed">{t('analysis.statusReviewed')}</option>
-            <option value="merged">{t('analysis.statusMerged')}</option>
-          </select>
-        </label>
-        <label className="filter-control">
-          <span>{t('analysis.ownerFilter')}</span>
-          <select
-            className="filter-select"
-            data-testid="analysis-owner-filter"
-            onChange={(event) => setOwner(event.target.value)}
-            value={owner}
-          >
-            <option value="all">{t('analysis.allOwners')}</option>
-            {ownerOptions.map((ownerOption) => (
-              <option key={ownerOption} value={ownerOption}>
-                {ownerOption}
-              </option>
-            ))}
-          </select>
-        </label>
       </section>
 
-      <section className="analysis-metrics">
-        <article className="metric-card">
-          <div className="metric-card-top">
-            <p className="metric-label">{t('analysis.analyzedTemplates')}</p>
-            <StatusChip tone="info">{results.length}</StatusChip>
-          </div>
-          <p className="metric-value">{results.length}</p>
-          <p className="metric-note">{t('analysis.analyzedTemplatesNote')}</p>
-        </article>
-        <article className="metric-card">
-          <div className="metric-card-top">
-            <p className="metric-label">{t('analysis.highConfidence')}</p>
-            <StatusChip tone="success">{highConfidenceCount}</StatusChip>
-          </div>
-          <p className="metric-value">{highConfidenceCount}</p>
-          <p className="metric-note">{t('analysis.highConfidenceNote')}</p>
-        </article>
-        <article className="metric-card">
-          <div className="metric-card-top">
-            <p className="metric-label">{t('analysis.needsReviewMetric')}</p>
-            <StatusChip tone="warning">{needsReviewCount}</StatusChip>
-          </div>
-          <p className="metric-value">{needsReviewCount}</p>
-          <p className="metric-note">{t('analysis.needsReviewNote')}</p>
-        </article>
-      </section>
+      <div className="analysis-deep-grid" data-testid="analysis-inspector">
+        <section className="analysis-deep-column analysis-source-column">
+          <h2>1. {t('analysis.sourceAndTemplate')}</h2>
+          <div className="analysis-column-body">
+            <section className="analysis-deep-section">
+              <h3>{t('analysis.maskedMessage')}</h3>
+              <div className="analysis-message-box">{selectedResult.maskedMessage}</div>
+              <p className="analysis-inline-meta">{t('analysis.channel')}: {selectedResult.channel} · {t('analysis.analyzedAt')}: {selectedResult.analyzedAt}</p>
+            </section>
 
-      <div className="analysis-workbench">
-        <section className="table-card analysis-results-panel">
-          <div className="card-header">
-            <div>
-              <h2 className="card-title">{t('analysis.resultsTitle')}</h2>
-              <p className="card-kicker">{t('analysis.resultsKicker')}</p>
-            </div>
-          </div>
-
-          {visibleResults.length > 0 ? (
-            <>
-              <div className="analysis-column-headings" aria-hidden="true">
-                <span>{t('analysis.tableTemplate')}</span>
-                <span>{t('analysis.tableType')}</span>
-                <span>{t('analysis.tableClassification')}</span>
-                <span>{t('analysis.tableConfidence')}</span>
-                <span>{t('analysis.tableOwner')}</span>
-                <span>{t('analysis.tableStatus')}</span>
+            <section className="analysis-deep-section">
+              <div className="analysis-section-heading">
+                <h3>{t('analysis.extractedTemplate')}</h3>
+                <button className="analysis-text-button" onClick={copyTemplate} type="button">{t('analysis.copy')}</button>
               </div>
-              <div className="analysis-results" data-testid="analysis-results-table">
-                {visibleResults.map((result) => (
-                  <button
-                    aria-pressed={result.id === selectedResult?.id}
-                    className="analysis-row-button"
-                    data-testid={`analysis-result-${result.id}`}
-                    key={result.id}
-                    onClick={() => {
-                      setSelectedId(result.id);
-                      setIsEditingOwner(false);
-                    }}
-                    type="button"
-                  >
-                    <div className="analysis-row-primary">
-                      <strong>{result.name}</strong>
-                      <span>{result.extractedPattern}</span>
-                    </div>
-                    <span className="analysis-row-value">{result.aiMessageType}</span>
-                    <span className="analysis-row-value">
-                      {t(governanceLabelKeys[result.governanceClassification])}
-                    </span>
-                    <span className="analysis-row-value">
-                      <span className="analysis-score">
-                        <span className="analysis-score-value">{result.confidence}%</span>
-                        <span className="analysis-score-track" aria-hidden="true">
-                          <span
-                            className="analysis-score-fill analysis-score-fill-blue"
-                            style={{ width: getScoreWidth(result.confidence) }}
-                          />
-                        </span>
-                      </span>
-                    </span>
-                    <span className="analysis-row-value">{result.owner}</span>
-                    <span className="analysis-row-value">
-                      {t(reviewStatusLabelKeys[result.reviewStatus])}
-                    </span>
-                  </button>
+              <div className="analysis-message-box analysis-template-box">{selectedResult.extractedPattern}</div>
+            </section>
+
+            <section className="analysis-deep-section">
+              <h3>{t('analysis.placeholders')} ({selectedResult.placeholders.length})</h3>
+              <div className="analysis-placeholder-table">
+                {selectedResult.placeholders.map((placeholder) => (
+                  <div className="analysis-placeholder-row" key={placeholder}>
+                    <code>{placeholder}</code>
+                    <span>{getPlaceholderKind(placeholder)}</span>
+                    <span>{getPlaceholderExample(placeholder)}</span>
+                  </div>
                 ))}
               </div>
-            </>
-          ) : (
-            <div className="empty-state" data-testid="analysis-results-table">
-              <strong>{t('analysis.emptyTitle')}</strong>
-              <span>{t('analysis.emptyBody')}</span>
-            </div>
-          )}
+            </section>
+          </div>
+          <footer className="analysis-source-footer">
+            <span><small>{t('analysis.templateLength')}</small><strong>{selectedResult.extractedPattern.length} {t('analysis.characters')}</strong></span>
+            <span><small>{t('analysis.variableDensity')}</small><strong>{variableDensity}%</strong></span>
+          </footer>
         </section>
 
-        <aside className="detail-panel">
-          {selectedResult ? (
-            <section className="card analysis-inspector-card" data-testid="analysis-inspector">
-              <div className="analysis-inspector-header">
-                <div>
-                  <p className="eyebrow analysis-inspector-eyebrow">{t('analysis.inspectorTitle')}</p>
-                  <h2 className="detail-title">{selectedResult.name}</h2>
-                </div>
-                <div className="analysis-inspector-status">
-                  <StatusChip tone="accent">{selectedResult.templateId}</StatusChip>
-                  <StatusChip
-                    tone={getGovernanceTone(selectedResult.governanceClassification)}
-                  >
-                    {t(governanceLabelKeys[selectedResult.governanceClassification])}
-                  </StatusChip>
-                  <StatusChip tone={getReviewTone(selectedResult.reviewStatus)}>
-                    <span data-testid="analysis-review-status">
-                      {t(reviewStatusLabelKeys[selectedResult.reviewStatus])}
-                    </span>
-                  </StatusChip>
-                  <StatusChip tone={getLifecycleTone(selectedResult.lifecycleStatus)}>
-                    <span data-testid="analysis-lifecycle-status">
-                      {t(lifecycleLabelKeys[selectedResult.lifecycleStatus])}
-                    </span>
-                  </StatusChip>
-                </div>
-              </div>
+        <section className="analysis-deep-column analysis-evidence-column">
+          <h2>2. {t('analysis.analysisEvidence')}</h2>
+          <div className="analysis-column-body">
+            <section className="analysis-deep-section">
+              <h3>{t('analysis.extractionFlow')}</h3>
+              <ol className="analysis-flow-list">
+                {extractionSteps.map((step, index) => {
+                  const StepIcon = extractionStepIcons[index];
 
-              <div className="analysis-metadata-grid">
-                <div className="field">
-                  <span>{t('analysis.messageType')}</span>
-                  <strong>{selectedResult.aiMessageType}</strong>
-                </div>
-                <div className="field">
-                  <span>{t('analysis.templateOwner')}</span>
-                  <strong data-testid="analysis-selected-owner">{selectedResult.owner}</strong>
-                </div>
-                <div className="field">
-                  <span>{t('analysis.channel')}</span>
-                  <strong>{selectedResult.channel}</strong>
-                </div>
-                <div className="field">
-                  <span>{t('analysis.analyzedAt')}</span>
-                  <strong>{selectedResult.analyzedAt}</strong>
-                </div>
-                <div className="field">
-                  <span>{t('analysis.confidenceScore')}</span>
-                  <strong className="analysis-score">
-                    <span className="analysis-score-value">{selectedResult.confidence}%</span>
-                    <span className="analysis-score-track" aria-hidden="true">
-                      <span
-                        className="analysis-score-fill analysis-score-fill-teal"
-                        style={{ width: getScoreWidth(selectedResult.confidence) }}
-                      />
-                    </span>
-                  </strong>
-                </div>
-                <div className="field">
-                  <span>{t('analysis.qualityScore')}</span>
-                  <strong>{selectedResult.qualityScore}%</strong>
-                </div>
-              </div>
-
-              <section className="detail-block">
-                <h3>{t('analysis.maskedMessage')}</h3>
-                <p>{selectedResult.maskedMessage}</p>
-              </section>
-
-              <section className="detail-block">
-                <h3>{t('analysis.extractedTemplate')}</h3>
-                <p>{selectedResult.extractedPattern}</p>
-              </section>
-
-              <section className="detail-block">
-                <h3>{t('analysis.placeholders')}</h3>
-                <div className="analysis-placeholder-list">
-                  {selectedResult.placeholders.map((placeholder) => (
-                    <code className="analysis-placeholder" key={placeholder}>
-                      {placeholder}
-                    </code>
-                  ))}
-                </div>
-              </section>
-
-              <section className="detail-block">
-                <h3>{t('analysis.aiExplanation')}</h3>
-                <ol className="analysis-explanation-list">
-                  {selectedResult.explanation.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ol>
-              </section>
-
-              <section className="detail-block">
-                <h3>{t('analysis.nearestMatch')}</h3>
-                {selectedResult.nearestMatch ? (
-                  <div className="analysis-match-summary">
-                    <strong>{selectedResult.nearestMatch.name}</strong>
-                    <span>
-                      {selectedResult.nearestMatch.templateId} ·{' '}
-                      {selectedResult.nearestMatch.similarity}% {t('analysis.similarity')}
-                    </span>
-                  </div>
-                ) : (
-                  <p>{t('analysis.noNearestMatch')}</p>
-                )}
-              </section>
-
-              <section className="detail-block">
-                <h3>{t('analysis.anomalies')}</h3>
-                {selectedResult.anomalies.length > 0 ? (
-                  <ul className="analysis-bullet-list">
-                    {selectedResult.anomalies.map((anomaly) => (
-                      <li key={anomaly}>{anomaly}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>{t('analysis.noAnomalies')}</p>
-                )}
-              </section>
-
-              <section className="detail-block">
-                <h3>{t('analysis.ownerEditor')}</h3>
-                {isEditingOwner ? (
-                  <div className="analysis-owner-editor">
-                    <label className="form-field">
-                      <span>{t('analysis.ownerDraftLabel')}</span>
-                      <input
-                        data-testid="analysis-owner-input"
-                        onChange={(event) => setOwnerDraft(event.target.value)}
-                        type="text"
-                        value={ownerDraft}
-                      />
-                    </label>
-                    <div className="action-strip">
-                      <button
-                        className="button button-primary"
-                        data-testid="analysis-save-owner"
-                        onClick={saveOwner}
-                        type="button"
-                      >
-                        {t('analysis.saveOwner')}
-                      </button>
-                      <button
-                        className="button"
-                        data-testid="analysis-owner-cancel"
-                        onClick={cancelOwnerEdit}
-                        type="button"
-                      >
-                        {t('analysis.cancelOwnerEdit')}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p>{selectedResult.owner}</p>
-                )}
-              </section>
-
-              <div className="action-strip">
-                <button
-                  className="button button-primary"
-                  data-testid="analysis-confirm"
-                  disabled={selectedResult.reviewStatus === 'merged'}
-                  onClick={confirmAnalysis}
-                  type="button"
-                >
-                  {t('analysis.confirm')}
-                </button>
-                <button
-                  className="button"
-                  data-testid="analysis-merge"
-                  disabled={!selectedResult.nearestMatch || selectedResult.reviewStatus === 'merged'}
-                  onClick={mergeCandidate}
-                  type="button"
-                >
-                  {t('analysis.merge')}
-                </button>
-                <button
-                  className="button"
-                  data-testid="analysis-edit-owner"
-                  onClick={startOwnerEdit}
-                  type="button"
-                >
-                  {t('analysis.editOwner')}
-                </button>
-                <button
-                  className="button"
-                  data-testid="analysis-demise"
-                  disabled={selectedResult.lifecycleStatus === 'demised'}
-                  onClick={demiseTemplate}
-                  type="button"
-                >
-                  {t('analysis.demise')}
-                </button>
-              </div>
+                  return (
+                    <li key={step}>
+                      <span className={index === extractionSteps.length - 1 ? 'analysis-flow-icon analysis-flow-icon-final' : 'analysis-flow-icon'}>
+                        <StepIcon aria-hidden="true" />
+                        <CheckCircleIcon aria-hidden="true" className="analysis-flow-check" />
+                      </span>
+                      {index < extractionSteps.length - 1 ? <ArrowLongRightIcon aria-hidden="true" className="analysis-flow-arrow" /> : null}
+                      <small>{t(step)}</small>
+                    </li>
+                  );
+                })}
+              </ol>
             </section>
-          ) : (
-            <section className="card analysis-empty-panel" data-testid="analysis-inspector">
-              <div className="empty-state">
-                <strong>{t('analysis.emptyTitle')}</strong>
-                <span>{t('analysis.inspectorEmptyBody')}</span>
-              </div>
+
+            <section className="analysis-classification-map">
+              <article>
+                <BuildingLibraryIcon aria-hidden="true" />
+                <div><small>{t('analysis.messageType')}</small><strong>{selectedResult.aiMessageType}</strong><span>{selectedResult.channel} transaction</span></div>
+              </article>
+              <ArrowLongRightIcon aria-hidden="true" className="analysis-classification-arrow" />
+              <article>
+                <ShieldCheckIcon aria-hidden="true" />
+                <div><small>{t('analysis.governanceClassification')}</small><strong>{t(governanceLabelKeys[selectedResult.governanceClassification])}</strong><span>{t('analysis.lowRisk')}</span></div>
+              </article>
             </section>
-          )}
+
+            <section className="analysis-explanation-panel">
+              <h3>{t('analysis.aiExplanation')}</h3>
+              <p>{selectedResult.explanation.join(' ')}</p>
+            </section>
+
+            <section className="analysis-confidence-panel">
+              <div className="analysis-panel-title"><h3>{t('analysis.confidenceFactors')}</h3><span>{t('analysis.impact')}</span></div>
+              {confidenceFactors.map(([label, strength, impact]) => (
+                <div className="analysis-factor-row" key={label}>
+                  <span>{t(label)}</span>
+                  <b>{strength === 'High' ? t('analysis.high') : t('analysis.medium')}</b>
+                  <i><span style={{ width: `${impact * 2.4}%` }} /></i>
+                  <small>+{(impact / 100).toFixed(2)}</small>
+                </div>
+              ))}
+              <div className="analysis-factor-total"><strong>{t('analysis.totalConfidence')}</strong><b>{selectedResult.confidence}%</b></div>
+            </section>
+
+            <section className="analysis-score-grid">
+              <article className="analysis-quality-score"><h3>{t('analysis.qualityScore')}</h3><strong>{selectedResult.qualityScore}</strong><span>/100</span><i><span style={{ width: getScoreWidth(selectedResult.qualityScore) }} /></i></article>
+              <article><h3>{t('analysis.qualityBreakdown')}</h3>{[
+                ['analysis.completeness', 3],
+                ['analysis.clarity', -2],
+                ['analysis.consistency', -1],
+                ['analysis.placeholderQuality', 1],
+              ].map(([label, offset]) => {
+                const score = Math.min(100, selectedResult.qualityScore + Number(offset));
+                return <div className="analysis-mini-score" key={label}><span>{t(label as MessageKey)}</span><i><span style={{ width: `${score}%` }} /></i><b>{score}</b></div>;
+              })}</article>
+              <article><h3>{t('analysis.anomalyChecks')}</h3><ul className="analysis-check-list">
+                {[
+                  ['analysis.piiDetected', false],
+                  ['analysis.policyViolations', false],
+                  ['analysis.outOfScopeContent', false],
+                  ['analysis.unusualFormatting', selectedResult.anomalies.length > 0],
+                  ['analysis.newPayeePattern', selectedResult.anomalies.length > 0],
+                ].map(([label, detected]) => <li key={label as string}><span>{t(label as MessageKey)}</span><b className={detected ? 'analysis-check-warning' : undefined}>{detected ? <ExclamationTriangleIcon aria-hidden="true" /> : <CheckCircleIcon aria-hidden="true" />}{detected ? t('analysis.detected') : t('analysis.none')}</b></li>)}
+              </ul></article>
+            </section>
+
+            <section className="analysis-evidence-disclosure">
+              <button aria-expanded={isEvidenceOpen} onClick={() => setIsEvidenceOpen((open) => !open)} type="button"><span>{t('analysis.evidence')} ({selectedResult.explanation.length + selectedResult.placeholders.length + selectedResult.anomalies.length})</span><span>{isEvidenceOpen ? '−' : '+'}</span></button>
+              {isEvidenceOpen ? <ul>{selectedResult.explanation.map((item) => <li key={item}>{item}</li>)}</ul> : null}
+            </section>
+          </div>
+        </section>
+
+        <aside className="analysis-deep-column analysis-context-column">
+          <h2>3. {t('analysis.nearestMatches')}</h2>
+          <div className="analysis-column-body">
+            <section className="analysis-match-list">
+              {visibleMatches.map((match, index) => (
+                <article key={`${match.templateId}-${index}`}>
+                  <span>{index + 1}</span>
+                  <div><strong>{match.templateId}</strong><small>{match.name}</small></div>
+                  <div className="analysis-match-score"><b>{match.similarity}%</b><i><span style={{ width: getScoreWidth(match.similarity) }} /></i></div>
+                </article>
+              ))}
+              <button className="analysis-link-button" onClick={() => setShowAllMatches((show) => !show)} type="button">{showAllMatches ? t('analysis.showLess') : t('analysis.viewAllMatches')}</button>
+            </section>
+
+            <section className="analysis-side-panel">
+              <h3>{t('analysis.ownership')}</h3>
+              {isEditingOwner ? (
+                <div className="analysis-owner-editor">
+                  <label><span>{t('analysis.ownerDraftLabel')}</span><input data-testid="analysis-owner-input" onChange={(event) => setOwnerDraft(event.target.value)} value={ownerDraft} /></label>
+                  <div><button className="button button-primary" data-testid="analysis-save-owner" onClick={saveOwner} type="button">{t('analysis.saveOwner')}</button><button className="button" data-testid="analysis-owner-cancel" onClick={() => setIsEditingOwner(false)} type="button">{t('analysis.cancelOwnerEdit')}</button></div>
+                </div>
+              ) : (
+                <div className="analysis-owner-row"><span className="analysis-owner-avatar">{selectedResult.owner.slice(0, 2).toUpperCase()}</span><div><small>{t('analysis.templateOwner')}</small><strong data-testid="analysis-selected-owner">{selectedResult.owner}</strong></div><button onClick={startOwnerEdit} type="button">{t('analysis.edit')}</button></div>
+              )}
+              <div className="analysis-owner-row"><span className="analysis-owner-avatar">GR</span><div><small>{t('analysis.backupOwner')}</small><strong>Governance Review</strong></div></div>
+            </section>
+
+            <section className="analysis-side-panel">
+              <h3>{t('analysis.lifecycleStatus')}</h3>
+              <dl className="analysis-lifecycle-list">
+                <div><dt>{t('analysis.reviewStatus')}</dt><dd><StatusChip tone={getReviewTone(selectedResult.reviewStatus)}><span data-testid="analysis-review-status">{t(reviewStatusLabelKeys[selectedResult.reviewStatus])}</span></StatusChip></dd></div>
+                <div><dt>{t('analysis.lifecycle')}</dt><dd><StatusChip tone={getLifecycleTone(selectedResult.lifecycleStatus)}><span data-testid="analysis-lifecycle-status">{t(lifecycleLabelKeys[selectedResult.lifecycleStatus])}</span></StatusChip></dd></div>
+                <div><dt>{t('analysis.created')}</dt><dd>{selectedResult.analyzedAt}</dd></div>
+                <div><dt>{t('analysis.occurrences')}</dt><dd>3 messages</dd></div>
+                <div><dt>{t('analysis.firstSeen')}</dt><dd>{selectedResult.analyzedAt}</dd></div>
+              </dl>
+              <button className="analysis-link-button" onClick={() => setShowLifecycle((show) => !show)} type="button">{t('analysis.viewLifecycle')}</button>
+              {showLifecycle ? <ol className="analysis-lifecycle-history"><li>{t('analysis.lifecycleAnalyzed')}</li><li>{t('analysis.lifecycleCandidate')}</li></ol> : null}
+            </section>
+          </div>
         </aside>
       </div>
+
+      <footer className="analysis-autosave">{t('analysis.autosaved')}</footer>
     </section>
   );
 }
