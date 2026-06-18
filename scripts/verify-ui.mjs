@@ -2,7 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
 
 const baseUrl = process.env.APP_URL ?? 'http://127.0.0.1:5173';
-const screenshotPath = '.artifacts/gmi-product-workspace.png';
+const screenshotPath = '/tmp/gmi-product-workspace.png';
 const errors = [];
 
 const browser = await chromium.launch({ headless: true });
@@ -91,7 +91,8 @@ await page.getByTestId('csv-result-preview').getByText('templates_june_volume.cs
 await page.getByTestId('csv-result-preview').getByText('Ready for AI analysis').waitFor();
 
 await page.waitForTimeout(250);
-await mkdir('.artifacts', { recursive: true });
+// ensure /tmp exists (container/os will usually have this) - keep writing screenshots to /tmp
+await mkdir('/tmp', { recursive: true });
 await page.screenshot({ fullPage: true, path: screenshotPath });
 await browser.close();
 
