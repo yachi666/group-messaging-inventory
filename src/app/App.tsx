@@ -7,6 +7,18 @@ import { ProductWorkspace } from '../features/workspace/ProductWorkspace';
 import { LanguageProvider } from '../i18n/LanguageProvider';
 import { AppShell, type AppView } from '../layout/AppShell';
 
+function renderActiveView(activeView: AppView) {
+  if (activeView === 'dashboard') {
+    return <DashboardPage />;
+  }
+
+  if (activeView === 'ai-template-analysis') {
+    return <AiTemplateAnalysisPage />;
+  }
+
+  return <ProductWorkspace activeView={activeView} />;
+}
+
 export function App() {
   const [isPending, startTransition] = useTransition();
   const [activeView, setActiveView] = useState<AppView>('dashboard');
@@ -21,13 +33,7 @@ export function App() {
     <LanguageProvider>
       <AiChatProvider>
         <AppShell activeView={activeView} isPending={isPending} onViewChange={handleViewChange}>
-          {activeView === 'dashboard' ? (
-            <DashboardPage />
-          ) : activeView === 'ai-template-analysis' ? (
-            <AiTemplateAnalysisPage />
-          ) : (
-            <ProductWorkspace activeView={activeView} />
-          )}
+          {renderActiveView(activeView)}
         </AppShell>
       </AiChatProvider>
     </LanguageProvider>

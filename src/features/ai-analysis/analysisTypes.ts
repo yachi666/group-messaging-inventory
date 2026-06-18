@@ -7,13 +7,8 @@ export type AiMessageType =
   | 'Profile update'
   | 'Alert';
 
-export type GovernanceClassification =
-  | 'Regulatory'
-  | 'Servicing'
-  | 'Marketing';
-
+export type GovernanceClassification = 'Regulatory' | 'Servicing' | 'Marketing';
 export type AnalysisReviewStatus = 'needs-review' | 'reviewed' | 'merged';
-
 export type AnalysisLifecycleStatus = 'active' | 'demised';
 
 export type SimilarTemplateMatch = {
@@ -41,4 +36,15 @@ export type AiTemplateAnalysisResult = {
   reviewStatus: AnalysisReviewStatus;
   lifecycleStatus: AnalysisLifecycleStatus;
   explanation: ReadonlyArray<string>;
+};
+
+export type AiTemplateAnalysisFilter = {
+  templateId?: string;
+  channel?: Channel;
+  aiMessageType?: AiMessageType;
+  reviewStatus?: AnalysisReviewStatus;
+  owner?: string;
+  minConfidence?: number;
+  maxConfidence?: number;
+  q?: string;
 };

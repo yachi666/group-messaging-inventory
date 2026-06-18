@@ -1,4 +1,3 @@
-import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
 
 const baseUrl = process.env.APP_URL ?? 'http://127.0.0.1:5173';
@@ -17,6 +16,27 @@ page.on('console', (message) => {
 await page.goto(baseUrl, { waitUntil: 'networkidle' });
 await page.getByRole('heading', { name: 'Messaging inventory' }).waitFor();
 await page.getByTestId('nav-ai-template-analysis').waitFor();
+await page.getByTestId('nav-ai-template-analysis').click();
+await page.getByRole('heading', { name: 'AI Template Analysis' }).waitFor();
+await page.getByTestId('analysis-results-table').waitFor();
+await page.getByTestId('analysis-search').fill('Card fraud');
+await page.getByTestId('analysis-result-ATA-001249').waitFor();
+await page.getByTestId('analysis-search').fill('');
+await page.getByTestId('analysis-status-filter').selectOption('needs-review');
+await page.getByTestId('analysis-result-ATA-001248').click();
+await page.getByTestId('analysis-confirm').click();
+await page.getByTestId('analysis-notice').getByText('Analysis confirmed').waitFor();
+await page.getByTestId('analysis-edit-owner').click();
+await page.getByTestId('analysis-owner-input').fill('L. Zhang');
+await page.getByTestId('analysis-save-owner').click();
+await page.getByTestId('analysis-selected-owner').getByText('L. Zhang').waitFor();
+await page.getByTestId('analysis-merge').click();
+await page.getByTestId('analysis-notice').getByText('Candidate merged').waitFor();
+await page.getByTestId('analysis-demise').click();
+await page.getByTestId('analysis-notice').getByText('Template demised').waitFor();
+await page.getByTestId('analysis-inspector').getByText('Payment due reminder').waitFor();
+await page.getByTestId('analysis-inspector').getByText('{amount}', { exact: true }).waitFor();
+await page.getByTestId('nav-dashboard').click();
 await page.getByTestId('dashboard-platform-filter').selectOption('SFMC');
 await page.getByTestId('dashboard-inventory-table').getByText('Card fraud alert').waitFor();
 await page.getByTestId('dashboard-inventory-table').getByText('Payment due reminder').waitFor({
@@ -27,6 +47,15 @@ await page.getByTestId('response-pack-status').getByText('Response pack staged')
 
 await page.getByLabel('Language').selectOption('zh-CN');
 await page.getByRole('heading', { name: '消息清单' }).waitFor();
+await page.getByTestId('nav-ai-template-analysis').click();
+await page.getByRole('heading', { name: 'AI 模板分析' }).waitFor();
+await page.getByTestId('analysis-inspector').getByText('提取后的模板').waitFor();
+await page.getByTestId('analysis-confirm').getByText('确认分析').waitFor();
+
+// Capture screenshot of the Chinese AI Template Analysis page to validate inspector/table visuals
+await page.waitForTimeout(250);
+await page.screenshot({ fullPage: true, path: screenshotPath });
+await page.waitForTimeout(250);
 
 await page.getByTestId('nav-inventory').click();
 await page.getByRole('heading', { name: '确认用例与负责人' }).waitFor();
@@ -91,8 +120,7 @@ await page.getByTestId('csv-result-preview').getByText('templates_june_volume.cs
 await page.getByTestId('csv-result-preview').getByText('Ready for AI analysis').waitFor();
 
 await page.waitForTimeout(250);
-await mkdir('/tmp', { recursive: true });
-await page.screenshot({ fullPage: true, path: screenshotPath });
+await page.screenshot({ fullPage: true, path: '/tmp/gmi-product-final.png' });
 await browser.close();
 
 if (errors.length > 0) {
