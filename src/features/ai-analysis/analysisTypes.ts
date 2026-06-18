@@ -1,3 +1,5 @@
+import type { Channel } from '../../domain/inventory';
+
 export type AiMessageType =
   | 'OTP'
   | 'Transaction'
@@ -19,26 +21,26 @@ export type AiTemplateAnalysisResult = {
   id: string;
   templateId: string;
   name: string;
-  channel: 'SMS' | 'Email' | 'Push' | 'In-app';
+  channel: Channel;
   analyzedAt: string;
   maskedMessage: string;
   extractedPattern: string;
-  placeholders: string[];
+  placeholders: ReadonlyArray<string>;
   aiMessageType: AiMessageType;
   governanceClassification: GovernanceClassification;
   confidence: number;
   qualityScore: number;
   nearestMatch?: SimilarTemplateMatch;
-  anomalies: string[];
+  anomalies: ReadonlyArray<string>;
   owner: string;
   reviewStatus: AnalysisReviewStatus;
   lifecycleStatus: AnalysisLifecycleStatus;
-  explanation: string[];
+  explanation: ReadonlyArray<string>;
 };
 
 export type AiTemplateAnalysisFilter = {
   templateId?: string;
-  channel?: 'SMS' | 'Email' | 'Push' | 'In-app';
+  channel?: Channel;
   aiMessageType?: AiMessageType;
   reviewStatus?: AnalysisReviewStatus;
   owner?: string;
