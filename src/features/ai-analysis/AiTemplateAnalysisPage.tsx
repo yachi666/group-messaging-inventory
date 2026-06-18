@@ -522,7 +522,7 @@ export function AiTemplateAnalysisPage() {
                     <div className="action-strip">
                       <button
                         className="button button-primary"
-                        data-testid="analysis-owner-save"
+                        data-testid="analysis-save-owner"
                         onClick={saveOwner}
                         type="button"
                       >
