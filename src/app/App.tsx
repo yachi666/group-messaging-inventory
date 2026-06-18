@@ -1,6 +1,7 @@
 import { useState, useTransition } from 'react';
 
 import { AiChatProvider } from '../features/ai/AiChatProvider';
+import { AiTemplateAnalysisPage } from '../features/ai-analysis/AiTemplateAnalysisPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { ProductWorkspace } from '../features/workspace/ProductWorkspace';
 import { LanguageProvider } from '../i18n/LanguageProvider';
@@ -22,6 +23,8 @@ export function App() {
         <AppShell activeView={activeView} isPending={isPending} onViewChange={handleViewChange}>
           {activeView === 'dashboard' ? (
             <DashboardPage />
+          ) : activeView === 'ai-template-analysis' ? (
+            <AiTemplateAnalysisPage />
           ) : (
             <ProductWorkspace activeView={activeView} />
           )}

@@ -16,6 +16,7 @@ page.on('console', (message) => {
 
 await page.goto(baseUrl, { waitUntil: 'networkidle' });
 await page.getByRole('heading', { name: 'Messaging inventory' }).waitFor();
+await page.getByTestId('nav-ai-template-analysis').waitFor();
 await page.getByTestId('dashboard-platform-filter').selectOption('SFMC');
 await page.getByTestId('dashboard-inventory-table').getByText('Card fraud alert').waitFor();
 await page.getByTestId('dashboard-inventory-table').getByText('Payment due reminder').waitFor({
