@@ -29,7 +29,7 @@ import type { AppView } from '../../layout/AppShell';
 import { formatPercentage, formatVolume } from '../../lib/format';
 
 type ProductWorkspaceProps = {
-  activeView: Exclude<AppView, 'dashboard'>;
+  activeView: Exclude<AppView, 'dashboard' | 'ai-template-analysis'>;
 };
 
 type InventoryFilter = 'all' | 'candidate' | 'needs-evidence' | 'pending-checker';
