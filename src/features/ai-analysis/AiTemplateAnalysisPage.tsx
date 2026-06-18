@@ -67,6 +67,10 @@ function getGovernanceTone(classification: GovernanceClassification): StatusChip
   return 'info';
 }
 
+function getScoreWidth(score: number) {
+  return `${Math.max(0, Math.min(100, score))}%`;
+}
+
 export function AiTemplateAnalysisPage() {
   const { t } = useI18n();
   const [results, setResults] = useState<ReadonlyArray<AiTemplateAnalysisResult>>(
@@ -354,7 +358,17 @@ export function AiTemplateAnalysisPage() {
                     <span className="analysis-row-value">
                       {t(governanceLabelKeys[result.governanceClassification])}
                     </span>
-                    <span className="analysis-row-value">{result.confidence}%</span>
+                    <span className="analysis-row-value">
+                      <span className="analysis-score">
+                        <span className="analysis-score-value">{result.confidence}%</span>
+                        <span className="analysis-score-track" aria-hidden="true">
+                          <span
+                            className="analysis-score-fill analysis-score-fill-blue"
+                            style={{ width: getScoreWidth(result.confidence) }}
+                          />
+                        </span>
+                      </span>
+                    </span>
                     <span className="analysis-row-value">{result.owner}</span>
                     <span className="analysis-row-value">
                       {t(reviewStatusLabelKeys[result.reviewStatus])}
@@ -418,7 +432,15 @@ export function AiTemplateAnalysisPage() {
                 </div>
                 <div className="field">
                   <span>{t('analysis.confidenceScore')}</span>
-                  <strong>{selectedResult.confidence}%</strong>
+                  <strong className="analysis-score">
+                    <span className="analysis-score-value">{selectedResult.confidence}%</span>
+                    <span className="analysis-score-track" aria-hidden="true">
+                      <span
+                        className="analysis-score-fill analysis-score-fill-teal"
+                        style={{ width: getScoreWidth(selectedResult.confidence) }}
+                      />
+                    </span>
+                  </strong>
                 </div>
                 <div className="field">
                   <span>{t('analysis.qualityScore')}</span>
