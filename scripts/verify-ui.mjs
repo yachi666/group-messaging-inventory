@@ -2,7 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
 
 const baseUrl = process.env.APP_URL ?? 'http://127.0.0.1:5173';
-const screenshotPath = '/tmp/gmi-product-workspace.png';
+const screenshotPath = 'artifacts/gmi-product-workspace.png';
 const errors = [];
 
 const browser = await chromium.launch({ headless: true });
@@ -17,6 +17,13 @@ page.on('console', (message) => {
 await page.goto(baseUrl, { waitUntil: 'networkidle' });
 await page.getByRole('heading', { name: 'Messaging inventory' }).waitFor();
 await page.getByTestId('nav-ai-template-analysis').waitFor();
+await page.getByTestId('nav-ai-template-analysis').click();
+await page.getByRole('heading', { name: 'AI Template Analysis' }).waitFor();
+await page.getByTestId('analysis-results-table').waitFor();
+await page.getByTestId('analysis-result-ATA-001248').click();
+await page.getByTestId('analysis-inspector').getByText('Payment due reminder').waitFor();
+await page.getByTestId('analysis-inspector').getByText('{amount}', { exact: true }).waitFor();
+await page.getByTestId('nav-dashboard').click();
 await page.getByTestId('dashboard-platform-filter').selectOption('SFMC');
 await page.getByTestId('dashboard-inventory-table').getByText('Card fraud alert').waitFor();
 await page.getByTestId('dashboard-inventory-table').getByText('Payment due reminder').waitFor({
@@ -91,8 +98,7 @@ await page.getByTestId('csv-result-preview').getByText('templates_june_volume.cs
 await page.getByTestId('csv-result-preview').getByText('Ready for AI analysis').waitFor();
 
 await page.waitForTimeout(250);
-// ensure /tmp exists (container/os will usually have this) - keep writing screenshots to /tmp
-await mkdir('/tmp', { recursive: true });
+await mkdir('artifacts', { recursive: true });
 await page.screenshot({ fullPage: true, path: screenshotPath });
 await browser.close();
 
