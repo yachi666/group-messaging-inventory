@@ -112,8 +112,10 @@ export function AiTemplateAnalysisPage() {
   }, [messageType, owner, query, results, reviewStatus]);
 
   const selectedResult = useMemo(() => {
-    return visibleResults.find((result) => result.id === selectedId) ?? visibleResults[0] ?? null;
-  }, [selectedId, visibleResults]);
+    return (
+      results.find((result) => result.id === selectedId) ?? visibleResults[0] ?? results[0] ?? null
+    );
+  }, [results, selectedId, visibleResults]);
 
   const highConfidenceCount = useMemo(() => {
     return results.filter((result) => result.confidence >= 90).length;

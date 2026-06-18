@@ -29,21 +29,13 @@ await page.getByTestId('analysis-notice').getByText('Analysis confirmed').waitFo
 await page.getByTestId('analysis-edit-owner').click();
 await page.getByTestId('analysis-owner-input').fill('L. Zhang');
 await page.getByTestId('analysis-save-owner').click();
-await page.getByTestId('analysis-selected-owner').waitFor();
+await page.getByTestId('analysis-selected-owner').getByText('L. Zhang').waitFor();
 await page.getByTestId('analysis-merge').click();
 await page.getByTestId('analysis-notice').getByText('Candidate merged').waitFor();
-// Demise button may not always be present depending on UI state; click if available
-const demiseCount = await page.locator('[data-testid="analysis-demise"]').count();
-if (demiseCount > 0) {
-  await page.getByTestId('analysis-demise').click();
-  await page.getByTestId('analysis-notice').getByText('Template demised').waitFor();
-}
-const resultCount = await page.locator('[data-testid="analysis-result-ATA-001248"]').count();
-if (resultCount > 0) {
-  await page.getByTestId('analysis-result-ATA-001248').click();
-  await page.getByTestId('analysis-inspector').getByText('Payment due reminder').waitFor();
-  await page.getByTestId('analysis-inspector').getByText('{amount}', { exact: true }).waitFor();
-}
+await page.getByTestId('analysis-demise').click();
+await page.getByTestId('analysis-notice').getByText('Template demised').waitFor();
+await page.getByTestId('analysis-inspector').getByText('Payment due reminder').waitFor();
+await page.getByTestId('analysis-inspector').getByText('{amount}', { exact: true }).waitFor();
 await page.getByTestId('nav-dashboard').click();
 await page.getByTestId('dashboard-platform-filter').selectOption('SFMC');
 await page.getByTestId('dashboard-inventory-table').getByText('Card fraud alert').waitFor();
