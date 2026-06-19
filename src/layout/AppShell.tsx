@@ -13,31 +13,25 @@ type AppShellProps = {
 
 export type AppView =
   | 'dashboard'
-  | 'inventory'
-  | 'triage'
-  | 'evidence'
-  | 'analytics'
-  | 'ai-template-analysis'
-  | 'audit-trail'
-  | 'settings';
+  | 'use-cases'
+  | 'templates'
+  | 'review-queue'
+  | 'administration';
 
 const navItems = [
   { id: 'dashboard', labelKey: 'nav.dashboard', icon: 'grid' },
-  { id: 'inventory', labelKey: 'nav.inventory', icon: 'rows' },
-  { id: 'triage', labelKey: 'nav.triage', icon: 'queue' },
-  { id: 'evidence', labelKey: 'nav.evidence', icon: 'file' },
-  { id: 'analytics', labelKey: 'nav.analytics', icon: 'bars' },
-  { id: 'ai-template-analysis', labelKey: 'nav.aiTemplateAnalysis', icon: 'spark' },
-  { id: 'audit-trail', labelKey: 'nav.auditTrail', icon: 'ledger' },
-  { id: 'settings', labelKey: 'nav.settings', icon: 'dial' },
+  { id: 'use-cases', labelKey: 'nav.inventory', icon: 'rows' },
+  { id: 'templates', labelKey: 'nav.aiTemplateAnalysis', icon: 'file' },
+  { id: 'review-queue', labelKey: 'nav.triage', icon: 'queue' },
+  { id: 'administration', labelKey: 'nav.settings', icon: 'dial' },
 ] as const satisfies ReadonlyArray<{
   id: AppView;
   icon: 'grid' | 'rows' | 'queue' | 'file' | 'bars' | 'spark' | 'ledger' | 'dial';
   labelKey: MessageKey;
 }>;
 
-const adminNavItems = navItems.slice(6);
-const workspaceNavItems = navItems.slice(0, 6);
+const adminNavItems = navItems.slice(4);
+const workspaceNavItems = navItems.slice(0, 4);
 
 export function AppShell({ activeView, children, isPending, onViewChange }: AppShellProps) {
   const { locale, setLocale, t } = useI18n();

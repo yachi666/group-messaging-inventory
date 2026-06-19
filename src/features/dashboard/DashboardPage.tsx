@@ -1,836 +1,399 @@
 import { useMemo, useState } from 'react';
-
-import { MetricCard } from '../../components/MetricCard';
-import { StatusChip } from '../../components/StatusChip';
 import {
-  auditRecords,
-  candidateUseCases,
-  coverageFlow,
-  dashboardMetrics,
-  triageItems,
-} from '../../data/mockInventory';
-import type { CandidateUseCase, Channel, DriftType, Platform } from '../../domain/inventory';
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+
+import { StatusChip } from '../../components/StatusChip';
+import { governanceTemplates, governanceUseCases } from '../../data/governanceMock';
+import type { GovernanceTemplate } from '../../domain/governance';
 import { useI18n } from '../../i18n/LanguageProvider';
-import type { MessageKey } from '../../i18n/messages';
 import { formatPercentage, formatVolume } from '../../lib/format';
 
-const maxCoverageVolume = Math.max(
-  ...coverageFlow.map((point) => point.matched + point.unknown),
-);
+type PeriodMode = 'month' | 'year';
+type BreakdownDimension = 'market' | 'platform' | 'channel';
+type PlatformFilter = 'all' | string;
+type ChannelFilter = 'all' | string;
+type MarketFilter = 'all' | string;
 
-const confidenceBands = [
-  { labelKey: 'confidence.high', value: 68, tone: 'success' },
-  { labelKey: 'confidence.medium', value: 24, tone: 'warning' },
-  { labelKey: 'confidence.low', value: 8, tone: 'danger' },
-] as const satisfies ReadonlyArray<{
-  labelKey: MessageKey;
-  value: number;
-  tone: 'success' | 'warning' | 'danger';
-}>;
+const platformOptions = ['all', 'MDP', 'SFMC', 'ICCM', 'IRIS'] as const;
+const channelOptions = ['all', 'SMS', 'Email', 'Push'] as const;
+const marketOptions = ['all', 'UK', 'Hong Kong', 'Singapore'] as const;
 
-const driftLabelKeys = {
-  'retired-but-live': 'drift.retiredButLive',
-  'new-sender-identity': 'drift.newSenderIdentity',
-  'new-template': 'drift.newTemplate',
-  'unknown-traffic': 'drift.unknownTraffic',
-  'volume-anomaly': 'drift.volumeAnomaly',
-} satisfies Record<DriftType, MessageKey>;
+const breakdownColors = ['#1f5f54', '#56b5a5', '#d5a756', '#7e8ac7', '#b86d68'];
 
-const statusLabelKeys = {
-  confirmed: 'status.confirmed',
-  candidate: 'status.candidate',
-  retired: 'status.retired',
-} satisfies Record<CandidateUseCase['status'], MessageKey>;
+const monthlyTraffic = [
+  { label: 'Jan', volume: 1_180_000, previous: 1_120_000 },
+  { label: 'Feb', volume: 1_260_000, previous: 1_160_000 },
+  { label: 'Mar', volume: 1_350_000, previous: 1_210_000 },
+  { label: 'Apr', volume: 1_480_000, previous: 1_320_000 },
+  { label: 'May', volume: 1_610_000, previous: 1_450_000 },
+  { label: 'Jun', volume: 1_749_900, previous: 1_540_000 },
+] as const;
 
-const ownerStatusLabelKeys = {
-  confirmed: 'status.confirmed',
-  'pending-checker': 'status.pendingChecker',
-  'needs-owner': 'status.needsOwner',
-} satisfies Record<CandidateUseCase['ownerStatus'], MessageKey>;
+const yearlyTraffic = [
+  { label: '2023', volume: 16_840_000, previous: 15_120_000 },
+  { label: '2024', volume: 19_460_000, previous: 16_840_000 },
+  { label: '2025', volume: 22_780_000, previous: 19_460_000 },
+  { label: '2026 YTD', volume: 11_034_000, previous: 9_660_000 },
+] as const;
 
-const auditStatusLabelKeys = {
-  approved: 'status.approved',
-  'pending-checker': 'status.pendingChecker',
-  'needs-evidence': 'status.needsEvidence',
-} satisfies Record<CandidateUseCase['auditStatus'], MessageKey>;
+const copy = {
+  en: {
+    title: 'Messaging traffic analytics',
+    subtitle: 'See how messaging volume changes over time and where active templates are being used.',
+    export: 'Export data',
+    reset: 'Reset filters',
+    month: 'Monthly',
+    year: 'Yearly',
+    period: 'View',
+    market: 'Region',
+    platform: 'Platform',
+    channel: 'Channel',
+    allMarkets: 'All regions',
+    allPlatforms: 'All platforms',
+    allChannels: 'All channels',
+    totalVolume: 'Total message volume',
+    activeTemplates: 'Active templates',
+    activeUseCases: 'Active use cases',
+    deliveryRate: 'Delivery rate',
+    dailyAverage: 'Average daily volume',
+    versus: 'vs previous period',
+    templatesNote: 'Templates with traffic this period',
+    useCasesNote: 'Business scenarios producing traffic',
+    deliveryNote: 'Delivered across selected scope',
+    dailyNote: 'Across business days',
+    trendTitle: 'Traffic trend',
+    trendMonth: 'Monthly message volume in 2026',
+    trendYear: 'Annual message volume, 2023–2026',
+    current: 'Current period',
+    previous: 'Previous period',
+    breakdownTitle: 'Traffic mix',
+    breakdownKicker: 'Switch the dimension to understand contribution',
+    topTemplates: 'Most active templates',
+    topTemplatesKicker: 'Ranked by message volume in the selected scope',
+    template: 'Template',
+    volume: 'Volume',
+    change: 'Change',
+    insightTitle: 'Business signals',
+    insightGrowth: 'Traffic is growing steadily',
+    insightGrowthBody: 'June volume is above the comparable previous period.',
+    insightConcentration: 'Volume is concentrated',
+    insightConcentrationBody: 'The leading segment contributes more than half of selected traffic.',
+    insightTemplate: 'Template activity is healthy',
+    insightTemplateBody: 'Active-template count and concentration are based on production traffic.',
+    selectedScope: 'Selected scope',
+    noData: 'No traffic matches this filter combination.',
+  },
+  'zh-CN': {
+    title: '消息流量分析',
+    subtitle: '查看消息流量随时间的变化，以及活跃模板主要分布在哪些地区和平台。',
+    export: '导出数据',
+    reset: '重置筛选',
+    month: '按月',
+    year: '按年',
+    period: '时间粒度',
+    market: '地区',
+    platform: '平台',
+    channel: '渠道',
+    allMarkets: '全部地区',
+    allPlatforms: '全部平台',
+    allChannels: '全部渠道',
+    totalVolume: '消息总量',
+    activeTemplates: '活跃模板',
+    activeUseCases: '活跃业务场景',
+    deliveryRate: '送达率',
+    dailyAverage: '日均流量',
+    versus: '较上一周期',
+    templatesNote: '本周期内产生流量的模板',
+    useCasesNote: '本周期内产生流量的业务场景',
+    deliveryNote: '所选范围内已送达消息',
+    dailyNote: '按工作日计算',
+    trendTitle: '流量趋势',
+    trendMonth: '2026 年月度消息量',
+    trendYear: '2023–2026 年度消息量',
+    current: '当前周期',
+    previous: '对比周期',
+    breakdownTitle: '流量构成',
+    breakdownKicker: '切换维度，查看各部分的贡献',
+    topTemplates: '最活跃模板',
+    topTemplatesKicker: '按所选范围内的消息量排序',
+    template: '模板',
+    volume: '流量',
+    change: '变化',
+    insightTitle: '业务信号',
+    insightGrowth: '流量保持稳定增长',
+    insightGrowthBody: '6 月流量高于可比周期。',
+    insightConcentration: '流量集中度较高',
+    insightConcentrationBody: '贡献最高的分组占所选流量的一半以上。',
+    insightTemplate: '模板活跃度健康',
+    insightTemplateBody: '活跃模板数量与集中度均来自生产流量。',
+    selectedScope: '当前范围',
+    noData: '当前筛选组合下没有流量数据。',
+  },
+} as const;
 
-const approvalStatusLabelKeys = {
-  approved: 'status.approved',
-  submitted: 'status.submitted',
-  rejected: 'status.needsEvidence',
-} satisfies Record<(typeof auditRecords)[number]['approvalStatus'], MessageKey>;
-
-const monthLabelKeys: Record<string, MessageKey> = {
-  Jan: 'month.jan',
-  Feb: 'month.feb',
-  Mar: 'month.mar',
-  Apr: 'month.apr',
-  May: 'month.may',
-  Jun: 'month.jun',
-};
-
-type DashboardPlatformFilter = 'all' | Platform;
-type DashboardChannelFilter = 'all' | Channel;
-type DashboardMarketFilter = 'all' | string;
-
-const platformOptions = ['all', 'MDP', 'SFMC', 'ICCM', 'IRIS'] as const satisfies ReadonlyArray<
-  DashboardPlatformFilter
->;
-
-const channelOptions = ['all', 'SMS', 'Email', 'Push'] as const satisfies ReadonlyArray<
-  DashboardChannelFilter
->;
-
-const marketOptions = ['all', 'UK', 'HK', 'SG', 'UAE'] as const satisfies ReadonlyArray<
-  DashboardMarketFilter
->;
-
-const useCaseNameKeys: Record<string, MessageKey> = {
-  'UC-1024': 'useCase.UC-1024.name',
-  'UC-1031': 'useCase.UC-1031.name',
-  'UC-1040': 'useCase.UC-1040.name',
-  'UC-0997': 'useCase.UC-0997.name',
-};
-
-const triageTitleKeys: Record<string, MessageKey> = {
-  'TRI-221': 'triage.TRI-221.title',
-  'TRI-224': 'triage.TRI-224.title',
-  'TRI-228': 'triage.TRI-228.title',
-};
-
-const triageActionKeys: Record<string, MessageKey> = {
-  'TRI-221': 'triage.TRI-221.action',
-  'TRI-224': 'triage.TRI-224.action',
-  'TRI-228': 'triage.TRI-228.action',
-};
-
-const auditActionKeys: Record<string, MessageKey> = {
-  'AUD-9081': 'audit.AUD-9081.action',
-  'AUD-9076': 'audit.AUD-9076.action',
-  'AUD-9068': 'audit.AUD-9068.action',
-};
-
-function getStatusTone(status: CandidateUseCase['status']) {
-  if (status === 'confirmed') {
-    return 'success';
-  }
-
-  if (status === 'retired') {
-    return 'danger';
-  }
-
-  return 'accent';
-}
-
-function getOwnerTone(status: CandidateUseCase['ownerStatus']) {
-  if (status === 'confirmed') {
-    return 'success';
-  }
-
-  if (status === 'pending-checker') {
-    return 'warning';
-  }
-
-  return 'danger';
-}
-
-function getAuditTone(status: CandidateUseCase['auditStatus']) {
-  if (status === 'approved') {
-    return 'success';
-  }
-
-  if (status === 'pending-checker') {
-    return 'warning';
-  }
-
-  return 'danger';
-}
-
-function getTranslatedValue(
-  t: (key: MessageKey) => string,
-  keysById: Record<string, MessageKey>,
-  id: string,
-  fallback: string,
-) {
-  const messageKey = keysById[id];
-  return messageKey ? t(messageKey) : fallback;
-}
-
-function isUseCaseVisible(
-  useCase: CandidateUseCase,
-  platformFilter: DashboardPlatformFilter,
-  channelFilter: DashboardChannelFilter,
-  marketFilter: DashboardMarketFilter,
+function matchesFilters(
+  item: GovernanceTemplate,
+  market: MarketFilter,
+  platform: PlatformFilter,
+  channel: ChannelFilter,
 ) {
   return (
-    (platformFilter === 'all' || useCase.platform === platformFilter) &&
-    (channelFilter === 'all' || useCase.channel === channelFilter) &&
-    (marketFilter === 'all' || useCase.market === marketFilter)
+    (market === 'all' || item.market === market) &&
+    (platform === 'all' || item.platform === platform) &&
+    (channel === 'all' || item.channel === channel)
   );
 }
 
-function isTriageVisible(
-  item: (typeof triageItems)[number],
-  platformFilter: DashboardPlatformFilter,
-  channelFilter: DashboardChannelFilter,
-  marketFilter: DashboardMarketFilter,
-) {
-  return (
-    (platformFilter === 'all' || item.platform === platformFilter) &&
-    (channelFilter === 'all' || item.channel === channelFilter) &&
-    (marketFilter === 'all' || item.market === marketFilter)
-  );
-}
-
-function getWeightedConfidence(useCases: CandidateUseCase[]) {
-  const totalVolume = useCases.reduce((sum, useCase) => sum + useCase.monthlyVolume, 0);
-
-  if (totalVolume === 0) {
-    return 0;
-  }
-
-  return Math.round(
-    useCases.reduce(
-      (sum, useCase) => sum + useCase.monthlyVolume * useCase.confidence,
-      0,
-    ) / totalVolume,
-  );
-}
-
-function getOwnerConfirmedPercentage(useCases: CandidateUseCase[]) {
-  if (useCases.length === 0) {
-    return 0;
-  }
-
-  const confirmedCount = useCases.filter((useCase) => useCase.ownerStatus === 'confirmed').length;
-  return Math.round((confirmedCount / useCases.length) * 100);
-}
-
-function downloadInventoryCsv(useCases: CandidateUseCase[]) {
-  const rows = [
-    [
-      'Use case',
-      'Status',
-      'Market',
-      'Platform',
-      'Channel',
-      'Sender identity',
-      'Template reference',
-      'Monthly volume',
-      'Classification',
-      'Confidence',
-      'Owner status',
-      'Audit status',
-    ],
-    ...useCases.map((useCase) => [
-      useCase.name,
-      useCase.status,
-      useCase.market,
-      useCase.platform,
-      useCase.channel,
-      useCase.senderIdentity,
-      useCase.templateReference,
-      String(useCase.monthlyVolume),
-      useCase.classification,
-      String(useCase.confidence),
-      useCase.ownerStatus,
-      useCase.auditStatus,
-    ]),
-  ];
-
-  const csv = rows
-    .map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(','))
-    .join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
+function downloadTrafficCsv(rows: ReadonlyArray<{ label: string; volume: number; previous: number }>) {
+  const csv = ['Period,Current volume,Previous period', ...rows.map((row) => `${row.label},${row.volume},${row.previous}`)].join('\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = 'messaging-inventory-baseline.csv';
+  anchor.download = 'messaging-traffic.csv';
   anchor.click();
   URL.revokeObjectURL(url);
 }
 
-export function DashboardPage() {
-  const { locale, t } = useI18n();
-  const [platformFilter, setPlatformFilter] = useState<DashboardPlatformFilter>('all');
-  const [channelFilter, setChannelFilter] = useState<DashboardChannelFilter>('all');
-  const [marketFilter, setMarketFilter] = useState<DashboardMarketFilter>('all');
-  const [isPackStaged, setIsPackStaged] = useState(false);
-  const [isCsvReady, setIsCsvReady] = useState(false);
+type DashboardPageProps = {
+  onNavigate?: (view: 'use-cases' | 'templates' | 'review-queue', id?: string) => void;
+};
 
-  const filteredUseCases = useMemo(
-    () =>
-      candidateUseCases.filter((useCase) =>
-        isUseCaseVisible(useCase, platformFilter, channelFilter, marketFilter),
-      ),
+export function DashboardPage({ onNavigate }: DashboardPageProps) {
+  const { locale } = useI18n();
+  const c = copy[locale];
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('month');
+  const [dimension, setDimension] = useState<BreakdownDimension>('market');
+  const [marketFilter, setMarketFilter] = useState<MarketFilter>('all');
+  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
+  const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
+
+  const filteredTemplates = useMemo(
+    () => governanceTemplates.filter((item) => matchesFilters(item, marketFilter, platformFilter, channelFilter)),
     [channelFilter, marketFilter, platformFilter],
   );
-
-  const filteredTriageItems = useMemo(
-    () =>
-      triageItems.filter((item) =>
-        isTriageVisible(item, platformFilter, channelFilter, marketFilter),
-      ),
-    [channelFilter, marketFilter, platformFilter],
-  );
-
-  const totalUseCaseVolume = candidateUseCases.reduce(
-    (sum, useCase) => sum + useCase.monthlyVolume,
-    0,
-  );
-  const filteredUseCaseVolume = filteredUseCases.reduce(
-    (sum, useCase) => sum + useCase.monthlyVolume,
-    0,
-  );
-  const coverageScale = totalUseCaseVolume > 0 ? filteredUseCaseVolume / totalUseCaseVolume : 1;
-  const visibleCoverageFlow = coverageFlow.map((point) => ({
-    ...point,
-    matched: Math.max(0, Math.round(point.matched * coverageScale)),
-    unknown: Math.max(0, Math.round(point.unknown * coverageScale)),
+  const allVolume = governanceTemplates.reduce((sum, item) => sum + item.monthlyVolume, 0);
+  const selectedVolume = filteredTemplates.reduce((sum, item) => sum + item.monthlyVolume, 0);
+  const scopeRatio = allVolume === 0 ? 0 : selectedVolume / allVolume;
+  const sourceTraffic = periodMode === 'month' ? monthlyTraffic : yearlyTraffic;
+  const traffic = sourceTraffic.map((item) => ({
+    ...item,
+    volume: Math.round(item.volume * scopeRatio),
+    previous: Math.round(item.previous * scopeRatio),
   }));
-  const visibleMaxCoverageVolume = Math.max(
-    1,
-    ...visibleCoverageFlow.map((point) => point.matched + point.unknown),
+  const currentVolume = traffic.at(-1)?.volume ?? 0;
+  const previousVolume = traffic.at(-1)?.previous ?? 0;
+  const growth = previousVolume === 0 ? 0 : ((currentVolume - previousVolume) / previousVolume) * 100;
+  const activeTemplates = filteredTemplates.filter(
+    (item) => item.lifecycle === 'Active' && item.monthlyVolume > 0,
+  ).length;
+  const activeUseCaseIds = new Set(
+    filteredTemplates.flatMap((item) => item.parentUseCaseId ? [item.parentUseCaseId] : []),
   );
-  const coverageAxisValues = [
-    visibleMaxCoverageVolume,
-    Math.round(visibleMaxCoverageVolume / 2),
-    0,
-  ];
-  const trafficMatchedPercentage =
-    filteredUseCases.length === candidateUseCases.length
-      ? dashboardMetrics.trafficMatchedPercentage
-      : getWeightedConfidence(filteredUseCases);
-  const ownerConfirmedPercentage =
-    filteredUseCases.length === candidateUseCases.length
-      ? dashboardMetrics.ownerConfirmedPercentage
-      : getOwnerConfirmedPercentage(filteredUseCases);
-  const evidenceGapCount = filteredUseCases.filter(
-    (useCase) => useCase.auditStatus === 'needs-evidence',
+  const activeUseCases = governanceUseCases.filter(
+    (item) => activeUseCaseIds.has(item.id) && item.lifecycle !== 'Retired',
   ).length;
-  const ownerGapCount = filteredUseCases.filter(
-    (useCase) => useCase.ownerStatus !== 'confirmed',
-  ).length;
+  const breakdown = useMemo(() => {
+    const groups = new Map<string, number>();
+    filteredTemplates.forEach((item) => {
+      const key = item[dimension];
+      groups.set(key, (groups.get(key) ?? 0) + item.monthlyVolume);
+    });
+    const total = [...groups.values()].reduce((sum, value) => sum + value, 0);
+    return [...groups.entries()]
+      .map(([label, volume]) => ({ label, volume, share: total === 0 ? 0 : (volume / total) * 100 }))
+      .sort((a, b) => b.volume - a.volume);
+  }, [dimension, filteredTemplates]);
 
-  function resetPilotScope() {
+  const rankedTemplates = filteredTemplates
+    .filter((item) => item.lifecycle === 'Active')
+    .sort((a, b) => b.monthlyVolume - a.monthlyVolume);
+  const topTemplate = rankedTemplates[0];
+  const topTemplateShare = selectedVolume === 0 || !topTemplate
+    ? 0
+    : (topTemplate.monthlyVolume / selectedVolume) * 100;
+  const scopeLabel = [
+    marketFilter === 'all' ? c.allMarkets : marketFilter,
+    platformFilter === 'all' ? c.allPlatforms : platformFilter,
+    channelFilter === 'all' ? c.allChannels : channelFilter,
+  ].join(' · ');
+
+  function resetFilters() {
+    setMarketFilter('all');
     setPlatformFilter('all');
     setChannelFilter('all');
-    setMarketFilter('all');
-    setIsPackStaged(false);
   }
 
-  function handleExportCsv() {
-    downloadInventoryCsv(filteredUseCases);
-    setIsCsvReady(true);
+  function applyBreakdown(label: string) {
+    if (dimension === 'market') setMarketFilter(label);
+    if (dimension === 'platform') setPlatformFilter(label as PlatformFilter);
+    if (dimension === 'channel') setChannelFilter(label as ChannelFilter);
   }
 
   return (
-    <>
-      <header className="workspace-header">
-        <div className="workspace-header-main">
-          <button className="back-button" type="button" aria-label="Back">
-            <span aria-hidden="true" />
-          </button>
-          <span className="object-badge" aria-hidden="true">
-            MI
-          </span>
-          <div className="workspace-copy">
-            <h1 className="page-title">{t('dashboard.title')}</h1>
-            <p className="page-subtitle">{t('dashboard.subtitle')}</p>
-          </div>
+    <div className="traffic-dashboard">
+      <header className="traffic-header">
+        <div>
+          <p className="eyebrow">{locale === 'zh-CN' ? '业务驾驶舱' : 'Business dashboard'}</p>
+          <h1 className="page-title">{c.title}</h1>
+          <p className="page-subtitle">{c.subtitle}</p>
         </div>
-
-        <div className="dashboard-header-tools" aria-label={t('nav.dashboard')}>
-          <div className="workspace-meta">
-            <span>
-              {t('dashboard.statusLabel')}
-              <StatusChip tone="success">{t('dashboard.statusActive')}</StatusChip>
-            </span>
-            <span>
-              <strong>{filteredUseCases.length}</strong> {t('dashboard.useCasesSelected')}
-            </span>
-            <span>
-              <strong>{ownerGapCount}</strong> {t('responsePack.ownerGaps')}
-            </span>
-            <span>
-              <strong>{evidenceGapCount}</strong> {t('responsePack.evidenceGaps')}
-            </span>
-          </div>
-
-          <div className="dashboard-primary-actions">
-            <button className="button" onClick={handleExportCsv} type="button">
-              {t('action.exportCsv')}
-            </button>
-            <button
-              className="button button-primary"
-              onClick={() => setIsPackStaged(true)}
-              type="button"
-            >
-              {t('action.buildResponsePack')}
-            </button>
-            <button className="icon-button workspace-menu" type="button" aria-label="More options">
-              ...
-            </button>
-          </div>
-        </div>
-
-        <nav className="workspace-tabs" aria-label={t('nav.dashboard')}>
-          <button className="workspace-tab workspace-tab-active" type="button">
-            {t('tab.overview')}
-          </button>
-          <button className="workspace-tab" type="button">
-            {t('tab.markets')}
-          </button>
-          <button className="workspace-tab" type="button">
-            {t('tab.platforms')}
-          </button>
-          <button className="workspace-tab" type="button">
-            {t('tab.evidence')}
-          </button>
-          <button className="workspace-tab" type="button">
-            {t('tab.audit')}
-          </button>
-        </nav>
+        <button className="button" onClick={() => downloadTrafficCsv(traffic)} type="button">
+          {c.export}
+        </button>
       </header>
 
-      <section className="filters dashboard-filters" aria-label={t('nav.dashboard')}>
-        <button
-          className={`filter-pill ${
-            platformFilter === 'all' && channelFilter === 'all' && marketFilter === 'all'
-              ? 'filter-pill-active'
-              : ''
-          }`}
-          onClick={resetPilotScope}
-          type="button"
-        >
-          {t('filter.pilotMarkets')}
-        </button>
-
-        <label className="filter-control">
-          <span>{t('filter.platformLabel')}</span>
-          <select
-            className="filter-select"
-            data-testid="dashboard-platform-filter"
-            onChange={(event) =>
-              setPlatformFilter(event.target.value as DashboardPlatformFilter)
-            }
-            value={platformFilter}
-          >
-            {platformOptions.map((platform) => (
-              <option key={platform} value={platform}>
-                {platform === 'all' ? t('filter.allPlatforms') : platform}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="filter-control">
-          <span>{t('filter.channelLabel')}</span>
-          <select
-            className="filter-select"
-            data-testid="dashboard-channel-filter"
-            onChange={(event) => setChannelFilter(event.target.value as DashboardChannelFilter)}
-            value={channelFilter}
-          >
-            {channelOptions.map((channel) => (
-              <option key={channel} value={channel}>
-                {channel === 'all' ? t('filter.allChannels') : channel}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="filter-control">
-          <span>{t('filter.marketLabel')}</span>
-          <select
-            className="filter-select"
-            data-testid="dashboard-market-filter"
-            onChange={(event) => setMarketFilter(event.target.value as DashboardMarketFilter)}
-            value={marketFilter}
-          >
-            {marketOptions.map((market) => (
-              <option key={market} value={market}>
-                {market === 'all' ? t('filter.allMarkets') : market}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <StatusChip tone="info">
-          {filteredUseCases.length} {t('dashboard.useCasesSelected')}
-        </StatusChip>
-      </section>
-
-      {(isPackStaged || isCsvReady) && (
-        <section className="status-banner" data-testid="response-pack-status">
+      <section className="traffic-filter-panel" aria-label={c.selectedScope}>
+        <div className="period-switch" aria-label={c.period}>
+          <span>{c.period}</span>
           <div>
-            <strong>
-              {isPackStaged ? t('responsePack.staged') : t('responsePack.csvReady')}
-            </strong>
-            <span>
-              {t('responsePack.scope')}: {filteredUseCases.length}{' '}
-              {t('responsePack.inventoryRows')} · {ownerGapCount} {t('responsePack.ownerGaps')} ·{' '}
-              {evidenceGapCount} {t('responsePack.evidenceGaps')}
-            </span>
+            <button className={periodMode === 'month' ? 'is-active' : ''} onClick={() => setPeriodMode('month')} type="button">{c.month}</button>
+            <button className={periodMode === 'year' ? 'is-active' : ''} onClick={() => setPeriodMode('year')} type="button">{c.year}</button>
           </div>
-          <StatusChip tone={evidenceGapCount === 0 ? 'success' : 'warning'}>
-            {evidenceGapCount === 0 ? t('legend.approved') : t('legend.needsEvidence')}
-          </StatusChip>
-        </section>
-      )}
-
-      <section className="kpi-grid" aria-label={t('nav.analytics')}>
-        <MetricCard
-          label={t('kpi.trafficMatched')}
-          note={t('kpi.trafficMatchedNote')}
-          tone="success"
-          trend="+4.8%"
-          value={formatPercentage(trafficMatchedPercentage)}
-        />
-        <MetricCard
-          label={t('kpi.unknownTraffic')}
-          note={t('kpi.unknownTrafficNote')}
-          tone="warning"
-          trend={filteredUseCases.length === candidateUseCases.length ? '-28' : 'scope'}
-          value={String(
-            filteredUseCases.length === candidateUseCases.length
-              ? dashboardMetrics.unknownTrafficCount
-              : filteredTriageItems.filter((item) => item.type === 'unknown-traffic').length,
-          )}
-        />
-        <MetricCard
-          label={t('kpi.driftExceptions')}
-          note={t('kpi.driftExceptionsNote')}
-          tone="danger"
-          trend={filteredUseCases.length === candidateUseCases.length ? '+3' : 'scope'}
-          value={String(
-            filteredUseCases.length === candidateUseCases.length
-              ? dashboardMetrics.driftExceptionCount
-              : filteredTriageItems.length,
-          )}
-        />
-        <MetricCard
-          label={t('kpi.ownerConfirmed')}
-          note={t('kpi.ownerConfirmedNote')}
-          tone="accent"
-          trend="+9.1%"
-          value={formatPercentage(ownerConfirmedPercentage)}
-        />
+        </div>
+        <label className="filter-control">
+          <span>{c.market}</span>
+          <select className="filter-select" onChange={(event) => setMarketFilter(event.target.value)} value={marketFilter}>
+            {marketOptions.map((value) => <option key={value} value={value}>{value === 'all' ? c.allMarkets : value}</option>)}
+          </select>
+        </label>
+        <label className="filter-control">
+          <span>{c.platform}</span>
+          <select className="filter-select" onChange={(event) => setPlatformFilter(event.target.value as PlatformFilter)} value={platformFilter}>
+            {platformOptions.map((value) => <option key={value} value={value}>{value === 'all' ? c.allPlatforms : value}</option>)}
+          </select>
+        </label>
+        <label className="filter-control">
+          <span>{c.channel}</span>
+          <select className="filter-select" onChange={(event) => setChannelFilter(event.target.value as ChannelFilter)} value={channelFilter}>
+            {channelOptions.map((value) => <option key={value} value={value}>{value === 'all' ? c.allChannels : value}</option>)}
+          </select>
+        </label>
+        <button className="traffic-reset" onClick={resetFilters} type="button">{c.reset}</button>
       </section>
 
-      <section className="dashboard-grid dashboard-grid-primary">
-        <article className="card coverage-card" aria-labelledby="coverage-flow-title">
+      <p className="traffic-scope"><strong>{c.selectedScope}</strong><span>{scopeLabel}</span></p>
+
+      <section className="traffic-kpis" aria-label={c.title}>
+        <article><span>{c.totalVolume}</span><strong>{formatVolume(currentVolume, locale)}</strong><small className="positive">+{growth.toFixed(1)}% {c.versus}</small></article>
+        <article><span>{c.activeTemplates}</span><strong>{activeTemplates}</strong><small>{c.templatesNote}</small></article>
+        <article><span>{c.activeUseCases}</span><strong>{activeUseCases}</strong><small>{c.useCasesNote}</small></article>
+        <article><span>{c.dailyAverage}</span><strong>{formatVolume(periodMode === 'month' ? currentVolume / 22 : currentVolume / 125, locale)}</strong><small>{c.dailyNote}</small></article>
+      </section>
+
+      <section className="traffic-main-grid">
+        <article className="card traffic-trend-card">
           <div className="card-header">
-            <div>
-              <h2 className="card-title" id="coverage-flow-title">
-                {t('section.coverageFlow')}
-              </h2>
-              <p className="card-kicker">{t('section.coverageFlowKicker')}</p>
-            </div>
-            <div className="coverage-legend" aria-hidden="true">
-              <span>
-                <span className="coverage-legend-marker coverage-legend-matched" />
-                {t('chart.matched')}
-              </span>
-              <span>
-                <span className="coverage-legend-marker coverage-legend-unknown" />
-                {t('chart.unknown')}
-              </span>
-            </div>
+            <div><h2 className="card-title">{c.trendTitle}</h2><p className="card-kicker">{periodMode === 'month' ? c.trendMonth : c.trendYear}</p></div>
+            <div className="traffic-legend"><span><i className="current" />{c.current}</span><span><i />{c.previous}</span></div>
           </div>
-
-          <div className="coverage-card-body">
-            <div className="coverage-summary">
-              <span>{t('dashboard.reachMarkets')}</span>
-              <strong>{t('dashboard.reachMarketsValue')}</strong>
-              <span>{t('dashboard.userReached')}</span>
-              <strong>{formatVolume(filteredUseCaseVolume, locale)}</strong>
-              <span>{t('dashboard.period')}</span>
-              <strong>{t('dashboard.periodValue')}</strong>
-              <small>{t('dashboard.lastUpdated')}</small>
-              <button className="refresh-link" type="button">
-                {t('dashboard.refresh')}
-              </button>
+          {traffic.length > 0 && currentVolume > 0 ? (
+            <div className="traffic-chart-canvas" aria-label={c.trendTitle}>
+              <ResponsiveContainer height="100%" width="100%">
+                <BarChart data={traffic} margin={{ top: 24, right: 8, bottom: 0, left: 4 }}>
+                  <defs>
+                    <linearGradient id="currentTrafficFill" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stopColor="#245e55" />
+                      <stop offset="100%" stopColor="#4ca99a" />
+                    </linearGradient>
+                    <linearGradient id="previousTrafficFill" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stopColor="#dfe9e7" />
+                      <stop offset="100%" stopColor="#eef3f2" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="#e9efed" strokeDasharray="2 7" vertical={false} />
+                  <XAxis axisLine={false} dataKey="label" fontSize={10} tickLine={false} tickMargin={12} />
+                  <YAxis axisLine={false} fontSize={9} tickFormatter={(value) => formatVolume(Number(value), locale)} tickLine={false} width={52} />
+                  <Tooltip
+                    contentStyle={{ background: '#173b36', border: 0, borderRadius: 12, boxShadow: '0 16px 36px rgba(23,59,54,.22)', color: '#fff', fontSize: 11 }}
+                    cursor={{ fill: 'rgba(31,95,84,.045)', radius: 10 }}
+                    formatter={(value) => formatVolume(Number(value), locale)}
+                    labelStyle={{ color: '#b9d7d1', fontWeight: 700, marginBottom: 6 }}
+                  />
+                  <Bar dataKey="volume" fill="url(#currentTrafficFill)" maxBarSize={38} name={c.current} radius={[9, 9, 3, 3]} />
+                  <Bar dataKey="previous" fill="url(#previousTrafficFill)" maxBarSize={38} name={c.previous} radius={[9, 9, 3, 3]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
+          ) : <div className="traffic-empty">{c.noData}</div>}
+        </article>
 
-            <div className="coverage-chart" aria-label={t('section.coverageFlow')}>
-              <div className="coverage-axis" aria-hidden="true">
-                {coverageAxisValues.map((value) => (
-                  <span key={value}>{formatVolume(value, locale)}</span>
+        <article className="card traffic-breakdown-card">
+          <div className="card-header"><div><h2 className="card-title">{c.breakdownTitle}</h2><p className="card-kicker">{c.breakdownKicker}</p></div></div>
+          <div className="dimension-switch">
+            {(['market', 'platform', 'channel'] as const).map((value) => (
+              <button className={dimension === value ? 'is-active' : ''} key={value} onClick={() => setDimension(value)} type="button">{c[value]}</button>
+            ))}
+          </div>
+          {breakdown.length > 0 ? (
+            <div className="traffic-mix-layout">
+              <div className="traffic-donut" aria-label={c.breakdownTitle}>
+                <ResponsiveContainer height="100%" width="100%">
+                  <PieChart>
+                    <Tooltip
+                      contentStyle={{ background: '#173b36', border: 0, borderRadius: 12, color: '#fff', fontSize: 11 }}
+                      formatter={(value) => `${Number(value).toFixed(1)}%`}
+                    />
+                    <Pie
+                      cornerRadius={7}
+                      data={breakdown}
+                      dataKey="share"
+                      innerRadius="67%"
+                      nameKey="label"
+                      outerRadius="94%"
+                      paddingAngle={3}
+                      stroke="transparent"
+                    >
+                      {breakdown.map((item, index) => <Cell fill={breakdownColors[index % breakdownColors.length]} key={item.label} />)}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="traffic-donut-center"><strong>{breakdown[0]?.share.toFixed(1)}%</strong><span>{breakdown[0]?.label}</span></div>
+              </div>
+              <div className="traffic-mix-legend">
+                {breakdown.map((item, index) => (
+                  <button key={item.label} onClick={() => applyBreakdown(item.label)} type="button">
+                    <i style={{ background: breakdownColors[index % breakdownColors.length] }} />
+                    <span><strong>{item.label}</strong><small>{formatVolume(item.volume, locale)}</small></span>
+                    <b>{item.share.toFixed(1)}%</b>
+                  </button>
                 ))}
               </div>
-
-              <div className="coverage-plot">
-                <span className="coverage-grid-line coverage-grid-line-top" aria-hidden="true" />
-                <span className="coverage-grid-line coverage-grid-line-middle" aria-hidden="true" />
-                <span className="coverage-grid-line coverage-grid-line-bottom" aria-hidden="true" />
-
-                {visibleCoverageFlow.map((point) => {
-                  const total = point.matched + point.unknown;
-                  const stackHeight = (total / visibleMaxCoverageVolume) * 100;
-                  const matchedHeight = total > 0 ? (point.matched / total) * 100 : 0;
-                  const unknownHeight = total > 0 ? (point.unknown / total) * 100 : 0;
-                  const unknownPercentage =
-                    total > 0 ? Math.round((point.unknown / total) * 100) : 0;
-                  const monthLabel = t(monthLabelKeys[point.month]);
-                  const matchedVolume = formatVolume(point.matched, locale);
-                  const unknownVolume = formatVolume(point.unknown, locale);
-                  const totalVolume = formatVolume(total, locale);
-
-                  return (
-                    <div className="coverage-bar-group" key={point.month}>
-                      <span className="coverage-total">{totalVolume}</span>
-                      <div
-                        aria-label={`${monthLabel}: ${matchedVolume} ${t(
-                          'chart.matched',
-                        )}, ${unknownVolume} ${t('chart.unknown')}`}
-                        className="coverage-stack-frame"
-                        title={`${monthLabel}: ${totalVolume} ${t('chart.totalVolume')}`}
-                      >
-                        <span className="coverage-stack" style={{ height: `${stackHeight}%` }}>
-                          <span
-                            className="coverage-segment coverage-segment-unknown"
-                            style={{ height: `${unknownHeight}%` }}
-                          />
-                          <span
-                            className="coverage-segment coverage-segment-matched"
-                            style={{ height: `${matchedHeight}%` }}
-                          />
-                        </span>
-                      </div>
-                      <span className="coverage-label">{monthLabel}</span>
-                      <span className="coverage-unknown">
-                        {formatPercentage(unknownPercentage)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
+          ) : <div className="traffic-empty">{c.noData}</div>}
+        </article>
+      </section>
+
+      <section className="traffic-lower-grid">
+        <article className="card traffic-template-card">
+          <div className="card-header"><div><h2 className="card-title">{c.topTemplates}</h2><p className="card-kicker">{c.topTemplatesKicker}</p></div><StatusChip tone="info">{activeTemplates} {c.activeTemplates}</StatusChip></div>
+          <div className="traffic-template-table" role="table">
+            <div className="traffic-template-row traffic-template-head" role="row"><span>{c.template}</span><span>{c.market}</span><span>{c.platform}</span><span>{c.volume}</span><span>{c.change}</span></div>
+            {rankedTemplates.map((item, index) => (
+              <div className="traffic-template-row" key={item.uuid} role="row">
+                <button className="traffic-template-name" onClick={() => onNavigate?.('templates', item.uuid)} type="button"><strong>{item.templateId}</strong><small>{item.sender}</small></button><span>{item.market}</span><span>{item.platform}</span><span>{formatVolume(item.monthlyVolume, locale)}</span>{(() => { const change = 12.4 - index * 2.1; return <span className={change >= 0 ? 'positive' : 'negative'}>{change >= 0 ? '+' : ''}{change.toFixed(1)}%</span>; })()}
+              </div>
+            ))}
+            {rankedTemplates.length === 0 ? <div className="traffic-empty">{c.noData}</div> : null}
           </div>
         </article>
 
-        <div className="insight-stack">
-          <article className="card" aria-labelledby="audit-readiness-title">
-            <div className="card-header">
-              <div>
-                <h2 className="card-title" id="audit-readiness-title">
-                  {t('section.auditReadiness')}
-                </h2>
-                <p className="card-kicker">{t('section.auditReadinessKicker')}</p>
-              </div>
-            </div>
-
-            <div className="donut-wrap">
-              <div aria-label={t('chart.auditReadyLabel')} className="donut" />
-              <div className="legend">
-                <div className="legend-row">
-                  <span>
-                    <span className="legend-marker marker-success" />
-                    {t('legend.approved')}
-                  </span>
-                  <strong>67%</strong>
-                </div>
-                <div className="legend-row">
-                  <span>
-                    <span className="legend-marker marker-warning" />
-                    {t('legend.pendingChecker')}
-                  </span>
-                  <strong>19%</strong>
-                </div>
-                <div className="legend-row">
-                  <span>
-                    <span className="legend-marker marker-danger" />
-                    {t('legend.needsEvidence')}
-                  </span>
-                  <strong>14%</strong>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <article className="card" aria-labelledby="confidence-title">
-            <div className="card-header">
-              <div>
-                <h2 className="card-title" id="confidence-title">
-                  {t('section.confidenceBands')}
-                </h2>
-                <p className="card-kicker">{t('section.confidenceBandsKicker')}</p>
-              </div>
-            </div>
-
-            <div className="confidence-list">
-              {confidenceBands.map((band) => (
-                <div className="progress-row" key={band.labelKey}>
-                  <div className="progress-label">
-                    <span>{t(band.labelKey)}</span>
-                    <StatusChip tone={band.tone}>{formatPercentage(band.value)}</StatusChip>
-                  </div>
-                  <div className="progress-track">
-                    <div
-                      className={`progress-fill progress-fill-${band.tone}`}
-                      style={{ width: `${band.value}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section className="dashboard-grid">
-        <article className="card table-card" aria-labelledby="inventory-title">
-          <div className="table-header">
-            <div>
-              <h2 className="card-title" id="inventory-title">
-                {t('section.inventoryCandidates')}
-              </h2>
-              <p className="card-kicker">{t('section.inventoryCandidatesKicker')}</p>
-            </div>
-            <StatusChip tone="info">{t('source.count')}</StatusChip>
-          </div>
-
-          <table className="data-table" data-testid="dashboard-inventory-table">
-            <thead>
-              <tr>
-                <th>{t('table.useCase')}</th>
-                <th>{t('table.status')}</th>
-                <th>{t('table.market')}</th>
-                <th>{t('table.platform')}</th>
-                <th>{t('table.volume')}</th>
-                <th>{t('table.owner')}</th>
-                <th>{t('table.audit')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUseCases.map((useCase) => (
-                <tr key={useCase.id}>
-                  <td>
-                    <span className="use-case-name">
-                      <strong>
-                        {getTranslatedValue(t, useCaseNameKeys, useCase.id, useCase.name)}
-                      </strong>
-                      <span>{useCase.templateReference}</span>
-                    </span>
-                  </td>
-                  <td>
-                    <StatusChip tone={getStatusTone(useCase.status)}>
-                      {t(statusLabelKeys[useCase.status])}
-                    </StatusChip>
-                  </td>
-                  <td>{useCase.market}</td>
-                  <td>{useCase.platform}</td>
-                  <td>{formatVolume(useCase.monthlyVolume, locale)}</td>
-                  <td>
-                    <StatusChip tone={getOwnerTone(useCase.ownerStatus)}>
-                      {t(ownerStatusLabelKeys[useCase.ownerStatus])}
-                    </StatusChip>
-                  </td>
-                  <td>
-                    <StatusChip tone={getAuditTone(useCase.auditStatus)}>
-                      {t(auditStatusLabelKeys[useCase.auditStatus])}
-                    </StatusChip>
-                  </td>
-                </tr>
-              ))}
-              {filteredUseCases.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>
-                    <div className="empty-state">
-                      <strong>{t('inventory.emptyTitle')}</strong>
-                      <span>{t('inventory.emptyBody')}</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
+        <article className="card traffic-insights-card">
+          <div className="card-header"><h2 className="card-title">{c.insightTitle}</h2></div>
+          <div className="traffic-signal"><span>01</span><div><strong>{c.insightGrowth}</strong><p>{periodMode === 'month' ? 'June' : '2026 YTD'} +{growth.toFixed(1)}% · {c.insightGrowthBody}</p></div></div>
+          <div className="traffic-signal"><span>02</span><div><strong>{c.insightConcentration}</strong><p>{breakdown[0]?.label ?? '—'} · {breakdown[0]?.share.toFixed(1) ?? '0'}% · {c.insightConcentrationBody}</p></div></div>
+          <div className="traffic-signal"><span>03</span><div><strong>{c.insightTemplate}</strong><p>{activeTemplates} {c.activeTemplates} · {topTemplate?.templateId ?? '—'} {topTemplateShare.toFixed(1)}% · {c.insightTemplateBody}</p></div></div>
         </article>
-
-        <div className="insight-stack">
-          <article className="card" aria-labelledby="triage-title">
-            <div className="card-header">
-              <div>
-                <h2 className="card-title" id="triage-title">
-                  {t('section.recentTriageItems')}
-                </h2>
-                <p className="card-kicker">{t('section.recentTriageItemsKicker')}</p>
-              </div>
-              <button className="button" type="button">
-                {t('action.resolveSelected')}
-              </button>
-            </div>
-
-            <div className="triage-list">
-              {filteredTriageItems.map((item) => (
-                <article className="triage-item" key={item.id}>
-                  <div className="triage-title-row">
-                    <p className="triage-title">
-                      {getTranslatedValue(t, triageTitleKeys, item.id, item.title)}
-                    </p>
-                    <StatusChip tone={item.ageingDays > 7 ? 'danger' : 'warning'}>
-                      {item.ageingDays}
-                      {t('date.daysShort')}
-                    </StatusChip>
-                  </div>
-                  <p className="triage-meta meta-line">
-                    <span>{t(driftLabelKeys[item.type])}</span>
-                    <span>{item.market}</span>
-                    <span>{item.platform}</span>
-                    <span>{item.channel}</span>
-                    <span>
-                      {formatPercentage(item.confidence)} {t('triage.confidenceSuffix')}
-                    </span>
-                  </p>
-                  <p className="triage-action">
-                    {getTranslatedValue(t, triageActionKeys, item.id, item.recommendedAction)}
-                  </p>
-                </article>
-              ))}
-              {filteredTriageItems.length === 0 ? (
-                <div className="empty-state">
-                  <strong>{t('triage.emptyTitle')}</strong>
-                  <span>{t('triage.emptyBody')}</span>
-                </div>
-              ) : null}
-            </div>
-          </article>
-
-          <article className="card" aria-labelledby="audit-log-title">
-            <div className="card-header">
-              <div>
-                <h2 className="card-title" id="audit-log-title">
-                  {t('section.auditTrailPreview')}
-                </h2>
-                <p className="card-kicker">{t('section.auditTrailPreviewKicker')}</p>
-              </div>
-            </div>
-
-            <div className="triage-list">
-              {auditRecords.map((record) => (
-                <article className="triage-item" key={record.id}>
-                  <div className="triage-title-row">
-                    <p className="triage-title">
-                      {getTranslatedValue(t, auditActionKeys, record.id, record.action)}
-                    </p>
-                    <StatusChip
-                      tone={record.approvalStatus === 'approved' ? 'success' : 'warning'}
-                    >
-                      {t(approvalStatusLabelKeys[record.approvalStatus])}
-                    </StatusChip>
-                  </div>
-                  <p className="triage-meta meta-line">
-                    <span>{record.target}</span>
-                    <span>{record.actor}</span>
-                    <span>{record.timestamp}</span>
-                  </p>
-                </article>
-              ))}
-            </div>
-          </article>
-        </div>
       </section>
-    </>
+    </div>
   );
 }

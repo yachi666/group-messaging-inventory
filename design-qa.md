@@ -1,37 +1,65 @@
-# Design QA — AI Analysis & Evidence
+# Design QA — Complete Governance Workspace
 
-- Source visual truth: `/var/folders/jg/zyy_772s1qz9jr_7pg7hd7m00000gn/T/codex-clipboard-253a5850-e1e2-4ef6-a922-dbbb269c5b51.png`
-- Implementation screenshot: `/tmp/codex-ai-analysis-final.png`
-- Focused comparison: `/tmp/codex-ai-analysis-comparison-final.png`
-- Viewport: 1440 × 1024, desktop, English, TPL-2048 selected
-- State: Evidence collapsed; candidate awaiting review
+## Evidence
 
-## Full-view comparison evidence
+- Selected visual truth: `design/visuals/governance-investigation-workbench.png`
+- Final Review Queue implementation: `product-design-audit/27-review-queue-complete.png`
+- Full reference comparison: `product-design-audit/30-final-reference-comparison.png`
+- Focused reference comparison: `product-design-audit/31-final-focused-comparison.png`
+- Complete product contact sheet: `product-design-audit/24-complete-product-contact-sheet.png`
+- Candidate Split: `product-design-audit/28-candidate-split.png`
+- Template Mapping: `product-design-audit/29-template-mapping.png`
+- Mobile Dashboard: `product-design-audit/25-dashboard-mobile.png`
+- Mobile Review Queue: `product-design-audit/26-review-mobile.png`
+- Comparison viewport: 1536 × 1088, English, Discovery Review, first Candidate selected
+- Responsive viewport: 390 × 844
 
-The three-column workbench, middle-column width, header alignment, vertical section order, card borders, compact density, green confidence treatment, and collapsed Evidence row match the source composition. The implementation keeps the repository shell and its existing tokens, so global typography and chrome differ from the standalone reference while the requested middle panel remains aligned.
+## Implemented surfaces reviewed
 
-## Focused region comparison evidence
+- Dashboard with global filters, six KPIs, coverage, funnel, composition, drift, governance health, and task drill-down.
+- Use Case List and shared Candidate / Active / Retired Detail workspace.
+- Candidate edit, Candidate-only Split, Merge, AI Analysis, Governance diff, and immutable Activity views.
+- Template List and Detail with composite identity, mapping, version timeline, content, traffic, AI Analysis, governance, and activity.
+- Discovery Review and separate Governance Approval decision workspace.
+- Administration: access, reference data, matching, workflow/SLA, Analysis Runs, Audit Trail, and data processing.
 
-The focused side-by-side comparison confirms that the middle panel now includes five icon-based extraction stages with directional connectors, two linked classification cards, the explanation block, five confidence-factor rows, the 92% confidence total, the 87/100 score, the 90/85/86/88 breakdown, five anomaly checks, and Evidence (8).
+## Required fidelity surfaces
+
+- Typography: project system-font stack, compact operational hierarchy, stable wrapping and truncation.
+- Spacing/layout: selected three-column investigation workbench preserved; list and detail pages use the same shell, density, hairlines, and action hierarchy.
+- Colors/tokens: neutral surfaces and semantic blue/green/amber/red states map to project tokens.
+- Assets/icons: Heroicons is used for UI iconography. The source contains no photographic or illustrative assets requiring generation.
+- Copy/content: product language follows `Use Case → Template → Template Version`, Candidate-only split, production discovery, and maker–checker governance.
+- Responsiveness: 390px verification reports `scrollWidth === clientWidth`; workbench columns stack without page-level horizontal overflow.
+- Accessibility: semantic headings/tables/forms, keyboard-native controls, visible focus treatment, labeled locale control, and disabled invalid decisions.
+
+## Governance behavior verified
+
+- No manual Create Use Case or Create Template action exists.
+- Candidate Split is visible for Candidate and absent for Active Use Case.
+- Empty Candidate Split groups disable submission.
+- All split results form one approval package.
+- Template Mapping offers only Existing Use Case, Keep Unassigned, or Re-analysis.
+- Approved values remain separately described as effective while pending changes are shown as proposed.
+- Governance Approval is separate from Discovery Review.
+- Self-approval displays a warning and disables Approve.
+- Re-analysis creates a new run and does not overwrite the current decision.
+
+## Automated verification
+
+- `npm run typecheck`: passed.
+- `npm run build`: passed.
+- `APP_URL=http://127.0.0.1:5175 npm run test:ui`: passed.
+- Browser console errors across primary routes: 0.
+- `git diff --check`: passed.
 
 ## Findings
 
-- No actionable P0/P1/P2 visual mismatches remain in the requested middle panel.
-- P3: Product-specific classification copy differs from the reference because the local model uses `Transaction` and `Servicing`; this is intentional data-contract preservation rather than layout drift.
-- P3: The app uses its established font and token palette instead of importing the mockup's exact typeface. Hierarchy, weight, wrapping, spacing, contrast, and states remain equivalent.
-- Image/asset fidelity: all newly added symbols use Heroicons outline assets; no placeholder or hand-drawn image assets remain in the middle panel.
+- No actionable P0, P1, or P2 findings remain.
 
-## Patches made
+## Follow-up polish
 
-- Replaced numbered flow circles with semantic outline icons, completion markers, and connecting arrows.
-- Restored the directional relationship and secondary labels between message type and governance classification.
-- Expanded quality and anomaly details to the complete 4-item and 5-item layouts.
-- Aligned TPL-2048 confidence, quality score, anomaly signals, and Evidence count with the source.
-
-## Verification
-
-- `npm run typecheck` — passed
-- `npm run build` — passed
-- `APP_URL=http://127.0.0.1:5182 npm run test:ui` — passed against the target worktree server
+- P3: Replace generic organization and user identity treatments when production brand/avatar assets are supplied.
+- P3: Connect filters, exports, persistence, and immutable audit events to backend APIs when contracts are available.
 
 final result: passed

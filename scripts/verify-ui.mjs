@@ -1,130 +1,86 @@
 import { chromium } from 'playwright';
 
 const baseUrl = process.env.APP_URL ?? 'http://127.0.0.1:5173';
-const screenshotPath = '/tmp/gmi-product-workspace.png';
+const screenshotPath = '/tmp/gmi-governance-workspace.png';
 const errors = [];
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
 
 page.on('console', (message) => {
-  if (message.type() === 'error') {
-    errors.push(message.text());
-  }
+  if (message.type() === 'error') errors.push(message.text());
 });
 
 await page.goto(baseUrl, { waitUntil: 'networkidle' });
-await page.getByRole('heading', { name: 'Messaging inventory' }).waitFor();
-await page.getByTestId('nav-ai-template-analysis').waitFor();
-await page.getByTestId('nav-ai-template-analysis').click();
-await page.getByRole('heading', { name: 'Template TPL-2048' }).waitFor();
-await page.getByTestId('analysis-results-table').waitFor();
-await page.mouse.move(900, 20);
-await page.screenshot({ fullPage: true, path: '/tmp/gmi-ai-workbench-en.png' });
-await page.getByTestId('analysis-result-ATA-001249').click();
-await page.getByRole('heading', { name: 'Template TPL-3091' }).waitFor();
-await page.getByTestId('analysis-result-ATA-001248').click();
-await page.getByTestId('analysis-confirm').click();
-await page.getByTestId('analysis-notice').getByText('Analysis confirmed').waitFor();
-await page.getByTestId('analysis-edit-owner').click();
-await page.getByTestId('analysis-owner-input').fill('L. Zhang');
-await page.getByTestId('analysis-save-owner').click();
-await page.getByTestId('analysis-selected-owner').getByText('L. Zhang').waitFor();
-await page.getByTestId('analysis-merge').click();
-await page.getByTestId('analysis-notice').getByText('Candidate merged').waitFor();
-await page.getByTestId('analysis-demise').click();
-await page.getByTestId('analysis-notice').getByText('Template demised').waitFor();
-await page.getByTestId('analysis-inspector').getByText('Masked source message').waitFor();
-await page.getByTestId('analysis-inspector').getByText('{amount}', { exact: true }).waitFor();
+
+// Discovery Review is the default action center.
+await page.getByRole('heading', { name: 'Review Queue' }).waitFor();
+await page.getByRole('heading', { name: 'AI Extraction Flow' }).waitFor();
+await page.getByRole('button', { name: 'Submit for Approval' }).click();
+await page.getByRole('status').getByText('Submitted to Governance Approval').waitFor();
+
+// Candidate split is real, Candidate-only, and prevents empty groups.
+await page.getByTestId('nav-use-cases').click();
+await page.getByRole('heading', { name: 'Use Cases' }).waitFor();
+const useCaseRows = page.locator('.g-data-table tbody tr');
+await useCaseRows.nth(0).click();
+await page.getByRole('heading', { name: 'Card repayment reminder' }).waitFor();
+await page.getByRole('button', { name: 'Split Candidate' }).click();
+await page.getByRole('heading', { name: 'Split UC-76821' }).waitFor();
+const groupARadios = page.locator('.g-split-groups > section:first-child input[type="radio"]');
+for (let index = 0; index < (await groupARadios.count()); index += 1) {
+  await groupARadios.nth(index).check();
+}
+if (await page.getByRole('button', { name: 'Submit split for approval' }).isEnabled()) {
+  throw new Error('Candidate split allowed an empty group.');
+}
+await page.locator('.g-split-modal > header button').click();
+await page.getByTestId('nav-use-cases').click();
+await useCaseRows.nth(1).click();
+if ((await page.getByRole('button', { name: 'Split Candidate' }).count()) !== 0) {
+  throw new Error('Active Use Case exposed Candidate-only split.');
+}
+
+// Template inventory uses composite identity and never offers manual creation.
+await page.getByTestId('nav-templates').click();
+await page.getByRole('heading', { name: 'Templates' }).waitFor();
+const templateRows = page.locator('.g-data-table tbody tr');
+await templateRows.nth((await templateRows.count()) - 1).click();
+await page.getByRole('heading', { name: 'NEW-SENDER-4481' }).waitFor();
+await page.getByRole('button', { name: 'Review mapping' }).click();
+const mappingDrawer = page.locator('.g-mapping-drawer');
+await mappingDrawer.getByText('Assign to existing Use Case', { exact: true }).waitFor();
+await mappingDrawer.getByText('Keep unassigned', { exact: true }).waitFor();
+await mappingDrawer.getByText('Request re-analysis', { exact: true }).waitFor();
+await page.locator('.g-mapping-drawer > header button').click();
+
+// Governance approval is separated from discovery and blocks self-approval.
+await page.getByTestId('nav-review-queue').click();
+await page.getByRole('tab', { name: 'Governance Approval' }).click();
+await page.getByRole('heading', { name: 'Governance decision' }).waitFor();
+const approvalRows = page.locator('.approval-list > button');
+await approvalRows.nth((await approvalRows.count()) - 1).click();
+await page.getByText('Self-approval blocked', { exact: true }).waitFor();
+if (await page.getByRole('button', { name: 'Approve', exact: true }).isEnabled()) {
+  throw new Error('Governance user could approve their own change.');
+}
+
+// Dashboard and Administration remain navigable from the same shell.
 await page.getByTestId('nav-dashboard').click();
-await page.getByTestId('dashboard-platform-filter').selectOption('SFMC');
-await page.getByTestId('dashboard-inventory-table').getByText('Card fraud alert').waitFor();
-await page.getByTestId('dashboard-inventory-table').getByText('Payment due reminder').waitFor({
-  state: 'detached',
-});
-await page.getByRole('button', { name: 'Build response pack' }).click();
-await page.getByTestId('response-pack-status').getByText('Response pack staged').waitFor();
+await page.getByRole('heading', { name: 'Messaging governance dashboard' }).waitFor();
+await page.getByTestId('nav-administration').click();
+await page.getByRole('heading', { name: 'Administration' }).waitFor();
+await page.getByRole('button', { name: 'Analysis Runs' }).click();
+await page.getByText('RUN-88104', { exact: true }).waitFor();
 
+// The shell and primary page title respond to the locale control.
 await page.getByLabel('Language').selectOption('zh-CN');
-await page.getByRole('heading', { name: '消息清单' }).waitFor();
-await page.getByTestId('nav-ai-template-analysis').click();
-await page.getByRole('heading', { name: '模板 TPL-2048' }).waitFor();
-await page.getByTestId('analysis-inspector').getByText('原始消息与提取模板').waitFor();
-await page.getByTestId('analysis-confirm').getByText('确认分类').waitFor();
+await page.getByRole('heading', { name: '系统管理' }).waitFor();
+await page.getByTestId('nav-use-cases').getByText('Use Case 管理').waitFor();
 
-// Capture screenshot of the Chinese AI Template Analysis page to validate inspector/table visuals
-await page.waitForTimeout(250);
 await page.screenshot({ fullPage: true, path: screenshotPath });
-await page.waitForTimeout(250);
-
-await page.getByTestId('nav-inventory').click();
-await page.getByRole('heading', { name: '确认用例与负责人' }).waitFor();
-await page.getByTestId('inventory-filter-candidate').click();
-await page.getByTestId('use-case-UC-1040').click();
-await page.getByTestId('use-case-inspector').getByText('房贷续约营销').waitFor();
-await page.getByTestId('message-owner-input').fill('L. Zhang');
-await page.getByTestId('contact-point-input').fill('mortgage-ops@example.com');
-await page.getByTestId('template-format-input').fill('您的房贷 {accountLast4} 将于 {renewalDate} 到期');
-await page.getByTestId('submit-template-change').click();
-await page.getByTestId('maker-checker-status').getByText('待复核').waitFor();
-await page.getByTestId('role-checker').click();
-await page.getByTestId('approve-template-change').click();
-await page.getByTestId('maker-checker-status').getByText('已批准').waitFor();
-
-await page.getByTestId('nav-triage').click();
-await page.getByRole('heading', { name: '在异常老化前完成处理' }).waitFor();
-await page.getByTestId('triage-item-TRI-224').click();
-await page.getByTestId('mark-reviewed').click();
-await page.getByTestId('triage-item-TRI-224').getByText('已批准').waitFor();
-
-await page.getByTestId('nav-evidence').click();
-await page.getByRole('heading', { name: '准备监管响应包' }).waitFor();
-await page.getByTestId('evidence-export-preview').waitFor();
-
-await page.getByTestId('nav-analytics').click();
-await page.getByRole('heading', { name: '确定下一步治理迭代优先级' }).waitFor();
-await page.getByTestId('analytics-signal-board').getByText('未知短信聚类超过 SLA 老化阈值').waitFor();
-await page.getByTestId('analytics-decision-brief').waitFor();
-await page.getByTestId('query-time-range').selectOption('last-30-days');
-await page.getByTestId('query-owner').selectOption('A. Morgan');
-await page.getByTestId('query-message-type').selectOption('Servicing');
-await page.getByTestId('run-query').click();
-await page.getByTestId('query-volume-stat').getByText('784,200').waitFor();
-await page.getByTestId('chat-launcher').click();
-await page.getByTestId('floating-chat-panel').getByText('Chat 报告').waitFor();
-await page.getByTestId('chat-query-input').fill('按市场总结 servicing 模板的 volume 和 owner 风险');
-await page.getByTestId('send-chat-message').click();
-await page.getByTestId('chat-thread').getByText('按市场总结 servicing 模板的 volume 和 owner 风险').waitFor();
-await page.getByTestId('chat-thread').getByText('我已按当前筛选生成治理报告').waitFor();
-await page.getByTestId('chat-action-card').getByText('准备导出报告').waitFor();
-await page.getByTestId('quick-action-owner-risk').click();
-await page.getByTestId('chat-thread').getByText('Owner 风险集中在 no-template clusters').waitFor();
-await page.getByTestId('dynamic-report').getByText('Servicing volume is concentrated in UK WPB').waitFor();
-await page.getByTestId('close-chat-widget').click();
-await page.getByTestId('floating-chat-panel').waitFor({ state: 'detached' });
-await page.getByTestId('export-chat-report').click();
-await page.getByTestId('report-export-status').getByText('报告导出已准备').waitFor();
-
-await page.getByTestId('nav-audit-trail').click();
-await page.getByRole('heading', { name: '展示清单背后的控制历史' }).waitFor();
-await page.getByTestId('audit-ledger').getByText('批准证据响应包导出').waitFor();
-await page.getByTestId('audit-control-summary').waitFor();
-
-await page.getByTestId('nav-settings').click();
-await page.getByRole('heading', { name: '配置 MVP 控制默认项' }).waitFor();
-await page.getByTestId('policy-controls').getByText('消息内容 PII 最小化').waitFor();
-await page.getByTestId('settings-impact').waitFor();
-await page.getByTestId('start-csv-upload').click();
-await page.getByTestId('csv-upload-progress').getByText('100%').waitFor();
-await page.getByTestId('csv-result-preview').getByText('templates_june_volume.csv').waitFor();
-await page.getByTestId('csv-result-preview').getByText('Ready for AI analysis').waitFor();
-
-await page.waitForTimeout(250);
-await page.screenshot({ fullPage: true, path: '/tmp/gmi-product-final.png' });
 await browser.close();
 
-if (errors.length > 0) {
-  throw new Error(`Browser console errors:\n${errors.join('\n')}`);
-}
+if (errors.length > 0) throw new Error(`Browser console errors:\n${errors.join('\n')}`);
 
 console.log(`Playwright verification passed. Screenshot: ${screenshotPath}`);

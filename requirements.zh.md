@@ -2,604 +2,605 @@
 
 ## 1. 文档目的
 
-本文档描述 Group Messaging Inventory 的产品需求、MVP 范围、功能能力、数据要求、安全合规要求与分阶段路线图。
+本文档定义 Group Messaging Inventory 前端产品的正式需求与 MVP 范围，并覆盖此前的需求版本。内容反映已对齐的产品模型、信息架构、治理审批流程与 AI 可解释性要求。
 
-该产品旨在通过自动化方式从生产消息日志中发现、归类并维护外发消息清单，帮助业务负责人和技术团队持续回答以下问题：
+## 2. 产品愿景
 
-- 当前有哪些 outbound messages 正在生产环境发送？
-- 每类消息对应哪个 use case？
-- 谁是 Message Owner 和 Integrating System Owner？
-- 消息通过哪个 platform、channel、sender identity 和 template 发送？
-- 是否能够提供可审计、可解释、可导出的 evidence，证明消息发送处于受控状态？
+Group Messaging Inventory 是一个用于发现、组织、审核和持续维护外发消息 Use Case 及其底层 Template 的治理系统。
 
-## 2. 背景与问题陈述
+产品需要帮助业务、技术和治理用户回答：
 
-当前 Group 范围内存在多个 Messaging-owned platforms，例如 MDP、SFMC、ICCM、IRIS。不同平台承载不同 channel、market、LoB 和 system integration，导致外发消息资产分散在多个系统、日志和人工维护清单中。
+- 当前有哪些消息 Use Case，它们为什么存在？
+- 每个 Use Case 由哪些 Template 实现？
+- 涉及哪些 Platform、Channel、Market、Tenant 和 Sender Identity？
+- 哪些生产流量已匹配、未匹配、新出现、已变化或处于 retired-but-live 状态？
+- AI 判断了什么、为什么这样判断、置信度是多少？
+- 谁修改或审批了正式治理数据，发生在什么时间？
 
-在缺少统一 inventory 的情况下，业务和技术团队难以及时确认：
+AI Analysis 是贯穿产品的辅助能力，不是主要业务对象，也不是独立的一级产品模块。
 
-- 哪些消息仍在 live production 中发送；
-- 发送量、发送渠道和 delivery outcomes；
-- 消息 owner、upstream system owner 和审批 evidence；
-- inventory 中标记为 retired 的消息是否仍然出现在 logs 中；
-- 是否出现新的 sender ID、domain、template 或未知 traffic。
+## 3. 产品原则
 
-因此需要建设 Group Messaging Inventory，通过 production logs 自动发现实际发送行为，并结合规则匹配、clustering、human validation、audit trail 和 reporting，形成可持续维护的消息治理能力。
+- **Use Case 优先：** Use Case 是主要业务与治理对象。
+- **Template 是实现资产：** Template 作为 Use Case 下级对象独立管理。
+- **版本化而不覆盖：** 重要内容变化创建 Template Version，并保留历史。
+- **人工负责：** AI 提供建议，授权用户作出最终治理决定。
+- **Maker–Checker 控制：** 重要修改必须审批后才能生效。
+- **默认可解释：** AI 结论需要提供业务可读解释和可展开的技术证据。
+- **操作职责清晰：** Dashboard 用于汇总，List 用于管理，Review Queue 用于处理任务。
+- **全程可审计：** 对象历史、AI 分析历史和审批历史需要相互区分并可追溯。
 
-## 3. 产品目标
+## 4. 用户与角色
 
-Group Messaging Inventory 的目标是创建并维护集团级 messaging inventory，覆盖 in-scope platforms 的 outbound messages，并支持以下能力：
+### 4.1 Business Maker
 
-- 自动 ingest production logs；
-- 从 logs 中 extract 和 normalise 关键 metadata；
-- 将 message events 匹配或聚类为 candidate use cases；
-- 为每个 match、classification 和 inferred attribute 提供 confidence score；
-- 支持 markets / LoBs 通过 triage workflow 确认 use case、owner、classification 和 evidence；
-- 提供 inventory export、dashboard、unknown traffic list 和 regulator response pack；
-- 提供 role-based access、PII minimisation、retention、encryption 和 explainability；
-- 支持分阶段扩展到更多 platforms 和 upstream system traceability。
+Business Maker 可以：
 
-## 4. 目标用户
+- 查看授权范围内的 Use Case、Template、流量和分析结果。
+- 补充和修改系统生成的 Candidate Use Case，并对已批准 Use Case 发起变更申请。
+- 补充或修正 Owner、Classification、Evidence 和业务信息。
+- 将未匹配 Template 或流量关联到 Use Case。
+- 向 Governance Team 提交变更审批。
+- 根据 Changes Requested 补充和修改申请。
 
-### 4.1 业务负责人
+Business Maker 不能审批自己提交的变更。
 
-业务负责人主要关注：
+### 4.2 Governance Team
 
-- 当前 market / LoB 范围内有哪些 live outbound messages；
-- 每类消息的 owner、classification 和审批 evidence；
-- unknown / unmatched traffic 的处理状态；
-- 是否可以快速生成监管、审计或治理场景所需的 response pack。
+中央 Governance Team 拥有全局可见范围，可以：
 
-### 4.2 技术团队
+- 补充和修改系统发现的 Use Case 与 Template，并遵循治理审批。
+- 处理未匹配数据和 Candidate 对象。
+- 批准、驳回或要求修改已提交的申请。
+- 合并 Use Case、Retire 或 Reactivate 治理对象并管理 Evidence。
+- 查看 AI 解释、对象历史和审批历史。
 
-技术团队主要关注：
+Governance 用户不能审批自己发起的变更。该变更必须由另一名 Governance 用户作为 Checker 审批。
 
-- 不同 platforms 的 log ingestion、data contracts 和 source lineage；
-- extraction、normalisation、matching、clustering 和 drift detection 逻辑；
-- upstream system attribution 的可行性和技术约束；
-- 安全、权限、retention、encryption、audit trail 和可运维性。
+### 4.3 Viewer
 
-## 5. 适用范围与边界
+Viewer 可以：
 
-### 5.1 MVP 范围
+- 搜索、筛选和查看授权范围内的 Inventory 数据。
+- 查看 AI 解释和已批准的治理记录。
+- 导出授权范围内的数据。
 
-MVP 初期覆盖 Messaging-owned platforms：
+### 4.4 Administrator
 
-- MDP
-- SFMC
-- ICCM
-- IRIS
+Administrator 负责：
 
-MVP 需要在 pilot markets 中验证端到端能力。具体 pilot markets 保留占位，待项目启动阶段确认。
+- 用户、角色和数据访问范围。
+- 匹配和 Classification 配置。
+- 工作流和审批配置。
+- 系统设置与技术运营配置。
 
-占位：
+## 5. 领域对象模型
 
-- Pilot Market 1: TBD
-- Pilot Market 2: TBD
-- Pilot Market 3: TBD
+```text
+Use Case
+  └── Template
+        └── Template Version
+              ├── Analysis Run
+              └── Production Events
 
-### 5.2 非 MVP 范围
+Review Task / Change Request 可以关联任意治理对象。
+```
 
-以下能力不作为 MVP 必须交付项，但纳入后续 roadmap：
+### 5.1 Use Case
 
-- DSP / CIB 等非 Messaging-owned platforms 的全面接入；
-- 全量 upstream system attribution；
-- 完整 policy-based non-compliance detection；
-- 与 Workbench / EMI 作为 system of record 的深度集成；
-- 全企业范围 automated attestation workflow。
+Use Case 表示发送一类消息的业务目的，例如“信用卡还款提醒”。MVP 中 Use Case 必须来自系统发现，不能从空白表单手工创建。
 
-### 5.3 关键边界说明
+支持和需要维护的属性包括：
 
-- 工具初期仅覆盖 Messaging-owned platforms。
-- DSP、CIB 等其他 platforms 需要后续通过 onboarding feeds 接入。
-- Upstream system attribution 只有在 logs 或 telemetry 中包含 upstream identifier 时才可靠。
-- 如果缺少 upstream identifier，该字段应标记为 `unknown`，直到统一 metadata standard 被执行。
-- 产品应优先存储 metadata 和 hashed content，避免不必要地保存 message content 或 PII。
+- 稳定的内部 Use Case ID。
+- 名称和描述。
+- Market 和 Line of Business。
+- Classification：Regulatory、Servicing 或 Marketing。
+- Message Owner。
+- Integrating System Owner。
+- 联系方式。
+- 生命周期状态。
+- 审批状态。
+- Evidence 引用和完整度。
+- 关联 Templates。
+- 汇总流量和 Delivery Outcomes。
+- 创建、验证和最后更新时间。
 
-## 6. 核心使用场景
+一个 Use Case 可以包含多个 Templates，也可以覆盖多个 Platform、Channel、Market、语言或技术实现。
 
-### 6.1 发现 live outbound messages
+### 5.2 Template
 
-系统自动 ingest production logs，并从 logs 中识别实际发送过的 messages，形成 live traffic baseline。
+Template 表示实现某个 Use Case 的技术消息资产。MVP 中 Template 必须来自生产数据发现，不能手工创建。
 
-### 6.2 生成 candidate use cases
+Template 的业务唯一标识为：
 
-系统基于 deterministic rules 和 clustering，将 message events 归并为 candidate use cases，并给出 confidence score。
+```text
+Platform + Tenant/Workspace + Template ID
+```
 
-### 6.3 人工确认 ownership 与 classification
+Template ID 本身不是全局唯一。系统还必须生成稳定的内部 Template UUID，避免外部元数据修正后破坏历史引用。
 
-Market / LoB 用户通过 triage queue 确认或修正 use case 名称、Message Owner、Integrating System Owner、classification 和 evidence references。
+Template 支持的属性包括：
 
-### 6.4 识别 drift 与 exception
+- 内部 Template UUID。
+- 外部 Template ID。
+- Platform。
+- Tenant 或 Workspace。
+- Parent Use Case。
+- Channel。
+- Market。
+- Sender Identity。
+- Template Format。
+- 当前 Template Version。
+- Mapping Status。
+- Lifecycle Status。
+- Approval Status。
+- 月发送量和 Delivery Outcomes。
+- First Seen 和 Last Seen。
+- Match Confidence。
 
-系统识别 inventory 与 logs 之间的不一致，例如：
+Template 可以暂时没有 Parent Use Case。Unassigned Template 必须能在 Template List 和 Review Queue 中被发现和处理。
 
-- inventory 显示 use case 已 retired，但 logs 显示仍有 live traffic；
-- 出现新的 sender ID；
-- 出现新的 template；
-- 出现未知或 unmatched traffic。
+第一阶段中，一个 Template 同一时间只能归属于一个 Active Parent Use Case。将其重新分配到其他 Use Case 属于需要审批的治理变更。
 
-### 6.5 生成报表与监管响应材料
+### 5.3 Template Version
 
-用户可以导出 inventory、exception list 和 regulator response pack，用于业务治理、审计、监管问询或管理层汇报。
+同一 Template 业务标识下，如果内容或其他重要治理配置发生变化，系统创建新的 Template Version，而不是创建新的 Template。
 
-## 7. 功能需求
+Template Version 包含：
 
-### 7.1 Data Ingestion
+- Version ID 和 Version Number。
+- Parent Template UUID。
+- 脱敏后的模板内容。
+- Content Fingerprint。
+- 提取出的变量和 Placeholders。
+- 重要配置快照。
+- First Seen、Last Seen 和生效时间。
+- 变化摘要以及与上一版本的差异。
+- Version Status。
+- Approval Status。
+- 关联的 Analysis Runs。
 
-系统必须支持从以下 platforms ingest production logs：
+系统检测到的新版本不能覆盖旧版本。新版本首先处于 Candidate Version 状态，经过确认和审批后才能成为 Current approved version。
 
-- MDP
-- SFMC
-- ICCM
-- IRIS
+### 5.4 Production Event
 
-MVP 阶段允许 batch ingestion 和 near real-time ingestion 两种方式。
+Production Event 表示从平台日志中发现的真实外发消息活动。事件或汇总记录需要保留足够的 Source Lineage，以支持匹配、流量统计、交付统计和调查，同时尽量减少消息内容和 PII 的存储。
 
-系统应支持多种输入格式：
+相关字段包括：
 
-- CSV export
-- API
-- Log streams
+- Platform、Tenant 和 Workspace。
+- Template ID 和检测到的 Template Version。
+- Channel 和 Market。
+- Sender Identity。
+- Timestamp 和 Source Lineage。
+- 可获得的 Message ID 和 Correlation ID。
+- Delivery Outcome。
+- 汇总 Volume。
+- Match Status 和 Confidence。
 
-系统必须维护 source lineage，包括：
+### 5.5 Analysis Run
 
-- source platform；
-- ingestion timestamp；
-- source file / API / stream reference；
-- data processing status；
-- parsing errors 或 rejected records。
+Analysis Run 记录规则、提取逻辑、Clustering 或 AI 针对 Template Version 或 Review Item 的一次执行。
 
-系统必须遵循 data minimisation 原则，仅存储实现 inventory、matching、audit 和 reporting 所需的数据。
+包含：
 
-### 7.2 Extraction 与 Normalisation
+- Run ID 和执行时间。
+- Trigger 和 Source Input。
+- 脱敏输入摘要。
+- Extraction Flow 各步骤及结果。
+- 标准化字段。
+- Template Pattern 和提取变量。
+- Candidate Use Case Matches。
+- Classification 建议。
+- 字段级和整体 Confidence。
+- Rules Hit、Cluster ID 和 Content Fingerprint。
+- 适用的 Model、Prompt、Extraction 和 Ruleset Version。
+- 耗时、Warnings、Errors 和 Retries。
+- 该分析用于审核时的最终人工决定。
 
-系统必须从 logs 中 extract 并 normalise 以下字段：
+Analysis Run 是不可变的历史证据，后续 Run 不能覆盖之前的结果。
 
-- Channel，例如 SMS、email、push、in-app；
-- Platform，例如 MDP、SFMC、ICCM、IRIS；
-- Tenant / workspace / sending profile；
-- Timestamp；
-- Message ID；
-- Correlation ID；
-- Sender identity，例如 SMS sender ID、short code、email From domain / address、reply-to；
-- Template reference，例如 AEM / MDP template ID、SFMC asset ID、ICCM template ID；
-- Delivery outcomes，例如 sent、delivered、bounced、failed；
-- Volume metrics，例如 daily aggregates、monthly aggregates。
+### 5.6 Review Task 与 Change Request
 
-如果某些 source logs 缺少字段，系统应：
+Review Task 表示需要人工调查或决策的工作项。Change Request 表示对已批准数据的拟议变更。
 
-- 将字段标记为 `unknown` 或 `not available`；
-- 保留缺失原因；
-- 在 data quality report 中体现。
+任务可以关联：
 
-### 7.3 Use Case Matching 与 Clustering
+- 未匹配生产流量。
+- Unassigned Templates。
+- Candidate Use Cases 或 Template Versions。
+- 低置信度匹配。
+- Drift 和生命周期异常。
+- 对象修改、合并、Retire 或 Reactivate 申请。
 
-系统必须将 message events 聚合为 candidate use cases。
+## 6. 状态模型
 
-匹配策略应优先使用 deterministic rules：
+Lifecycle、Approval、Mapping 和 Analysis 状态必须相互独立。
 
-- template ID；
-- sender identity；
-- tenant / workspace；
-- platform；
-- channel；
-- market / entity；
-- sending profile。
+### 6.1 Use Case Lifecycle
 
-在 deterministic rules 不足以识别 use case 时，系统应使用 clustering：
+- Candidate
+- Active
+- Retired
 
-- content fingerprint；
-- metadata similarity；
-- sending pattern；
-- sender / template / channel combination。
+### 6.2 Template Lifecycle
 
-系统必须为以下对象提供 confidence score：
+- Active
+- No Traffic
+- Retired
 
-- use case match；
-- inferred market / entity；
-- inferred owner；
-- inferred classification；
-- cluster assignment。
+### 6.3 Template Version Status
 
-系统必须保存 explainability 信息，说明 match 产生原因：
+- Candidate
+- Current
+- Superseded
 
-- 命中的 rules；
-- 使用的 cluster ID；
-- 关键 metadata；
-- confidence score 的组成依据。
+### 6.4 Mapping Status
 
-### 7.4 Drift Detection
+- Assigned
+- Unassigned
+- Suggested
+- Mapping Change Pending
 
-系统必须检测 inventory 与 production logs 之间的 drift。
+### 6.5 Approval Status
 
-MVP 至少支持以下 drift 类型：
+- Draft
+- Pending Approval
+- Changes Requested
+- Approved
+- Rejected
+- Withdrawn
 
-- `retired but live`: inventory 显示 retired，但 logs 中仍有 traffic；
-- `new sender identity`: 出现新的 sender ID、short code、From domain 或 address；
-- `new template`: 出现新的 template ID 或 asset ID；
-- `unknown traffic`: 无法匹配到已有 use case；
-- `volume anomaly`: 某 use case volume 与历史 baseline 存在显著差异。
+## 7. 信息架构
 
-Drift 结果应进入 triage queue，并支持 ageing 和处理状态跟踪。
+一级导航包含：
 
-### 7.5 Classification
+1. Dashboard
+2. Use Cases
+3. Templates
+4. Review Queue
+5. Administration
 
-MVP 阶段系统应支持 message type suggestion，后续阶段升级为必须能力。
+Evidence、Analytics、AI Analysis 和 Audit Trail 不再作为独立一级导航，而是出现在对应对象详情、Dashboard、Review Queue 或 Administration 中。
 
-系统应建议以下 classification：
+## 8. 功能需求
 
-- Regulatory
-- Servicing
-- Marketing
+### 8.1 Dashboard
 
-系统应为 classification suggestion 提供 confidence score。
+Dashboard 用于提供可操作的 Inventory 和治理健康度汇总。
 
-系统应识别 content 或 template metadata 中是否包含：
+应展示：
 
-- URLs；
-- domains；
-- contact numbers。
+- Use Case、Template 和 Template Version 总数。
+- 各 Lifecycle 和 Approval Status 数量。
+- 已匹配到 Inventory 的生产流量比例。
+- 未匹配流量数量及趋势。
+- Unassigned Template 数量。
+- Candidate 和低置信度任务数量。
+- 待审批和逾期审批数量。
+- Owner 和 Evidence 完整率。
+- 平均审批时长和 Ageing。
+- 按 Platform、Channel、Market、Classification 的分布和趋势。
+- 高优先级 Drift 和 Exception 摘要。
 
-后续阶段系统应支持 policy-aligned flags，例如：
+Dashboard 卡片和图表应支持下钻到带筛选条件的列表或队列。
 
-- public URL shorteners；
-- 未批准 domain；
-- 异常 contact number；
-- 与 classification 不一致的 content pattern。
+### 8.2 Use Case List
 
-### 7.6 Ownership Workflow
+Use Case List 是主要业务 Inventory 视图。
 
-系统必须提供 triage queue，支持 markets / LoBs 完成以下操作：
+必须支持：
 
-- confirm use case；
-- rename use case；
-- assign Message Owner；
-- assign Integrating System Owner；
-- confirm classification；
-- link evidence，例如 approval reference、attestation reference；
-- review unknown traffic；
-- resolve drift exception。
+- 关键词搜索。
+- 按 Platform、Channel、Market、Classification、Owner、Lifecycle、Approval 和 Evidence Status 筛选。
+- 排序和分页。
+- 在可行范围内保存筛选视图。
+- CSV 导出。
+- 展示 Template 数量、流量和最近活动。
+- 进入 Use Case Detail。
 
-系统必须支持 maker-checker 机制：
+### 8.3 Use Case Detail
 
-- maker 提交新增、修改或确认；
-- checker 审核并批准；
-- 所有状态变更写入 audit trail。
+Use Case Detail 替代当前 AI Template Analysis 页面，成为主要治理对象详情页。
 
-系统必须保留完整 audit trail：
+包含：
 
-- 操作人；
-- 操作时间；
-- 变更前后内容；
-- 变更原因；
-- evidence reference；
-- approval status。
+#### Overview
 
-### 7.7 Reporting 与 Export
+- 核心业务信息。
+- Classification 和 Lifecycle。
+- Owner 和联系人。
+- 当前生效版本和待审批变更。
+- Evidence 完整度和最近活动。
 
-系统必须提供 inventory export，格式至少支持 CSV。
+#### Templates and Traffic
 
-系统必须提供 dashboards，至少包括：
+- 关联 Templates 和 Versions。
+- Platform、Channel、Market、Tenant 和 Sender 覆盖。
+- 流量趋势和 Delivery Outcomes。
+- 需要审批的关联、重新分配和解绑操作。
 
-- `% traffic matched to inventory`，即 coverage；
-- unknown / unmatched traffic list；
-- unknown traffic ageing；
-- volume by market / LoB / channel / platform；
-- top sender IDs；
-- top domains；
-- top templates；
-- drift exceptions；
-- ownership confirmation status。
+#### AI Analysis
 
-系统必须支持 Regulator Response Pack export，内容包括：
+- 当前 AI 结论和 Confidence。
+- Extraction Flow。
+- Candidate Matches 和匹配解释。
+- 字段级 Confidence。
+- Analysis Run 历史和结果差异。
 
-- market；
-- channel；
-- platform；
-- use case；
-- message classification；
-- Message Owner；
-- Integrating System Owner；
-- sender identity；
-- template reference；
-- volume metrics；
-- delivery outcomes；
-- evidence references；
-- latest validation status。
+#### Governance
 
-## 8. 数据需求
+- Evidence 引用。
+- 当前生效值和拟议值。
+- 字段级变更对比。
+- 提交原因和审批意见。
 
-### 8.1 核心实体
+#### Activity
 
-系统至少应包含以下核心实体：
+- 对象变更。
+- 审批决定。
+- Analysis 活动。
+- Template 关联和生命周期事件。
 
-- Message Event
-- Candidate Use Case
-- Confirmed Use Case
-- Sender Identity
-- Template Reference
-- Platform Source
-- Owner
-- Evidence Reference
-- Drift Exception
-- Audit Record
+### 8.4 Template List
 
-### 8.2 MVP Inventory 字段
+Template List 是独立的运营和技术 Inventory 视图。
 
-MVP 生成的 use case-level inventory 至少包括：
+必须展示并支持按以下字段筛选：
 
-- use case ID；
-- use case name；
-- status，例如 candidate、confirmed、retired；
-- channel；
-- market / entity；
-- LoB；
-- platform；
-- tenant / workspace；
-- sender identity；
-- template reference；
-- monthly volume；
-- delivery outcomes；
-- Message Owner；
-- Integrating System Owner；
-- classification；
-- confidence score；
-- evidence reference；
-- latest validation date；
-- audit status。
+- Template ID。
+- Platform。
+- Tenant 或 Workspace。
+- Parent Use Case。
+- Current Version。
+- Channel、Market 和 Sender Identity。
+- Mapping、Lifecycle 和 Approval Status。
+- Monthly Volume 和 Last Seen。
+- Match Confidence。
 
-### 8.3 PII 与 Content 处理
+必须支持：
 
-系统应优先使用 metadata 和 hashed content。
+- Assigned 和 Unassigned 视图。
+- 使用完整组合标识进行搜索。
+- 进入 Template Detail。
+- 关联已有 Use Case。
+- 保持 Unassigned、请求 Re-analysis 或关联已有 Use Case；系统后续可以生成 Candidate Use Case。
+- 提交 Reassignment、Retirement 或 Reactivation 变更。
+- CSV 导出。
 
-对于 message content：
+### 8.5 Template Detail
 
-- 默认不存储完整 content；
-- 如需存储 snippets，应限制访问权限；
-- snippets 应脱敏；
-- retention 应符合 records policy；
-- 所有 content 访问应写入 audit trail。
+Template Detail 包含：
 
-## 9. 安全、隐私与合规需求
+- 组合业务标识和内部 UUID。
+- Parent Use Case。
+- Platform、Tenant、Channel、Market 和 Sender 信息。
+- 当前和历史 Template Versions。
+- 脱敏内容、变量和版本差异。
+- Traffic 和 Delivery Outcomes。
+- AI Analysis 和 Extraction Flow。
+- 相似 Templates 和 Candidate Matches。
+- Governance Status 和 Activity History。
 
-系统必须支持 role-based access control。
+### 8.6 AI Analysis 与 Extraction Flow
 
-至少应区分以下角色：
+AI Analysis 通过渐进式信息披露同时服务业务和技术用户。
 
-- Viewer
-- Market / LoB Maker
-- Market / LoB Checker
-- Platform Admin
-- Compliance / Risk Viewer
-- System Admin
+默认 Summary 视图展示：
 
-系统必须限制敏感数据访问：
+- 系统判断了什么。
+- 推荐的 Use Case 和 Classification。
+- Confidence 和重要不确定项。
+- 业务可读的关键原因。
+- 建议的人工操作。
 
-- content snippets；
-- PII；
-- sender-level sensitive metadata；
-- evidence documents。
+Technical Details 展开每个 Extraction Flow 步骤：
 
-系统必须支持：
+```text
+Ingestion
+→ Normalization
+→ Template Detection
+→ Variable Extraction
+→ Use Case Matching
+→ Classification
+```
 
-- encryption at rest；
-- encryption in transit；
-- data retention policy；
-- access logging；
-- audit trail；
-- periodic access recertification；
-- explainability for matching decisions。
+技术详情包括脱敏输入、标准化输出、提取字段、确定性规则、候选分数、Clustering 信息、Fingerprint、Model 和 Ruleset Version、耗时、Warnings、Errors 和 Retries。
 
-## 10. MVP 定义
+AI Analysis 可从 Use Case Detail、Template Detail、Review Task Detail 和 Administration 下的 Analysis Runs 页面进入。
 
-MVP 的目标是：在 Messaging-owned platforms 范围内，系统能够生成 use case-level inventory，并支持人工确认和导出。
+### 8.7 Review Queue
 
-MVP 必须包含：
+Review Queue 包含两个工作区。
 
-- ingest MDP、SFMC、ICCM、IRIS logs 的能力，至少在 pilot scope 中覆盖 MDP 和一个 legacy platform；
-- extraction 和 normalisation；
-- deterministic matching；
-- basic clustering；
-- confidence scoring；
-- triage workflow；
-- Message Owner 和 Integrating System Owner 确认；
-- classification confirmation；
-- inventory CSV export；
-- exception list export；
-- coverage dashboard；
-- unknown traffic list；
-- basic audit trail。
+#### Discovery Review
 
-MVP inventory 必须包含：
+包括：
 
-- channel；
-- market / entity；
-- platform；
-- sender identity；
-- template link / reference；
-- monthly volume；
-- delivery outcomes，如 source available；
-- confidence score；
-- owner confirmation status；
-- classification confirmation status。
+- 未匹配流量。
+- Unassigned Templates。
+- Candidate Use Cases。
+- Candidate Template Versions。
+- 低置信度匹配。
+- 新 Template 或 Sender Identity。
+- Retired-but-live 和其他 Drift Exceptions。
 
-## 11. MVP 成功指标
+审核人员可以：
 
-MVP 的成功指标包括：
+- 关联已有 Use Case。
+- 在系统生成 Candidate Use Case 后补充信息；不支持手工创建。
+- 确认或修正 Template Version。
+- 在填写原因后排除 Noise 或标记为不需要治理。
+- 查看 AI Analysis。
+- 将处理结果提交审批。
 
-- 至少 80% 的 in-scope platform message volume 被映射到 candidate use cases；
-- 至少 70% 的 mapped use cases 在 pilot markets 中拥有 confirmed owners；
-- unknown traffic list 在 log ingestion 后 24 小时内自动生成；
-- pilot users 能够通过 triage workflow 完成 use case confirmation；
-- inventory 和 exception list 可被导出用于业务治理或审计准备。
+#### Governance Approval
 
-## 12. 分阶段路线图
+包括以下拟议变更：
 
-### Phase 0: Mobilise & Design, Weeks 0-4
+- Use Case 创建和修改。
+- Template 关联或重新分配。
+- Template Version 确认。
+- Classification、Owner 和 Evidence 修改。
+- Use Case 合并。
+- Candidate Use Case 拆分；MVP 不支持拆分 Active Use Case。
+- Retire 和 Reactivate。
 
-目标：
+Governance 用户可以批准、驳回或要求修改。队列必须支持筛选、分配或领取、Ageing、SLA 标识和审批历史。低风险批量处理可以在 MVP 后考虑。
 
-- 确认 scope、data sources、privacy model 和 MVP schema；
-- 定义 matching rules 和 confidence scoring approach；
-- 定义 triage workflow、maker-checker 和 audit trail requirements；
-- 确认 pilot markets。
+### 8.8 Maker–Checker 工作流
 
-交付物：
+重要变更遵循：
 
-- signed requirements；
-- data contracts；
-- MVP schema；
-- pilot market selection；
-- implementation backlog。
+```text
+Draft
+→ Pending Approval
+→ Approved
 
-### Phase 1: MVP Build + Pilot, Weeks 5-12
+Pending Approval
+→ Changes Requested
+→ Draft
 
-目标：
+Pending Approval
+→ Rejected
 
-- ingest MDP logs；
-- ingest one legacy platform logs，例如 SFMC；
-- 覆盖 2-3 个 pilot markets；
-- 实现 extraction、deterministic matching 和 basic clustering；
-- 构建 triage queue、CSV export 和 coverage dashboard。
+Draft 或 Pending Approval
+→ Withdrawn
+```
 
-交付物：
+规则：
 
-- MVP tool live for pilots；
-- first inventory baseline；
-- unknown traffic report；
-- pilot feedback。
+- 新 Change Request 获批前，原有 Approved Data 继续生效。
+- 待审批值必须与当前生效值清晰区分。
+- Dashboard、Report 和 Export 默认使用已批准的当前生效数据。
+- Checker 可以批准、驳回或要求修改，但不应静默重写已提交申请。
+- Rejection 和 Changes Requested 必须填写意见。
+- 用户不能审批自己发起的变更。
+- 每次审批保存 Submitter、Checker、时间、意见、字段差异和版本快照。
+- 不影响治理数据的评论和内部备注可以即时保存。
 
-Exit KPI：
+### 8.9 自动发现与匹配
 
-- pilot scope 中至少 80% volume matched。
+系统处理流程为：
 
-### Phase 2: Expand Coverage + Classification, Weeks 13-24
+```text
+Production Events
+→ 标准化 Metadata
+→ 解析 Template 组合标识
+→ 检测 Template Version
+→ 匹配或推荐 Use Case
+→ 计算 Confidence
+→ 必要时进入人工审核
+```
 
-目标：
+预期分流规则：
 
-- 接入剩余 Messaging-owned platforms，例如 ICCM、IRIS；
-- 增加 classification suggestions；
-- 增加 URL / domain detection；
-- 增加 drift detection；
-- 增加 unknown traffic ageing SLA。
+- 已知 Template 和已知 Version：更新流量和 Last Seen。
+- 已知 Template 但内容发生重要变化：创建 Candidate Version。
+- 未知 Template 组合标识：创建 Unassigned Template Candidate。
+- 已知且高置信度 Mapping：应用已批准映射并保留解释。
+- 低置信度或未匹配：创建 Discovery Review Task。
+- Retired 对象仍有 Live Traffic：创建 Drift Task。
 
-交付物：
+### 8.10 Audit 与 History
 
-- multi-platform inventory；
-- exception management process；
-- policy-aligned flags；
-- enhanced dashboard。
+产品必须分别保留：
 
-Exit KPI：
+- **Object History：** Use Case、Template 和 Template Version 如何变化。
+- **Analysis History：** 当时规则或 AI 做出了什么判断。
+- **Approval History：** 谁提交、审核、批准、驳回或要求修改。
 
-- in-scope platforms 中至少 90% volume matched。
+重要修改需要保留字段级差异和不可变快照。
 
-### Phase 3: End-to-End Traceability, Weeks 25-36
+### 8.11 Administration
 
-目标：
+Administration 包含：
 
-- 实现或消费 standard upstream identifiers；
-- 建立 upstream request ID、messaging platform ID 和 vendor ID 之间的 correlation；
-- 改进 retry / fallback visibility。
+- 用户、角色和访问范围管理。
+- 匹配和 Classification 配置。
+- 审批工作流设置。
+- 面向技术和治理调查的 Analysis Runs 查询。
+- Audit Trail 查询。
+- 相关系统配置和处理状态。
 
-交付物：
+## 9. 报表与导出
 
-- real-time traffic upstream attribution；
-- traceability reporting；
-- upstream identifier adoption guidance。
+MVP 必须支持已批准 Inventory 和 Review Data 的 CSV 导出。
 
-Exit KPI：
+根据导出类型应包含：
 
-- pilot markets 中至少 90% real-time traffic 具备 upstream attribution。
+- Use Cases 和 Classifications。
+- Templates 和组合标识。
+- 当前 Template Versions。
+- Platform、Channel、Market、Tenant 和 Sender 信息。
+- Ownership 和 Evidence Status。
+- Volume 和 Delivery Outcomes。
+- Mapping 和 Approval Status。
+- Exception 和 Ageing 信息。
 
-### Phase 4: Scale Beyond Messaging-Owned Platforms, Weeks 25-52, Parallel
+Regulator Response Pack 和高级报表构建器属于后续 Roadmap。
 
-目标：
+## 10. 安全、隐私与治理要求
 
-- onboarding DSP、CIB 等 platforms；
-- 定义 minimum telemetry feeds，例如 daily export 或 API；
-- 对尚未 onboarded platforms 执行 procedural registration；
-- 通过 FIM 支持 quarterly attestation。
+- 实施 Role-Based Access 和授权数据范围。
+- 限制敏感内容访问，默认展示脱敏内容。
+- 尽量减少消息内容和 PII 的存储。
+- 保留 Source Lineage 和 Explainability。
+- 最终系统架构需要支持传输中和静态数据加密。
+- 对 Production Events 应用配置的 Retention，同时保留必要治理证据。
+- 根据 Policy 记录访问和变更活动。
+- 防止治理变更的 Self-Approval。
 
-交付物：
+## 11. MVP 范围
 
-- expanded enterprise coverage；
-- non-Messaging-owned platform onboarding model；
-- reduced unknown source risk；
-- quarterly attestation process。
+前端 MVP 包含：
 
-### Phase 5: BAU Hardening, Post-52 Weeks
+- 展示核心 Inventory 和治理指标的 Dashboard。
+- Use Case List 和 Use Case Detail。
+- Template List 和 Template Detail。
+- Template Version 历史和 Candidate Version 处理。
+- 多维搜索和筛选。
+- 未匹配、Candidate 和 Drift Review 流程。
+- AI Extraction Flow 的 Business Summary 和 Technical Details。
+- Maker–Checker Change Request 和 Governance Approval。
+- Object、Analysis 和 Approval History。
+- CSV 导出。
+- 按未来 API Response 结构设计的 Mock Data。
 
-目标：
+## 12. 后续 Roadmap
 
-- performance hardening；
-- resilience improvement；
-- access recertification；
-- automated governance reporting；
-- 与 Workbench / EMI 集成，作为 system of record 和 attestation workflow。
+MVP 后可考虑：
 
-交付物：
+- 高级自定义报表和 Regulator Response Pack 生成。
+- 可视化 Matching Rule 和 Policy Rule 编辑器。
+- Model Operations 和质量监控控制台。
+- 在明确 Policy 下自动批准低风险变更。
+- 高级 Queue Assignment 和 SLA 编排。
+- 扩展更多 Platform 和 Upstream System 数据接入。
+- 端到端 Request 与 Message Traceability。
+- 企业级 Attestation Workflow 和外部系统集成。
 
-- BAU operating model；
-- production support model；
-- automated governance reporting；
-- access review process；
-- Workbench / EMI integration。
+## 13. MVP 成功指标
 
-## 13. 依赖与约束
+- 至少 80% 的范围内生产消息量映射到 Candidate 或 Approved Use Case。
+- Pilot Markets 中至少 70% 的已映射 Use Cases 拥有已确认 Owner。
+- 新增未匹配流量和 Unassigned Templates 在数据接入后 24 小时内进入 Review Queue。
+- 每一项已批准治理变更都具有明确的 Maker、Checker、时间和前后快照。
+- 每一项 AI 辅助的审核决定都保留业务解释和可访问的技术证据。
 
-### 13.1 数据依赖
+## 14. 已确认决策
 
-产品依赖各 platforms 提供可用的 production logs。
-
-关键依赖包括：
-
-- log availability；
-- field completeness；
-- stable template identifiers；
-- sender identity availability；
-- delivery outcome availability；
-- correlation ID availability；
-- upstream identifier availability。
-
-### 13.2 平台依赖
-
-不同 platforms 的 data model、log format 和 API 能力可能不同，需要在 Phase 0 完成 data contracts。
-
-### 13.3 组织依赖
-
-产品需要 markets / LoBs 参与 triage、ownership confirmation 和 classification confirmation。
-
-如果缺少业务 owner 参与，inventory 将只能停留在 candidate 状态。
-
-### 13.4 政策依赖
-
-Policy-aligned flags 依赖明确的 messaging policy、approved domains、approved sender identities 和 URL / contact number standards。
-
-## 14. 风险与缓解措施
-
-| 风险 | 影响 | 缓解措施 |
-| --- | --- | --- |
-| Logs 缺少 upstream identifier | 无法可靠识别 upstream system | 标记为 unknown，并推动 metadata standard |
-| Logs 格式不一致 | ingestion 和 normalisation 成本上升 | Phase 0 定义 data contracts 和 parser strategy |
-| Owner 确认不及时 | inventory 长期停留在 candidate 状态 | 建立 triage SLA、ageing dashboard 和 escalation |
-| PII 或 content 处理不当 | 隐私和合规风险 | 默认 metadata + hashed content，限制 snippets 访问 |
-| Matching confidence 不足 | use case 归类不可靠 | deterministic rules 优先，clustering 结果进入人工确认 |
-| 非 Messaging-owned platforms 未接入 | enterprise coverage 不完整 | Phase 4 通过 onboarding feeds 和 attestation 扩展 |
-
-## 15. 待确认问题
-
-以下事项需要在 Phase 0 或需求评审阶段确认：
-
-- Pilot markets 具体名单；
-- MVP 是否必须同时覆盖 MDP、SFMC、ICCM、IRIS，或是否允许按 pilot source 分批接入；
-- Market / LoB 与 platform tenancy 的映射规则；
-- Message Owner 和 Integrating System Owner 的权威来源；
-- Classification 的内部标准定义；
-- Evidence reference 应链接到哪些系统或文档库；
-- Retention policy 的具体周期；
-- Content snippets 是否允许存储，以及允许的脱敏规则；
-- Maker-checker 的审批层级；
-- Workbench / EMI 在 roadmap 中的集成边界。
-
+- Use Case 是 Template 的上级对象。
+- 一个 Use Case 可以包含多个 Templates。
+- Use Case、Template 和 Template Version 不能手工创建，必须来自生产数据发现。
+- 用户可以拆分系统生成的 Candidate Use Case，但 MVP 不允许拆分 Active Use Case。
+- Template 拥有独立的 List 和 Detail 页面。
+- Template 业务唯一标识为 `Platform + Tenant/Workspace + Template ID`。
+- Template 同时拥有稳定的内部 UUID。
+- 同一 Template 标识下的重要内容变化创建新的 Template Version。
+- Regulatory、Servicing 和 Marketing 是 Classification，而不是主要 Inventory 维度。
+- Business 和 Governance 用户都可以修改治理对象。
+- 由中央 Governance Team 统一审批。
+- 任何用户都不能审批自己发起的变更。
+- AI Extraction Flow 保留在对象和审核上下文中，并提供 Summary 和 Technical Details 两层视图。

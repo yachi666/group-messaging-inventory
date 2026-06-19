@@ -107,6 +107,8 @@ npm run test:ui
 
 The visual language is documented in [DESIGN.md](./DESIGN.md). The interface uses a friendly, data-dense governance dashboard style: pale navigation, compact tables, rounded metric cards, calm status chips, and audit-ready language.
 
+Product behavior, domain rules, workflows, page specifications, and agent implementation guidance are indexed in [design/README.md](./design/README.md). Agents implementing product changes should begin there rather than inferring behavior from the current UI.
+
 ## 🗺️ Roadmap
 
 The product roadmap is documented in [requirements.md](./requirements.md) and [requirements.zh.md](./requirements.zh.md). Planned phases include:

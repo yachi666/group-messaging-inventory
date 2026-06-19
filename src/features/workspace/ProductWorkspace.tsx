@@ -25,11 +25,10 @@ import type {
 import { useAiChat } from '../ai/AiChatProvider';
 import { useI18n } from '../../i18n/LanguageProvider';
 import type { MessageKey } from '../../i18n/messages';
-import type { AppView } from '../../layout/AppShell';
 import { formatPercentage, formatVolume } from '../../lib/format';
 
 type ProductWorkspaceProps = {
-  activeView: Exclude<AppView, 'dashboard' | 'ai-template-analysis'>;
+  activeView: 'inventory' | 'triage' | 'evidence' | 'analytics' | 'audit-trail' | 'settings';
 };
 
 type InventoryFilter = 'all' | 'candidate' | 'needs-evidence' | 'pending-checker';
