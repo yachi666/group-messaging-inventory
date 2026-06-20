@@ -1,65 +1,41 @@
-# Design QA — Complete Governance Workspace
+# Design QA — Global Messaging Inventory
 
-## Evidence
+- Source visual truth: `/var/folders/jg/zyy_772s1qz9jr_7pg7hd7m00000gn/T/codex-clipboard-9a299c1f-0731-4047-a575-caa7a55f8764.png`
+- Implementation screenshot: `/Users/zhinan/Documents/test-analysis2/product-design-audit/global-inventory-drag-default.png`
+- Full-view comparison: `/Users/zhinan/Documents/test-analysis2/product-design-audit/global-inventory-drag-comparison.png`
+- Focused map comparison: `/Users/zhinan/Documents/test-analysis2/product-design-audit/global-inventory-map-focused.png`
+- Viewport: 2206 × 1122
+- State: default map position, United Kingdom selected, detail panel closed
 
-- Selected visual truth: `design/visuals/governance-investigation-workbench.png`
-- Final Review Queue implementation: `product-design-audit/27-review-queue-complete.png`
-- Full reference comparison: `product-design-audit/30-final-reference-comparison.png`
-- Focused reference comparison: `product-design-audit/31-final-focused-comparison.png`
-- Complete product contact sheet: `product-design-audit/24-complete-product-contact-sheet.png`
-- Candidate Split: `product-design-audit/28-candidate-split.png`
-- Template Mapping: `product-design-audit/29-template-mapping.png`
-- Mobile Dashboard: `product-design-audit/25-dashboard-mobile.png`
-- Mobile Review Queue: `product-design-audit/26-review-mobile.png`
-- Comparison viewport: 1536 × 1088, English, Discovery Review, first Candidate selected
-- Responsive viewport: 390 × 844
+**Findings**
 
-## Implemented surfaces reviewed
+- No actionable P0, P1, or P2 issues remain.
+- Fonts and typography: the source hierarchy and optical scale are preserved. Copy intentionally differs to match the Group Messaging Inventory product domain.
+- Spacing and layout rhythm: summary metrics, global map, readiness rings, market cards, and monthly-volume strip retain the reference composition.
+- Colors and visual tokens: the lavender canvas, navy text, white cells, purple heat distribution, red hotspot cores, and semantic market cards remain faithful.
+- Map fidelity: the world silhouette now uses the 50m `world-atlas` coastline dataset instead of the former 110m geometry. A projected offscreen land mask preserves detailed coastlines while retaining the honeycomb treatment.
+- Copy and content: labels now represent production traffic, matched messages, unknown traffic, drift exceptions, owner confirmation, evidence readiness, and the four pilot markets from repository data.
+- Interaction: mouse and touch pointer dragging moves the complete map layer within bounded global limits. The Reset control restores `(0, 0)`. Browser verification produced `matrix(1, 0, 0, 1, -200, -60)` after drag and `matrix(1, 0, 0, 1, 0, 0)` after reset.
+- Performance: the accurate coastline is rasterized once into an offscreen mask before the high-DPI honeycomb is drawn. This replaced repeated point-in-polygon checks and restored sub-second browser capture after load.
 
-- Dashboard with global filters, six KPIs, coverage, funnel, composition, drift, governance health, and task drill-down.
-- Use Case List and shared Candidate / Active / Retired Detail workspace.
-- Candidate edit, Candidate-only Split, Merge, AI Analysis, Governance diff, and immutable Activity views.
-- Template List and Detail with composite identity, mapping, version timeline, content, traffic, AI Analysis, governance, and activity.
-- Discovery Review and separate Governance Approval decision workspace.
-- Administration: access, reference data, matching, workflow/SLA, Analysis Runs, Audit Trail, and data processing.
+**Patches made during QA**
 
-## Required fidelity surfaces
+- Replaced generic statistics and city copy with project inventory metrics and pilot-market volumes.
+- Upgraded map source geometry from 110m to 50m coastline detail.
+- Added bounded pointer dragging, touch support, drag cursor, exploration hint, and Reset control.
+- Moved the map layer and all market cards together so annotations remain geographically attached.
+- Added an offscreen coastline mask to avoid expensive per-cell geometry traversal.
 
-- Typography: project system-font stack, compact operational hierarchy, stable wrapping and truncation.
-- Spacing/layout: selected three-column investigation workbench preserved; list and detail pages use the same shell, density, hairlines, and action hierarchy.
-- Colors/tokens: neutral surfaces and semantic blue/green/amber/red states map to project tokens.
-- Assets/icons: Heroicons is used for UI iconography. The source contains no photographic or illustrative assets requiring generation.
-- Copy/content: product language follows `Use Case → Template → Template Version`, Candidate-only split, production discovery, and maker–checker governance.
-- Responsiveness: 390px verification reports `scrollWidth === clientWidth`; workbench columns stack without page-level horizontal overflow.
-- Accessibility: semantic headings/tables/forms, keyboard-native controls, visible focus treatment, labeled locale control, and disabled invalid decisions.
+**Implementation Checklist**
 
-## Governance behavior verified
+- [x] Project-specific copy and values.
+- [x] Accurate 50m geographic coastline data.
+- [x] Mouse and touch drag behavior.
+- [x] Functional Reset and market detail controls.
+- [x] TypeScript and production build pass.
 
-- No manual Create Use Case or Create Template action exists.
-- Candidate Split is visible for Candidate and absent for Active Use Case.
-- Empty Candidate Split groups disable submission.
-- All split results form one approval package.
-- Template Mapping offers only Existing Use Case, Keep Unassigned, or Re-analysis.
-- Approved values remain separately described as effective while pending changes are shown as proposed.
-- Governance Approval is separate from Discovery Review.
-- Self-approval displays a warning and disables Approve.
-- Re-analysis creates a new run and does not overwrite the current decision.
+**Follow-up Polish**
 
-## Automated verification
-
-- `npm run typecheck`: passed.
-- `npm run build`: passed.
-- `APP_URL=http://127.0.0.1:5175 npm run test:ui`: passed.
-- Browser console errors across primary routes: 0.
-- `git diff --check`: passed.
-
-## Findings
-
-- No actionable P0, P1, or P2 findings remain.
-
-## Follow-up polish
-
-- P3: Replace generic organization and user identity treatments when production brand/avatar assets are supplied.
-- P3: Connect filters, exports, persistence, and immutable audit events to backend APIs when contracts are available.
+- P3: add wheel/pinch zoom only if exploration needs extend beyond the requested drag interaction.
 
 final result: passed

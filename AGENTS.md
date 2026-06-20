@@ -40,3 +40,17 @@ No test framework is currently configured. Before opening a PR, run `npm run typ
 This repository has no existing commit history, so use clear, imperative commit messages such as `Add dashboard status chips` or `Refine inventory mock data`. Keep changes scoped and avoid mixing formatting-only edits with behavior changes.
 
 Pull requests should include a short summary, verification steps, and screenshots for visible UI changes. Link related issues or requirements when available, and call out any changes to mock data, i18n keys, or design-token usage.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in [GitHub Issues](https://github.com/yachi666/group-messaging-inventory/issues) via the `gh` CLI. External PRs are **not** treated as a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Uses the default canonical labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: one `CONTEXT.md` at the repo root plus `docs/adr/`. See `docs/agents/domain.md`.

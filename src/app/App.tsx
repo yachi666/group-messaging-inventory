@@ -8,6 +8,7 @@ import {
   UseCasesPage,
 } from '../features/governance/GovernancePages';
 import { ReviewQueuePage } from '../features/review-queue/ReviewQueuePage';
+import { GeneralStatisticsPage } from '../features/statistics/GeneralStatisticsPage';
 import { LanguageProvider } from '../i18n/LanguageProvider';
 import { AppShell, type AppView } from '../layout/AppShell';
 
@@ -35,7 +36,7 @@ function renderActiveView(
   return <AdministrationPage />;
 }
 
-export function App() {
+function InventoryApp() {
   const [isPending, startTransition] = useTransition();
   const [activeView, setActiveView] = useState<AppView>('review-queue');
   const [selectedObjectId, setSelectedObjectId] = useState<string>();
@@ -63,4 +64,12 @@ export function App() {
       </AiChatProvider>
     </LanguageProvider>
   );
+}
+
+export function App() {
+  if (window.location.pathname === '/general-statistics') {
+    return <GeneralStatisticsPage />;
+  }
+
+  return <InventoryApp />;
 }
