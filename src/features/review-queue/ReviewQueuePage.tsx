@@ -106,7 +106,7 @@ export function ReviewQueuePage() {
             <button onClick={() => flash('Filters ready for configuration')} type="button"><FunnelIcon />Filters <span>3</span></button>
           </div>
           <div className="queue-columns"><span>Object</span><span>Plat/Chnl</span><span>Conf.</span><span>Priority</span><span>Age</span></div>
-          <div className="queue-list">
+          <div className="review-queue-list">
             {visibleItems.map((item) => (
               <button className={`queue-row ${selected.id === item.id ? 'queue-row-selected' : ''}`} key={item.id} onClick={() => setSelectedId(item.id)} type="button">
                 <span className={`queue-object-icon queue-object-${item.priority.toLowerCase()}`}><DocumentMagnifyingGlassIcon /></span>
