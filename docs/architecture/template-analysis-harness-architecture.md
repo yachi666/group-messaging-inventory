@@ -573,6 +573,7 @@ Current repository status:
 - `npm run test:evals:latest-api-mapping:local` verifies that persisted evaluation/release rows map into the latest-evaluation API response contract without Postgres.
 - `EVAL_WRITE_RELEASE_DATABASE=true` persists release evidence into Postgres when `EVAL_CREATE_RELEASE_EVIDENCE=true` and `DATABASE_URL` are also set.
 - `npm run test:evals:pg` runs the same gate and records the accepted report into Postgres `analysis_evaluations`.
+- `npm run test:evals:release-persistence:pg` writes a passing evaluation plus release evidence into Postgres and reads it back through the latest-evaluation repository path.
 - `GET /analysis-evaluations/latest` exposes the latest gate summary and promotion evidence hash through the NestJS API for dashboards and CI checks. It reads persisted `analysis_evaluations` and `pipeline_releases` when `DATABASE_URL` is set, and falls back to the local replay gate without a database.
 - `npm run test:no-infra` is the local and CI entrypoint for the no-infrastructure harness gate set.
 - `.github/workflows/ci.yml` runs `npm run test:no-infra` on pull requests and pushes, and `npm run test:ci-workflow` verifies that the workflow and package script continue to include the required gates.
@@ -1566,6 +1567,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented stable release evidence hashing for tamper-evident local artifacts.
 - Implemented optional Postgres recording through `npm run test:evals:pg` when local infrastructure is running.
 - Implemented `pipeline_releases` record mapping and optional release evidence persistence via `EVAL_WRITE_RELEASE_DATABASE=true`.
+- Implemented `npm run test:evals:release-persistence:pg` for Postgres-backed evaluation and release evidence readback.
 - Implemented bounded OpenAI-compatible provider retry policy and stable provider-error classification for transient 408/429/5xx/network failures.
 - Implemented `GET /analysis-evaluations/latest` for a database-aware API query surface over evaluation gate status and release evidence hash, with local replay fallback when no database is configured.
 - Implemented worker failure persistence activity and repository support for marking failed analysis runs with structured error metadata.
@@ -1573,7 +1575,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented and verified `npm run test:harness:temporal` for the full API -> Temporal -> worker -> Postgres analysis evidence loop with local header authorization and persisted analysis output, review task, and audit event checks.
 - Implemented `npm run test:no-infra` plus GitHub Actions CI for no-infrastructure typecheck, secret scan, backend smoke, readiness probes, runtime lifecycle checks, API surface checks, PII gate, eval gates, release mapping gates, web contract checks, workflow verification, deploy config checks, build, bundle budget, and local UI verification.
 - Implemented contract-backed backend smoke parsing for key API success and error responses via `packages/contracts`.
-- Next: grow the locale-specific PII trap fixture set with reviewer-labeled false-positive samples and run full Postgres/Temporal release persistence verification before production promotion.
+- Next: grow the locale-specific PII trap fixture set with reviewer-labeled false-positive samples before production promotion.
 
 ## 16. Key Open Questions
 

@@ -230,6 +230,13 @@ npm run infra:up
 npm run test:evals:pg
 ```
 
+验证 evaluation 与 release evidence 的完整 Postgres 写入和 latest readback：
+
+```bash
+npm run infra:up
+npm run test:evals:release-persistence:pg
+```
+
 验证后台持久化链路：
 
 ```bash

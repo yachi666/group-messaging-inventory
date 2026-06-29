@@ -333,6 +333,13 @@ DATABASE_URL=postgres://gmi:gmi@127.0.0.1:55432/gmi \
 npm run test:gate -w @gmi/evals
 ```
 
+To verify the full Postgres-backed evaluation plus release evidence readback path, run:
+
+```bash
+npm run infra:up
+npm run test:evals:release-persistence:pg
+```
+
 For backend persistence verification, run:
 
 ```bash
