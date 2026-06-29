@@ -45,6 +45,8 @@ await page.getByRole('heading', { name: 'Review Queue' }).waitFor();
 await page.getByRole('heading', { name: 'AI Extraction Flow' }).waitFor();
 await page.getByTestId('review-task-refresh').waitFor();
 await page.getByRole('status').getByText(/Review task API unavailable|API review tasks|open review tasks/).waitFor();
+await page.getByTestId('review-task-claim').click();
+await page.getByRole('status').getByText('Connect to the Review Task API to update this local queue item').waitFor();
 await page.getByRole('button', { name: 'Submit for Approval' }).click();
 await page.getByRole('status').getByText('Submitted to Governance Approval').waitFor();
 

@@ -144,7 +144,7 @@ curl -H 'x-actor-id: auditor-local' \
 `/audit-events` 支持按 `objectType`、`objectId`、`sourceRunId`、`changeRequestId` 和 `limit` 筛选。
 `/review-tasks` 暴露 analysis review task，并支持按 `status`、`objectType`、`objectId`、`sourceRunId` 和 `limit` 筛选，让需要人工复核的分析结果可以从工作台追踪到 reviewer queue。
 `POST /review-tasks/{taskId}/transition` 支持 reviewer 认领、开始处理、升级待批、完成或关闭 review task，并写入 actor attribution 与 audit event。
-Review Queue 的 Discovery 视图会优先读取该 API 中的 open template review task；API 不可用时回退到本地 discovery 数据。
+Review Queue 的 Discovery 视图会优先读取该 API 中的 open template review task，并可对 API-backed task 执行认领、开始处理、完成操作；API 不可用时回退到本地 discovery 数据。
 
 API 提交可以只入队，也可以直接启动 Temporal workflow。需要本地完整 Harness 链路时，先运行 Temporal，并设置：
 

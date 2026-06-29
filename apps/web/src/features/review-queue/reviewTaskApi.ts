@@ -1,4 +1,4 @@
-import { reviewTasksResponseSchema } from '@gmi/contracts';
+import { reviewTaskResponseSchema, reviewTasksResponseSchema } from '@gmi/contracts';
 
 import { apiFetch } from '../../lib/apiClient';
 
@@ -16,6 +16,13 @@ export type ReviewTask = {
   resolvedAt: string | null;
 };
 
+type ReviewTaskTransitionStatus =
+  | 'Assigned'
+  | 'InReview'
+  | 'PendingApproval'
+  | 'Resolved'
+  | 'Dismissed';
+
 export async function fetchOpenReviewTasks(
   signal?: AbortSignal,
 ): Promise<ReadonlyArray<ReviewTask>> {
@@ -31,4 +38,32 @@ export async function fetchOpenReviewTasks(
   const payload = reviewTasksResponseSchema.parse(await response.json());
 
   return payload.reviewTasks;
+}
+
+export async function transitionReviewTask(input: {
+  taskId: string;
+  actorId: string;
+  status: ReviewTaskTransitionStatus;
+  assignedTo?: string;
+  reason: string;
+}): Promise<ReviewTask> {
+  const response = await apiFetch(
+    `/review-tasks/${encodeURIComponent(input.taskId)}/transition`,
+    {
+      method: 'POST',
+      roles: ['analysis_runner'],
+      body: JSON.stringify({
+        actorId: input.actorId,
+        status: input.status,
+        assignedTo: input.assignedTo,
+        reason: input.reason,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to transition review task: ${response.status}`);
+  }
+
+  return reviewTaskResponseSchema.parse(await response.json());
 }

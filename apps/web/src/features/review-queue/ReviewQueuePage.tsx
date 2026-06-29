@@ -23,12 +23,13 @@ import {
   type ChangeRequest,
   type ChangeRequestEvidencePackage,
 } from './changeRequestApi';
-import { fetchOpenReviewTasks, type ReviewTask } from './reviewTaskApi';
+import { fetchOpenReviewTasks, transitionReviewTask, type ReviewTask } from './reviewTaskApi';
 
-type QueueStatus = 'Needs review' | 'Pending approval' | 'Overdue';
+type QueueStatus = 'Needs review' | 'Assigned' | 'In review' | 'Pending approval' | 'Resolved' | 'Dismissed' | 'Overdue';
 
 type QueueItem = {
   id: string;
+  taskId: string;
   name: string;
   platform: string;
   channel: string;
@@ -37,21 +38,24 @@ type QueueItem = {
   priority: 'High' | 'Medium' | 'Low';
   age: string;
   status: QueueStatus;
+  reviewTaskStatus?: ReviewTask['status'];
+  assignedTo?: string | null;
+  isApiBacked?: boolean;
 };
 
 const fallbackQueueItems: QueueItem[] = [
-  { id: 'UC-76821', name: 'Card repayment reminder', platform: 'MDP', channel: 'SMS', market: 'Hong Kong', confidence: 87, priority: 'High', age: '3d', status: 'Needs review' },
-  { id: 'TPL-55411', name: 'Order confirmation v3', platform: 'SFMC', channel: 'Email', market: 'UK', confidence: 64, priority: 'Medium', age: '5d', status: 'Needs review' },
-  { id: 'UC-76818', name: 'Password reset email', platform: 'ICCM', channel: 'Email', market: 'Singapore', confidence: 91, priority: 'High', age: '1d', status: 'Pending approval' },
-  { id: 'VER-33109', name: 'Marketing opt-in email v2', platform: 'MDP', channel: 'SMS', market: 'UK', confidence: 77, priority: 'Medium', age: '2d', status: 'Needs review' },
-  { id: 'RL-85512', name: 'Spring promo SMS (Retired)', platform: 'SFMC', channel: 'SMS', market: 'Hong Kong', confidence: 93, priority: 'High', age: '7d', status: 'Overdue' },
-  { id: 'TPL-55398', name: 'Shipping delay SMS', platform: 'MDP', channel: 'SMS', market: 'Singapore', confidence: 58, priority: 'Low', age: '6d', status: 'Needs review' },
-  { id: 'UC-76790', name: 'Account security alert email', platform: 'ICCM', channel: 'Email', market: 'UK', confidence: 87, priority: 'High', age: '4d', status: 'Needs review' },
-  { id: 'VER-33077', name: 'Welcome series email v2', platform: 'MDP', channel: 'Email', market: 'Hong Kong', confidence: 73, priority: 'Medium', age: '3d', status: 'Pending approval' },
-  { id: 'TPL-55321', name: 'Two-factor code SMS', platform: 'SFMC', channel: 'SMS', market: 'Singapore', confidence: 61, priority: 'Medium', age: '8d', status: 'Overdue' },
-  { id: 'RL-88401', name: 'Black Friday offer email (Retired)', platform: 'MDP', channel: 'Email', market: 'UK', confidence: 95, priority: 'High', age: '10d', status: 'Overdue' },
-  { id: 'UC-76712', name: 'Loyalty points expiry SMS', platform: 'SFMC', channel: 'SMS', market: 'Singapore', confidence: 68, priority: 'Medium', age: '5d', status: 'Needs review' },
-  { id: 'VER-33012', name: 'Re-engagement email v2', platform: 'ICCM', channel: 'Email', market: 'Singapore', confidence: 79, priority: 'Medium', age: '2d', status: 'Pending approval' },
+  { id: 'UC-76821', taskId: 'UC-76821', name: 'Card repayment reminder', platform: 'MDP', channel: 'SMS', market: 'Hong Kong', confidence: 87, priority: 'High', age: '3d', status: 'Needs review' },
+  { id: 'TPL-55411', taskId: 'TPL-55411', name: 'Order confirmation v3', platform: 'SFMC', channel: 'Email', market: 'UK', confidence: 64, priority: 'Medium', age: '5d', status: 'Needs review' },
+  { id: 'UC-76818', taskId: 'UC-76818', name: 'Password reset email', platform: 'ICCM', channel: 'Email', market: 'Singapore', confidence: 91, priority: 'High', age: '1d', status: 'Pending approval' },
+  { id: 'VER-33109', taskId: 'VER-33109', name: 'Marketing opt-in email v2', platform: 'MDP', channel: 'SMS', market: 'UK', confidence: 77, priority: 'Medium', age: '2d', status: 'Needs review' },
+  { id: 'RL-85512', taskId: 'RL-85512', name: 'Spring promo SMS (Retired)', platform: 'SFMC', channel: 'SMS', market: 'Hong Kong', confidence: 93, priority: 'High', age: '7d', status: 'Overdue' },
+  { id: 'TPL-55398', taskId: 'TPL-55398', name: 'Shipping delay SMS', platform: 'MDP', channel: 'SMS', market: 'Singapore', confidence: 58, priority: 'Low', age: '6d', status: 'Needs review' },
+  { id: 'UC-76790', taskId: 'UC-76790', name: 'Account security alert email', platform: 'ICCM', channel: 'Email', market: 'UK', confidence: 87, priority: 'High', age: '4d', status: 'Needs review' },
+  { id: 'VER-33077', taskId: 'VER-33077', name: 'Welcome series email v2', platform: 'MDP', channel: 'Email', market: 'Hong Kong', confidence: 73, priority: 'Medium', age: '3d', status: 'Pending approval' },
+  { id: 'TPL-55321', taskId: 'TPL-55321', name: 'Two-factor code SMS', platform: 'SFMC', channel: 'SMS', market: 'Singapore', confidence: 61, priority: 'Medium', age: '8d', status: 'Overdue' },
+  { id: 'RL-88401', taskId: 'RL-88401', name: 'Black Friday offer email (Retired)', platform: 'MDP', channel: 'Email', market: 'UK', confidence: 95, priority: 'High', age: '10d', status: 'Overdue' },
+  { id: 'UC-76712', taskId: 'UC-76712', name: 'Loyalty points expiry SMS', platform: 'SFMC', channel: 'SMS', market: 'Singapore', confidence: 68, priority: 'Medium', age: '5d', status: 'Needs review' },
+  { id: 'VER-33012', taskId: 'VER-33012', name: 'Re-engagement email v2', platform: 'ICCM', channel: 'Email', market: 'Singapore', confidence: 79, priority: 'Medium', age: '2d', status: 'Pending approval' },
 ];
 
 type ApprovalItem = {
@@ -93,10 +97,14 @@ export function ReviewQueuePage() {
   const [apiQueueItems, setApiQueueItems] = useState<QueueItem[] | null>(null);
   const [reviewTaskNotice, setReviewTaskNotice] = useState<string | null>(null);
   const [isLoadingReviewTasks, setIsLoadingReviewTasks] = useState(false);
+  const [transitioningTaskId, setTransitioningTaskId] = useState<string | null>(null);
 
   const queueSource = apiQueueItems ?? fallbackQueueItems;
   const visibleItems = useMemo(() => queueSource.filter((item) => `${item.name} ${item.id} ${item.market}`.toLowerCase().includes(query.toLowerCase())), [query, queueSource]);
   const selected = queueSource.find((item) => item.id === selectedId) ?? queueSource[0] ?? fallbackQueueItems[0];
+  const selectedTaskIsTerminal =
+    selected.reviewTaskStatus === 'Resolved' || selected.reviewTaskStatus === 'Dismissed';
+  const selectedTaskIsBusy = transitioningTaskId === selected.taskId;
 
   function loadReviewTasks() {
     const controller = new AbortController();
@@ -142,6 +150,39 @@ export function ReviewQueuePage() {
   function flash(message: string) {
     setNotice(message);
     window.setTimeout(() => setNotice(null), 2200);
+  }
+
+  async function handleReviewTaskTransition(
+    status: 'Assigned' | 'InReview' | 'Resolved',
+    reason: string,
+  ) {
+    if (!selected.isApiBacked) {
+      flash('Connect to the Review Task API to update this local queue item');
+      return;
+    }
+
+    setTransitioningTaskId(selected.taskId);
+    try {
+      const updatedTask = await transitionReviewTask({
+        taskId: selected.taskId,
+        actorId: 'web-local-user',
+        status,
+        assignedTo: status === 'Assigned' || status === 'InReview' ? 'web-local-user' : undefined,
+        reason,
+      });
+      const updatedItem = toQueueItem(updatedTask);
+      setApiQueueItems((items) =>
+        items?.map((item) => (item.taskId === updatedItem.taskId ? updatedItem : item)) ?? [
+          updatedItem,
+        ],
+      );
+      setSelectedId(updatedItem.id);
+      setReviewTaskNotice(`Review task ${updatedItem.taskId} moved to ${updatedItem.status}.`);
+    } catch {
+      setReviewTaskNotice('Review task update failed. Refresh and try again.');
+    } finally {
+      setTransitioningTaskId(null);
+    }
   }
 
   if (activeTab === 'Governance Approval') {
@@ -251,6 +292,7 @@ export function ReviewQueuePage() {
       </div>
 
       <footer className="action-dock">
+        <div><button data-testid="review-task-claim" disabled={selectedTaskIsBusy || (selected.isApiBacked && selected.reviewTaskStatus !== 'Open')} onClick={() => handleReviewTaskTransition('Assigned', 'Reviewer claimed task from Discovery Review')} type="button"><ShieldCheckIcon />Claim Task</button><button data-testid="review-task-start" disabled={selectedTaskIsBusy || (selected.isApiBacked && (selected.reviewTaskStatus === 'InReview' || selectedTaskIsTerminal))} onClick={() => handleReviewTaskTransition('InReview', 'Reviewer started analysis review')} type="button"><DocumentMagnifyingGlassIcon />Start Review</button><button data-testid="review-task-resolve" disabled={selectedTaskIsBusy || (selected.isApiBacked && selectedTaskIsTerminal)} onClick={() => handleReviewTaskTransition('Resolved', 'Reviewer completed Discovery Review')} type="button"><CheckCircleIcon />Resolve Task</button></div>
         <div><button onClick={() => setSplitting(true)} type="button"><ScissorsIcon />Split Candidate</button><button onClick={() => flash('Merge selection mode enabled')} type="button"><ArrowsRightLeftIcon />Merge</button><button onClick={() => flash('AI re-analysis requested')} type="button"><ArrowPathIcon />Request Re-analysis</button></div>
         <div><button onClick={() => flash('Draft saved')} type="button">Save Draft</button><button className="submit-button" onClick={() => flash('Submitted to Governance Approval')} type="button">Submit for Approval</button></div>
       </footer>
@@ -267,6 +309,7 @@ function Field({ label, value }: { label: string; value: string }) { return <div
 function toQueueItem(task: ReviewTask): QueueItem {
   return {
     id: task.sourceRunId ?? task.taskId,
+    taskId: task.taskId,
     name: task.reason,
     platform: task.objectType === 'template' ? 'Template' : task.objectType,
     channel: task.taskType,
@@ -275,6 +318,9 @@ function toQueueItem(task: ReviewTask): QueueItem {
     priority: toQueuePriority(task.priority),
     age: formatTaskAge(task.createdAt),
     status: toQueueStatus(task.status),
+    reviewTaskStatus: task.status,
+    assignedTo: task.assignedTo,
+    isApiBacked: true,
   };
 }
 
@@ -293,8 +339,11 @@ function toTaskConfidence(priority: string) {
 }
 
 function toQueueStatus(status: ReviewTask['status']): QueueStatus {
+  if (status === 'Assigned') return 'Assigned';
+  if (status === 'InReview') return 'In review';
   if (status === 'PendingApproval') return 'Pending approval';
-  if (status === 'Resolved' || status === 'Dismissed') return 'Overdue';
+  if (status === 'Resolved') return 'Resolved';
+  if (status === 'Dismissed') return 'Dismissed';
   return 'Needs review';
 }
 

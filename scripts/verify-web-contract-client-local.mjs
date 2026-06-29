@@ -94,6 +94,24 @@ if (auditApi.includes('as AuditEventsResponse')) {
   throw new Error('auditApi.ts must not cast audit events before schema parsing.');
 }
 
+for (const expectedSchema of ['reviewTasksResponseSchema', 'reviewTaskResponseSchema']) {
+  if (!reviewTaskApi.includes(expectedSchema)) {
+    throw new Error(`reviewTaskApi.ts must parse API responses with ${expectedSchema}.`);
+  }
+}
+
+if (!reviewTaskApi.includes('transitionReviewTask')) {
+  throw new Error('reviewTaskApi.ts must expose the review task transition command.');
+}
+
+if (!reviewTaskApi.includes('/review-tasks/${encodeURIComponent(input.taskId)}/transition')) {
+  throw new Error('reviewTaskApi.ts must call the review task transition API.');
+}
+
+if (!reviewTaskApi.includes("roles: ['analysis_runner']")) {
+  throw new Error('reviewTaskApi.ts must send analysis_runner role for review task commands.');
+}
+
 if (!reviewTaskApi.includes('reviewTasksResponseSchema')) {
   throw new Error('reviewTaskApi.ts must parse API responses with reviewTasksResponseSchema.');
 }
@@ -132,7 +150,11 @@ for (const expectedApiPath of [
 
 for (const expectedSource of [
   'fetchOpenReviewTasks(controller.signal)',
+  'await transitionReviewTask({',
   'tasks.map(toQueueItem)',
+  'data-testid="review-task-claim"',
+  'data-testid="review-task-start"',
+  'data-testid="review-task-resolve"',
   'Review task API unavailable. Showing local discovery queue.',
   'data-testid="review-task-refresh"',
   'fetchPendingChangeRequests(controller.signal)',
