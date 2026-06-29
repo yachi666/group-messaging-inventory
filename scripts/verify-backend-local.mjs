@@ -51,7 +51,7 @@ try {
   await verifyStandardValidationError();
   await verifyRbacRequired();
 
-  const submitResponse = await postJson(
+  const submitResult = await postJsonWithStatus(
     `${baseUrl}/template-versions/tv-backend-local-smoke/analysis-runs`,
     {
       triggerType: 'manual_reanalysis',
@@ -63,8 +63,10 @@ try {
       'idempotency-key': `backend-local-smoke-${Date.now()}`,
     },
   );
+  const submitResponse = submitResult.body;
   submitAnalysisRunResponseSchema.parse(submitResponse);
 
+  assertEqual(submitResult.status, 202, 'submit status code');
   assertEqual(submitResponse.status, 'Queued', 'submit status');
   assertEqual(
     submitResponse.pollUrl,
@@ -799,6 +801,10 @@ async function getJson(url) {
 }
 
 async function postJson(url, body, headers = {}) {
+  return (await postJsonWithStatus(url, body, headers)).body;
+}
+
+async function postJsonWithStatus(url, body, headers = {}) {
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -813,7 +819,10 @@ async function postJson(url, body, headers = {}) {
     throw new Error(`POST ${url} returned ${response.status}: ${await response.text()}`);
   }
 
-  return response.json();
+  return {
+    status: response.status,
+    body: await response.json(),
+  };
 }
 
 function defaultAuthHeaders() {

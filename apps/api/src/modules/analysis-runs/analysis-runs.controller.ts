@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Headers, Inject, Param, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import {
   createCurrentVersionChangeRequestSchema,
   createLifecycleChangeRequestSchema,
@@ -28,6 +39,7 @@ export class AnalysisRunsController {
   ) {}
 
   @Post('template-versions/:versionId/analysis-runs')
+  @HttpCode(HttpStatus.ACCEPTED)
   @RequiresRoles('analysis_runner')
   submitAnalysisRun(
     @Param('versionId') versionId: string,
