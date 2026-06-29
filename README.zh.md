@@ -8,7 +8,7 @@
 
 Group Messaging Inventory 用于回答一个核心治理问题：当前有哪些 outbound messages 正在生产环境发送，它们由谁负责，通过什么平台、渠道、sender identity 和 template 发送，以及是否能够提供可导出的 control evidence。
 
-本仓库是一个基于 Vite + React + TypeScript 的 MVP 前端基础。产品体验覆盖 pilot market coverage、use case matching、triage、evidence readiness、analytics、audit trail 和 governance settings。
+本仓库是一个基于 npm workspaces 的 TypeScript monorepo。现有 Vite + React 前端承载产品体验，新增 API、worker 与共享 packages 用于逐步落地 Templates Analysis Harness 后台。
 
 ## 🎯 MVP 范围
 
@@ -37,24 +37,31 @@ MVP 聚焦 Messaging-owned platforms：
 - React 19
 - TypeScript
 - Vite
+- NestJS API scaffold
+- Temporal TypeScript worker scaffold
+- npm workspaces
+- Zod contracts
+- Kysely database types
+- 通过可替换 adapter 接入 OpenAI Agents SDK
 - CSS design tokens
 - 面向未来 API response 结构设计的 mock data
 
 ## 📁 项目结构
 
 ```text
-src/
-  app/                  应用组合入口
-  components/           可复用展示组件
-  data/                 Mock inventory 和 governance 数据
-  domain/               产品领域类型与契约
-  features/dashboard/   Dashboard-first MVP 页面
-  features/workspace/   Inventory、triage、evidence、analytics、audit、settings 视图
-  i18n/                 英文/中文消息与语言提供器
-  layout/               应用外壳与导航
-  lib/                  小型框架无关工具函数
-  styles/               设计 token 与全局 CSS
+apps/
+  web/                  Vite + React 前端
+  api/                  NestJS API scaffold
+  worker/               Temporal worker scaffold
+packages/
+  domain/               共享产品类型与状态模型
+  contracts/            Zod API 与 provider schemas
+  db/                   Kysely 数据库表类型
+  policy/               治理与路由规则
+  ai-adapters/          可替换 AI provider adapter，包括 OpenAI Agents SDK
 ```
+
+前端源码位于 `apps/web/src/`。
 
 ## 🚀 本地运行
 
@@ -70,13 +77,78 @@ npm install
 npm run dev
 ```
 
+启动后台进程：
+
+```bash
+npm run dev:api
+npm run dev:worker
+```
+
+默认 worker 使用 `AI_PROVIDER=noop`，本地开发不会调用模型 provider。需要通过 OpenAI Agents SDK 执行分析活动时，设置：
+
+```bash
+AI_PROVIDER=openai
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-5.4-mini
+OPENAI_TRACE_INCLUDE_SENSITIVE_DATA=false
+npm run dev:worker
+```
+
+业务 Harness 仍然负责 workflow 状态、policy routing、持久化和 review gates。OpenAI SDK 只封装在 `@gmi/ai-adapters` 后面，用于模型编排、结构化输出、guardrails 和 tracing。
+
+本地治理 API 授权先使用轻量 header 模式，后续可替换为 SSO 或 API Gateway 注入的身份上下文：
+
+```bash
+API_AUTH_MODE=header
+curl -H 'x-actor-id: analyst-local' \
+  -H 'x-gmi-roles: analysis_runner,change_maker,change_checker,auditor' \
+  http://127.0.0.1:4000/ready
+```
+
+受保护的分析与治理路由需要以下角色之一：`analysis_runner`、`analysis_reader`、`change_maker`、`change_checker` 或 `auditor`。`/health` 与 `/ready` 保持公开。只有隔离本地调试时才建议设置 `API_AUTH_MODE=disabled`。
+
+不可变治理账本通过以下接口暴露：
+
+```bash
+curl -H 'x-gmi-roles: auditor' \
+  'http://127.0.0.1:4000/audit-events?changeRequestId=CR-...'
+```
+
+`/audit-events` 支持按 `objectType`、`objectId`、`sourceRunId`、`changeRequestId` 和 `limit` 筛选。
+
+API 提交可以只入队，也可以直接启动 Temporal workflow。需要本地完整 Harness 链路时，先运行 Temporal，并设置：
+
+```bash
+ANALYSIS_WORKFLOW_DRIVER=temporal
+TEMPORAL_ADDRESS=127.0.0.1:7233
+TEMPORAL_NAMESPACE=default
+TEMPORAL_TASK_QUEUE=template-analysis
+npm run dev:api
+```
+
+启动本地后台基础设施：
+
+```bash
+npm run infra:up
+npm run db:migrate
+npm run db:smoke
+```
+
+本地 Postgres 连接串：
+
+```text
+postgres://gmi:gmi@127.0.0.1:55432/gmi
+```
+
+Temporal 运行在 `127.0.0.1:7233`，Temporal UI 位于 `http://127.0.0.1:8233`。
+
 运行类型检查：
 
 ```bash
 npm run typecheck
 ```
 
-构建生产包：
+构建共享包、后台应用与前端生产包：
 
 ```bash
 npm run build
@@ -102,6 +174,43 @@ npm run build
 ```bash
 npm run test:ui
 ```
+
+无需 Postgres 或 Temporal 的本地后台契约验证：
+
+```bash
+npm run test:backend
+```
+
+该 smoke test 覆盖 API validation、analysis run submission、repository domain errors、Change Request 创建、maker-checker submit/decision、禁止自审批、待审批队列 projection，以及 Change Request evidence package。
+
+运行 golden dataset evaluation gate：
+
+```bash
+npm run test:evals
+```
+
+将通过的 evaluation report 写入 Postgres evidence：
+
+```bash
+npm run infra:up
+npm run test:evals:pg
+```
+
+验证后台持久化链路：
+
+```bash
+npm run infra:up
+npm run db:smoke
+```
+
+验证完整 API -> Temporal -> worker -> Postgres evidence loop：
+
+```bash
+npm run infra:up
+npm run test:harness:temporal
+```
+
+在 Postgres-backed 模式下，analysis run 会按照存储状态保持为 `Queued`、`Running`、`Failed` 或 `Succeeded`。只有 worker 写入 `analysis_outputs` 之后，API response 才会包含 `output` 和 policy routing。
 
 ## 🎨 设计方向
 

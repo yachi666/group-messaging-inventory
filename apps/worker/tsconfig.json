@@ -1,0 +1,29 @@
+{
+  "extends": "../../tsconfig.workspace.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/tsconfig.tsbuildinfo",
+    "declaration": false,
+    "declarationMap": false,
+    "composite": false
+  },
+  "references": [
+    {
+      "path": "../../packages/ai-adapters"
+    },
+    {
+      "path": "../../packages/contracts"
+    },
+    {
+      "path": "../../packages/db"
+    },
+    {
+      "path": "../../packages/domain"
+    },
+    {
+      "path": "../../packages/policy"
+    }
+  ],
+  "include": ["src/**/*.ts"]
+}

@@ -1,0 +1,65 @@
+services:
+  gmi-postgres:
+    image: postgres:16-alpine
+    container_name: gmi-postgres
+    environment:
+      POSTGRES_DB: gmi
+      POSTGRES_USER: gmi
+      POSTGRES_PASSWORD: gmi
+    ports:
+      - '55432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U gmi -d gmi']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - gmi_postgres_data:/var/lib/postgresql/data
+
+  temporal-postgres:
+    image: postgres:16-alpine
+    container_name: gmi-temporal-postgres
+    environment:
+      POSTGRES_DB: temporal
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U temporal -d temporal']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - gmi_temporal_postgres_data:/var/lib/postgresql/data
+
+  temporal:
+    image: temporalio/auto-setup:1.26
+    container_name: gmi-temporal-server
+    depends_on:
+      temporal-postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal
+      POSTGRES_SEEDS: temporal-postgres
+      DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/config/dynamicconfig/development-sql.yaml
+    ports:
+      - '7233:7233'
+    volumes:
+      - ./temporal/dynamicconfig:/etc/temporal/config/dynamicconfig:ro
+
+  temporal-ui:
+    image: temporalio/ui:2.36.0
+    container_name: gmi-temporal-ui
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - '8233:8080'
+
+volumes:
+  gmi_postgres_data:
+  gmi_temporal_postgres_data:

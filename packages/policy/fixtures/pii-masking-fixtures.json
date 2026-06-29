@@ -1,0 +1,32 @@
+[
+  {
+    "id": "base-us-contact",
+    "content": "Hi Jane Doe, email jane.doe@example.com or call +1 415-555-0134 about account 123456789012.",
+    "expectedIncludes": ["{{name}}", "{{email}}", "{{phone}}", "{{account}}"],
+    "expectedExcludes": ["Jane Doe", "jane.doe@example.com", "+1 415-555-0134", "123456789012"]
+  },
+  {
+    "id": "hk-cn-sg-phones-and-card",
+    "content": "客户 Li Wei 可致电 +852 9123 4567 或 +86 138 0013 8000，SG mobile 8123 4567，card 4111 1111 1111 1111.",
+    "expectedIncludes": ["{{name}}", "{{phone}}", "{{account}}"],
+    "expectedExcludes": ["Li Wei", "+852 9123 4567", "+86 138 0013 8000", "8123 4567", "4111 1111 1111 1111"]
+  },
+  {
+    "id": "regulated-identifiers",
+    "content": "For customer Alex Wong, verify HKID A123456(7) and IBAN GB82 WEST 1234 5698 7654 32 before payout.",
+    "expectedIncludes": ["{{name}}", "{{government_id}}", "{{account}}"],
+    "expectedExcludes": ["Alex Wong", "A123456(7)", "GB82 WEST 1234 5698 7654 32"]
+  },
+  {
+    "id": "false-positive-operational-numbers",
+    "content": "Use OTP 123456 before 2026-06-28 for template 1000000000 and campaign 2026062801.",
+    "expectedIncludes": ["OTP 123456", "2026-06-28", "template 1000000000", "campaign 2026062801"],
+    "expectedExcludes": ["{{phone}}", "{{account}}", "{{government_id}}"]
+  },
+  {
+    "id": "false-positive-version-and-batch",
+    "content": "Template version tv_20260628_0001 and batch 0000000000 should remain visible for audit.",
+    "expectedIncludes": ["tv_20260628_0001", "batch 0000000000"],
+    "expectedExcludes": ["{{phone}}", "{{account}}", "{{government_id}}"]
+  }
+]

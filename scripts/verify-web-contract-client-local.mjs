@@ -1,0 +1,82 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
+const repoRoot = process.cwd();
+
+const webPackageJson = JSON.parse(
+  await readFile(path.join(repoRoot, 'apps/web/package.json'), 'utf8'),
+);
+const analysisApi = await readFile(
+  path.join(repoRoot, 'apps/web/src/features/ai-analysis/analysisApi.ts'),
+  'utf8',
+);
+const changeRequestApi = await readFile(
+  path.join(repoRoot, 'apps/web/src/features/review-queue/changeRequestApi.ts'),
+  'utf8',
+);
+const auditApi = await readFile(
+  path.join(repoRoot, 'apps/web/src/features/workspace/auditApi.ts'),
+  'utf8',
+);
+const apiClient = await readFile(
+  path.join(repoRoot, 'apps/web/src/lib/apiClient.ts'),
+  'utf8',
+);
+
+const dependencies = {
+  ...webPackageJson.dependencies,
+  ...webPackageJson.devDependencies,
+};
+
+if (dependencies['@gmi/contracts'] !== '0.1.0') {
+  throw new Error('apps/web must depend on @gmi/contracts for API response validation.');
+}
+
+for (const expectedSchema of [
+  'aiTemplateAnalysisResultsResponseSchema',
+  'latestAnalysisEvaluationResponseSchema',
+]) {
+  if (!analysisApi.includes(expectedSchema)) {
+    throw new Error(`analysisApi.ts must parse API responses with ${expectedSchema}.`);
+  }
+}
+
+if (analysisApi.includes('as AnalysisResultsResponse')) {
+  throw new Error('analysisApi.ts must not cast analysis results before schema parsing.');
+}
+
+if (analysisApi.includes('as LatestAnalysisEvaluation')) {
+  throw new Error('analysisApi.ts must not cast latest evaluation before schema parsing.');
+}
+
+if (!auditApi.includes('auditEventsResponseSchema')) {
+  throw new Error('auditApi.ts must parse API responses with auditEventsResponseSchema.');
+}
+
+if (auditApi.includes('as AuditEventsResponse')) {
+  throw new Error('auditApi.ts must not cast audit events before schema parsing.');
+}
+
+for (const [fileName, source] of [
+  ['analysisApi.ts', analysisApi],
+  ['changeRequestApi.ts', changeRequestApi],
+  ['auditApi.ts', auditApi],
+]) {
+  if (!source.includes('apiFetch')) {
+    throw new Error(`${fileName} must use the shared apiFetch helper for API requests.`);
+  }
+  if (source.includes('VITE_API_BASE_URL')) {
+    throw new Error(`${fileName} must not duplicate API base URL handling.`);
+  }
+  if (source.includes('x-gmi-roles')) {
+    throw new Error(`${fileName} must not hand-roll governance role headers.`);
+  }
+}
+
+for (const expected of ['VITE_API_BASE_URL', 'x-gmi-roles', 'x-actor-id']) {
+  if (!apiClient.includes(expected)) {
+    throw new Error(`apiClient.ts must centralize ${expected}.`);
+  }
+}
+
+console.log('Web contract client local smoke passed.');
