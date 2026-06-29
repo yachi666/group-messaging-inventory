@@ -90,7 +90,7 @@ Operational endpoints:
 - `GET /health` is the API liveness check.
 - `GET /ready` returns component readiness for the API, Postgres, Temporal workflow driver, and AI provider configuration. When `DATABASE_URL` or `ANALYSIS_WORKFLOW_DRIVER=temporal` is enabled, readiness performs lightweight dependency probes instead of only checking environment variables.
 - Every API response includes `x-request-id`. Send `x-request-id` on inbound requests to preserve a caller trace id; standard error responses also include `error.requestId`.
-- API access logs are emitted as single-line JSON with `event=http_request`, `requestId`, method, path, status code, and duration.
+- API access logs are emitted as single-line JSON with `event=http_request`, `requestId`, `actorId`, `roleCount`, method, path, status code, and duration.
 - API and worker startup use shared runtime configuration validation through `@gmi/runtime-config`, so invalid provider, Temporal, port, timeout, or database URL settings fail early with actionable errors.
 - The implemented API surface is tracked in `docs/api/template-analysis-api.json` and checked by `npm run test:api-surface`.
 

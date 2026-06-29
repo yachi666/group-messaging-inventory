@@ -1,4 +1,5 @@
 type RequestWithRequestId = {
+  headers?: Record<string, string | string[] | undefined>;
   method?: string;
   originalUrl?: string;
   requestId?: string;
@@ -23,6 +24,8 @@ export function accessLogMiddleware(
       JSON.stringify({
         event: 'http_request',
         requestId: request.requestId ?? 'unknown',
+        actorId: normalizeHeaderValue(request.headers?.['x-actor-id']) ?? 'anonymous',
+        roleCount: parseHeaderList(request.headers?.['x-gmi-roles']).size,
         method: request.method ?? 'UNKNOWN',
         path: request.originalUrl ?? request.url ?? 'unknown',
         statusCode: response.statusCode ?? 0,
@@ -32,4 +35,20 @@ export function accessLogMiddleware(
   });
 
   next();
+}
+
+function normalizeHeaderValue(value: string | string[] | undefined) {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  const trimmed = rawValue?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function parseHeaderList(value: string | string[] | undefined) {
+  const rawValue = Array.isArray(value) ? value.join(',') : value ?? '';
+  return new Set(
+    rawValue
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
 }

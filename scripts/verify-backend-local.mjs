@@ -256,6 +256,34 @@ async function verifyAccessLog() {
   await waitForCondition(() => apiOutput.includes('"event":"http_request"'), {
     label: 'API access log event',
   });
+  await waitForCondition(() => apiOutput.includes('"actorId":"anonymous"'), {
+    label: 'API access log anonymous actor',
+  });
+  await waitForCondition(() => apiOutput.includes('"roleCount":0'), {
+    label: 'API access log anonymous role count',
+  });
+
+  const protectedRequestId = `backend-local-protected-access-log-${Date.now()}`;
+  const protectedResponse = await fetch(`${baseUrl}/templates/analysis-results`, {
+    headers: {
+      'x-request-id': protectedRequestId,
+      ...defaultAuthHeaders(),
+    },
+  });
+
+  if (!protectedResponse.ok) {
+    throw new Error(`access log protected request returned ${protectedResponse.status}`);
+  }
+
+  await waitForCondition(() => apiOutput.includes(`"requestId":"${protectedRequestId}"`), {
+    label: 'API access log protected request id',
+  });
+  await waitForCondition(() => apiOutput.includes('"actorId":"backend-local-smoke"'), {
+    label: 'API access log protected actor',
+  });
+  await waitForCondition(() => apiOutput.includes('"roleCount":4'), {
+    label: 'API access log protected role count',
+  });
 }
 
 async function verifyAnalysisRunTerminalGuard(runId) {
