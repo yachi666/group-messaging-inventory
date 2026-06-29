@@ -1210,6 +1210,7 @@ Current repository status:
 - Checker decisions for API-backed Change Requests call the backend decision command and remove the item from the pending queue after success.
 - AI Template Analysis mapping and lifecycle actions include `submitterActorId` so created Change Requests can enter the pending approval queue immediately.
 - Change Request evidence packages expose the CR, proposed patch, source Analysis Run, and audit events for review/export workflows.
+- `npm run test:web-contracts` verifies that the Governance Approval client keeps the pending queue, decision command, and evidence package calls on the shared `apiFetch` + Zod-contract path while retaining explicit mock fallback behavior.
 
 Response shape should remain close to the frontend contract:
 
@@ -1555,7 +1556,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented create-and-submit flow for mapping/lifecycle/current-version Change Requests via optional `submitterActorId`.
 - Persist maker/checker actors, decision reason, timestamps, and audit events.
 - Apply approved mapping/lifecycle/current-version patches to the governed Template and increment `approved_revision`.
-- Wire the Governance Approval screen to pending Change Requests with mock fallback.
+- Implemented Governance Approval screen wiring to pending Change Requests with explicit mock fallback and web-contract verification.
 - Implemented minimum evidence export package: `GET /change-requests/{id}/evidence-package`.
 
 ### Phase 4: Evaluation Gates

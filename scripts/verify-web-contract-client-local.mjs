@@ -14,6 +14,10 @@ const changeRequestApi = await readFile(
   path.join(repoRoot, 'apps/web/src/features/review-queue/changeRequestApi.ts'),
   'utf8',
 );
+const reviewQueuePage = await readFile(
+  path.join(repoRoot, 'apps/web/src/features/review-queue/ReviewQueuePage.tsx'),
+  'utf8',
+);
 const auditApi = await readFile(
   path.join(repoRoot, 'apps/web/src/features/workspace/auditApi.ts'),
   'utf8',
@@ -55,6 +59,46 @@ if (!auditApi.includes('auditEventsResponseSchema')) {
 
 if (auditApi.includes('as AuditEventsResponse')) {
   throw new Error('auditApi.ts must not cast audit events before schema parsing.');
+}
+
+for (const expectedSchema of [
+  'changeRequestsResponseSchema',
+  'changeRequestResponseSchema',
+  'changeRequestEvidencePackageSchema',
+]) {
+  if (!changeRequestApi.includes(expectedSchema)) {
+    throw new Error(`changeRequestApi.ts must parse API responses with ${expectedSchema}.`);
+  }
+}
+
+if (changeRequestApi.includes('as ChangeRequest')) {
+  throw new Error('changeRequestApi.ts must not cast change requests before schema parsing.');
+}
+
+for (const expectedApiPath of [
+  '/change-requests?status=PendingApproval',
+  '/change-requests/${encodeURIComponent(input.changeRequestId)}/decision',
+  '/change-requests/${encodeURIComponent(changeRequestId)}/evidence-package',
+]) {
+  if (!changeRequestApi.includes(expectedApiPath)) {
+    throw new Error(`changeRequestApi.ts must call ${expectedApiPath}.`);
+  }
+}
+
+for (const expectedSource of [
+  'fetchPendingChangeRequests(controller.signal)',
+  'changeRequests.map(toApprovalItem)',
+  'isApiBacked: true',
+  'await decideChangeRequest({',
+  'await fetchChangeRequestEvidencePackage(selected.id)',
+]) {
+  if (!reviewQueuePage.includes(expectedSource)) {
+    throw new Error(`ReviewQueuePage.tsx must keep the API-backed governance approval path: ${expectedSource}`);
+  }
+}
+
+if (!reviewQueuePage.includes('Approval API unavailable. Showing local mock approvals.')) {
+  throw new Error('ReviewQueuePage.tsx should keep the local mock fallback message explicit.');
 }
 
 for (const [fileName, source] of [
