@@ -340,6 +340,13 @@ npm run infra:up
 npm run test:evals:release-persistence:pg
 ```
 
+To verify the API-owned release evidence ingestion path, including hash rejection and latest-evaluation readback, run:
+
+```bash
+npm run infra:up
+npm run test:evals:release-api:pg
+```
+
 For backend persistence verification, run:
 
 ```bash

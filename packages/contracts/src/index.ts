@@ -255,26 +255,30 @@ export const aiTemplateAnalysisResultsResponseSchema = z.object({
   results: z.array(aiTemplateAnalysisResultSchema),
 });
 
+export const analysisEvaluationMetricsSchema = z.object({
+  caseCount: z.number().int().nonnegative(),
+  schemaPassRate: z.number().min(0).max(1),
+  classificationAccuracy: z.number().min(0).max(1),
+  routingAccuracy: z.number().min(0).max(1),
+  placeholderRecall: z.number().min(0).max(1),
+});
+
+export const analysisEvaluationThresholdsSchema = z.object({
+  minCaseCount: z.number().int().nonnegative(),
+  minSchemaPassRate: z.number().min(0).max(1),
+  minClassificationAccuracy: z.number().min(0).max(1),
+  minRoutingAccuracy: z.number().min(0).max(1),
+  minPlaceholderRecall: z.number().min(0).max(1),
+});
+
 export const latestAnalysisEvaluationResponseSchema = z.object({
   evaluation: z.object({
     suite: z.string().min(1),
     datasetVersion: z.string().min(1),
     mode: z.enum(['replay', 'provider']),
     verdict: z.enum(['pass', 'fail']),
-    metrics: z.object({
-      caseCount: z.number().int().nonnegative(),
-      schemaPassRate: z.number().min(0).max(1),
-      classificationAccuracy: z.number().min(0).max(1),
-      routingAccuracy: z.number().min(0).max(1),
-      placeholderRecall: z.number().min(0).max(1),
-    }),
-    thresholds: z.object({
-      minCaseCount: z.number().int().nonnegative(),
-      minSchemaPassRate: z.number().min(0).max(1),
-      minClassificationAccuracy: z.number().min(0).max(1),
-      minRoutingAccuracy: z.number().min(0).max(1),
-      minPlaceholderRecall: z.number().min(0).max(1),
-    }),
+    metrics: analysisEvaluationMetricsSchema,
+    thresholds: analysisEvaluationThresholdsSchema,
     failedCaseIds: z.array(z.string().min(1)),
   }),
   release: z.object({
@@ -290,6 +294,53 @@ export const latestAnalysisEvaluationResponseSchema = z.object({
       rulesetVersion: z.string().min(1),
     }),
   }),
+});
+
+export const pipelineReleaseEvidenceSchema = z.object({
+  releaseId: z.string().min(1),
+  status: z.enum(['ReadyForPromotion', 'BlockedByEvaluation']),
+  promotionAllowed: z.boolean(),
+  evidenceHash: z.string().startsWith('sha256:'),
+  requestedBy: z.string().min(1),
+  createdAt: z.string().datetime(),
+  pipeline: z.object({
+    pipelineVersion: z.string().min(1),
+    promptVersion: z.string().min(1),
+    modelProvider: z.string().min(1),
+    modelName: z.string().min(1),
+    rulesetVersion: z.string().min(1),
+  }),
+  evaluation: z.object({
+    suite: z.string().min(1),
+    datasetVersion: z.string().min(1),
+    mode: z.enum(['replay', 'provider']),
+    verdict: z.enum(['pass', 'fail']),
+    metrics: analysisEvaluationMetricsSchema,
+    thresholds: analysisEvaluationThresholdsSchema,
+    failureCaseIds: z.array(z.string().min(1)),
+  }),
+});
+
+export const recordPipelineReleaseEvidenceSchema = z.object({
+  evidence: pipelineReleaseEvidenceSchema,
+  reportRef: z.string().min(1).nullable().optional(),
+});
+
+export const recordPipelineReleaseEvidenceResponseSchema = z.object({
+  recordedEvaluation: z.object({
+    evaluationId: z.string().min(1),
+    evaluationSuite: z.string().min(1),
+    datasetVersion: z.string().min(1),
+    verdict: z.enum(['pass', 'fail']),
+    createdAt: z.string().datetime(),
+  }),
+  recordedRelease: z.object({
+    releaseId: z.string().min(1),
+    status: z.enum(['ReadyForPromotion', 'BlockedByEvaluation']),
+    promotionAllowed: z.boolean(),
+    evidenceHash: z.string().startsWith('sha256:'),
+  }),
+  latest: latestAnalysisEvaluationResponseSchema,
 });
 
 export const readinessResponseSchema = z.object({
@@ -320,6 +371,8 @@ export const standardErrorSchema = z.object({
       'pii_masking_failed',
       'schema_validation_failed',
       'rate_limited',
+      'invalid_release_evidence',
+      'dependency_unavailable',
     ]),
     message: z.string().min(1),
     details: z.record(z.string(), z.unknown()).optional(),
@@ -359,5 +412,11 @@ export type AiTemplateAnalysisResultsResponse = z.infer<
 >;
 export type LatestAnalysisEvaluationResponse = z.infer<
   typeof latestAnalysisEvaluationResponseSchema
+>;
+export type RecordPipelineReleaseEvidenceRequest = z.infer<
+  typeof recordPipelineReleaseEvidenceSchema
+>;
+export type RecordPipelineReleaseEvidenceResponse = z.infer<
+  typeof recordPipelineReleaseEvidenceResponseSchema
 >;
 export type ReadinessResponse = z.infer<typeof readinessResponseSchema>;

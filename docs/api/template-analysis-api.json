@@ -134,6 +134,15 @@
       "status": 200,
       "roles": ["analysis_reader", "analysis_runner", "auditor"],
       "response": "latestAnalysisEvaluationResponseSchema"
+    },
+    {
+      "operationId": "recordReleaseEvidence",
+      "method": "POST",
+      "path": "/analysis-evaluations/release-evidence",
+      "status": 201,
+      "roles": ["change_checker", "auditor"],
+      "request": "recordPipelineReleaseEvidenceSchema",
+      "response": "recordPipelineReleaseEvidenceResponseSchema"
     }
   ]
 }

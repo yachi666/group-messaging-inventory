@@ -11,7 +11,7 @@ const evaluationsController = read(
 const healthController = read('apps/api/src/modules/health.controller.ts');
 const contracts = read('packages/contracts/src/index.ts');
 
-const expectedEndpointCount = 15;
+const expectedEndpointCount = 16;
 
 assertEqual(manifest.service, 'group-messaging-inventory-api', 'manifest service');
 assertEqual(manifest.basePath, '/', 'manifest basePath');
@@ -119,6 +119,12 @@ assertEndpoint('getLatestEvaluation', evaluationsController, {
   decorator: "@Get('latest')",
   roles: ['analysis_reader', 'analysis_runner', 'auditor'],
   status: 200,
+});
+assertEndpoint('recordReleaseEvidence', evaluationsController, {
+  decorator: "@Post('release-evidence')",
+  roles: ['change_checker', 'auditor'],
+  status: 201,
+  requestSchema: 'recordPipelineReleaseEvidenceSchema',
 });
 
 console.log('API surface local smoke passed.');

@@ -1,16 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import {
   latestAnalysisEvaluationResponseSchema,
+  recordPipelineReleaseEvidenceResponseSchema,
   type LatestAnalysisEvaluationResponse,
+  type RecordPipelineReleaseEvidenceRequest,
+  type RecordPipelineReleaseEvidenceResponse,
 } from '@gmi/contracts';
 import {
   createPostgresDatabase,
   createPostgresPool,
   getLatestAnalysisEvaluation,
+  recordAnalysisEvaluation,
+  recordPipelineReleaseEvidence,
 } from '@gmi/db';
 import {
   createPipelineReleaseEvidence,
   runGoldenTemplateEvaluation,
+  verifyPipelineReleaseEvidence,
+  type PipelineReleaseEvidence,
 } from '@gmi/evals';
 
 @Injectable()
@@ -55,6 +62,75 @@ export class AnalysisEvaluationsService {
         pipeline: release.pipeline,
       },
     });
+  }
+
+  async recordReleaseEvidence(
+    request: RecordPipelineReleaseEvidenceRequest,
+  ): Promise<RecordPipelineReleaseEvidenceResponse> {
+    const connectionString = process.env.DATABASE_URL;
+
+    if (!connectionString) {
+      throw new ServiceUnavailableException({
+        code: 'dependency_unavailable',
+        message: 'DATABASE_URL is required to record release evidence.',
+        details: {
+          dependency: 'postgres',
+        },
+      });
+    }
+
+    const evidence = request.evidence as PipelineReleaseEvidence;
+
+    if (!verifyPipelineReleaseEvidence(evidence)) {
+      throw new BadRequestException({
+        code: 'invalid_release_evidence',
+        message: 'Release evidence hash does not match the submitted payload.',
+      });
+    }
+
+    const pool = createPostgresPool({ connectionString });
+    const db = createPostgresDatabase(pool);
+
+    try {
+      const recordedEvaluation = await recordAnalysisEvaluation(db, {
+        evaluationSuite: evidence.evaluation.suite,
+        pipelineVersion: evidence.pipeline.pipelineVersion,
+        promptVersion: evidence.pipeline.promptVersion,
+        modelProvider: evidence.pipeline.modelProvider,
+        modelName: evidence.pipeline.modelName,
+        rulesetVersion: evidence.pipeline.rulesetVersion,
+        datasetVersion: evidence.evaluation.datasetVersion,
+        metrics: evidence.evaluation.metrics,
+        thresholds: evidence.evaluation.thresholds,
+        verdict: evidence.evaluation.verdict,
+        reportRef: request.reportRef ?? null,
+      });
+      const recordedRelease = await recordPipelineReleaseEvidence(db, evidence);
+      const latest = await getLatestAnalysisEvaluation(db);
+
+      if (!latest) {
+        throw new ServiceUnavailableException({
+          code: 'dependency_unavailable',
+          message: 'Latest evaluation could not be read after recording release evidence.',
+          details: {
+            dependency: 'postgres',
+          },
+        });
+      }
+
+      return recordPipelineReleaseEvidenceResponseSchema.parse({
+        recordedEvaluation,
+        recordedRelease: {
+          releaseId: recordedRelease.releaseId,
+          status: recordedRelease.status,
+          promotionAllowed: recordedRelease.promotionAllowed,
+          evidenceHash: recordedRelease.evidenceHash,
+        },
+        latest,
+      });
+    } finally {
+      await db.destroy();
+    }
   }
 
   private async getPersistedLatestEvaluation() {

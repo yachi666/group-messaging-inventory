@@ -42,6 +42,7 @@
     "test:evals:release-artifact:local": "node scripts/verify-release-evidence-artifact-local.mjs",
     "test:evals:release-persistence:local": "npm run build:packages && node scripts/verify-release-persistence-local.mjs",
     "test:evals:release-persistence:pg": "npm run build:packages && node scripts/verify-release-persistence-pg.mjs",
+    "test:evals:release-api:pg": "npm run build:packages && npm run build:api && node scripts/verify-release-evidence-api-pg.mjs",
     "test:evals:latest-api-mapping:local": "npm run build:packages && node scripts/verify-latest-evaluation-mapping-local.mjs",
     "test:pii:local": "npm run build:packages && npm run build:apps && node scripts/verify-pii-masking-local.mjs",
     "test:ci-workflow": "node scripts/verify-ci-workflow-local.mjs",

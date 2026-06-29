@@ -574,6 +574,8 @@ Current repository status:
 - `EVAL_WRITE_RELEASE_DATABASE=true` persists release evidence into Postgres when `EVAL_CREATE_RELEASE_EVIDENCE=true` and `DATABASE_URL` are also set.
 - `npm run test:evals:pg` runs the same gate and records the accepted report into Postgres `analysis_evaluations`.
 - `npm run test:evals:release-persistence:pg` writes a passing evaluation plus release evidence into Postgres and reads it back through the latest-evaluation repository path.
+- `POST /analysis-evaluations/release-evidence` accepts hash-verified release evidence through the TypeScript API so production-impacting evidence writes can be protected by API auth, request validation, and audit-adjacent controls instead of direct table writes.
+- `npm run test:evals:release-api:pg` verifies the API-owned release evidence ingestion path, including invalid-hash rejection and latest-evaluation readback.
 - `GET /analysis-evaluations/latest` exposes the latest gate summary and promotion evidence hash through the NestJS API for dashboards and CI checks. It reads persisted `analysis_evaluations` and `pipeline_releases` when `DATABASE_URL` is set, and falls back to the local replay gate without a database.
 - `npm run test:no-infra` is the local and CI entrypoint for the no-infrastructure harness gate set.
 - `.github/workflows/ci.yml` runs `npm run test:no-infra` on pull requests and pushes, and `npm run test:ci-workflow` verifies that the workflow and package script continue to include the required gates.
@@ -1568,6 +1570,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented optional Postgres recording through `npm run test:evals:pg` when local infrastructure is running.
 - Implemented `pipeline_releases` record mapping and optional release evidence persistence via `EVAL_WRITE_RELEASE_DATABASE=true`.
 - Implemented `npm run test:evals:release-persistence:pg` for Postgres-backed evaluation and release evidence readback.
+- Implemented `POST /analysis-evaluations/release-evidence` and `npm run test:evals:release-api:pg` for API-owned release evidence ingestion with hash verification.
 - Implemented bounded OpenAI-compatible provider retry policy and stable provider-error classification for transient 408/429/5xx/network failures.
 - Implemented `GET /analysis-evaluations/latest` for a database-aware API query surface over evaluation gate status and release evidence hash, with local replay fallback when no database is configured.
 - Implemented worker failure persistence activity and repository support for marking failed analysis runs with structured error metadata.

@@ -245,6 +245,13 @@ npm run infra:up
 npm run test:evals:release-persistence:pg
 ```
 
+验证由 API 接收 release evidence 的生产式入口，包括 hash 篡改拒绝和 latest-evaluation readback：
+
+```bash
+npm run infra:up
+npm run test:evals:release-api:pg
+```
+
 验证后台持久化链路：
 
 ```bash
