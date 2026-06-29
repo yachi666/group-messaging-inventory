@@ -250,7 +250,7 @@ For local PII masking trap verification before provider calls, run:
 npm run test:pii:local
 ```
 
-This deterministic smoke test reads `packages/policy/fixtures/pii-masking-fixtures.json` and checks that common raw email, phone, account, name, HK/CN/SG phone, grouped card-number, HKID, and IBAN patterns are converted into placeholder tokens before worker analysis reaches an AI adapter. It also protects known false positives such as OTPs, dates, template IDs, batch IDs, and campaign IDs.
+This deterministic smoke test reads `packages/policy/fixtures/pii-masking-fixtures.json` and checks that common raw email, phone, account, name, HK/CN/SG/India phone, grouped card-number, HKID, Singapore NRIC/FIN, India PAN, and IBAN patterns are converted into placeholder tokens before worker analysis reaches an AI adapter. It also protects known false positives such as OTPs, dates, template IDs, batch IDs, campaign IDs, regional-looking SKUs, rules, tickets, and experiment IDs.
 
 For local secret scanning, run:
 

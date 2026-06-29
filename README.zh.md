@@ -223,6 +223,14 @@ npm run test:backend
 npm run test:evals
 ```
 
+运行模型调用前的 PII masking trap gate：
+
+```bash
+npm run test:pii:local
+```
+
+该 smoke 会读取 `packages/policy/fixtures/pii-masking-fixtures.json`，验证 email、phone、account、name、HK/CN/SG/India phone、card、HKID、Singapore NRIC/FIN、India PAN 与 IBAN 会在进入 AI adapter 前被替换为 placeholder；同时保护 OTP、日期、template ID、batch ID、campaign ID、区域化 SKU/rule/ticket/experiment ID 等 false positives。
+
 将通过的 evaluation report 写入 Postgres evidence：
 
 ```bash

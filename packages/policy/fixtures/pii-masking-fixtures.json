@@ -18,6 +18,18 @@
     "expectedExcludes": ["Alex Wong", "A123456(7)", "GB82 WEST 1234 5698 7654 32"]
   },
   {
+    "id": "sg-nric-fin-and-mobile",
+    "content": "Customer Tan Mei wrote from tan.mei@example.sg. Verify NRIC S1234567D, FIN G1234567X, and SG mobile +65 8123 4567.",
+    "expectedIncludes": ["{{name}}", "{{email}}", "{{government_id}}", "{{phone}}"],
+    "expectedExcludes": ["Tan Mei", "tan.mei@example.sg", "NRIC S1234567D", "FIN G1234567X", "+65 8123 4567"]
+  },
+  {
+    "id": "india-pan-mobile-and-account",
+    "content": "Customer Ravi Kumar has PAN ABCDE1234F, IN mobile +91 98765 43210, and account no 998877665544.",
+    "expectedIncludes": ["{{name}}", "PAN {{government_id}}", "{{phone}}", "account {{account}}"],
+    "expectedExcludes": ["Ravi Kumar", "PAN ABCDE1234F", "+91 98765 43210", "998877665544"]
+  },
+  {
     "id": "false-positive-operational-numbers",
     "content": "Use OTP 123456 before 2026-06-28 for template 1000000000 and campaign 2026062801.",
     "expectedIncludes": ["OTP 123456", "2026-06-28", "template 1000000000", "campaign 2026062801"],
@@ -27,6 +39,12 @@
     "id": "false-positive-version-and-batch",
     "content": "Template version tv_20260628_0001 and batch 0000000000 should remain visible for audit.",
     "expectedIncludes": ["tv_20260628_0001", "batch 0000000000"],
+    "expectedExcludes": ["{{phone}}", "{{account}}", "{{government_id}}"]
+  },
+  {
+    "id": "false-positive-regional-looking-ids",
+    "content": "Keep SKU S1234567D, rule ABCDE1234F, ticket 91234567, and experiment 98765 43210 visible for reviewer triage.",
+    "expectedIncludes": ["SKU S1234567D", "rule ABCDE1234F", "ticket 91234567", "experiment 98765 43210"],
     "expectedExcludes": ["{{phone}}", "{{account}}", "{{government_id}}"]
   }
 ]

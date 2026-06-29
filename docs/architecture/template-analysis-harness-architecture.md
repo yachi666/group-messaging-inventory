@@ -558,9 +558,9 @@ Current repository status:
 - `packages/evals` implements a first golden dataset gate for template analysis.
 - `npm run test:evals` runs schema validation, classification accuracy, policy routing accuracy, placeholder recall checks, and a minimum case-count gate.
 - The initial suite uses replayed outputs for deterministic CI-style coverage across servicing, marketing, regulatory, candidate drift, low-confidence review, PII masking block, and classification-conflict review paths.
-- `packages/policy` includes a first deterministic `maskTemplateContent` pass for common email, phone, HK/CN/SG phone, account, grouped card-number, IBAN, HKID, and name patterns.
-- `packages/policy/fixtures/pii-masking-fixtures.json` stores the first local masking trap and false-positive fixture set.
-- `npm run test:pii:local` verifies that raw PII trap strings are replaced before worker analysis reaches an AI adapter and protects false positives for OTPs, dates, template IDs, batch IDs, and campaign IDs.
+- `packages/policy` includes a first deterministic `maskTemplateContent` pass for common email, phone, HK/CN/SG/India phone, account, grouped card-number, IBAN, HKID, Singapore NRIC/FIN, India PAN, and name patterns.
+- `packages/policy/fixtures/pii-masking-fixtures.json` stores the first local masking trap and false-positive fixture set, including regional identifier traps and regional-looking business IDs that should remain visible.
+- `npm run test:pii:local` verifies that raw PII trap strings are replaced before worker analysis reaches an AI adapter and protects false positives for OTPs, dates, template IDs, batch IDs, campaign IDs, regional-looking SKUs, rules, tickets, and experiment IDs.
 - `runGoldenTemplateEvaluation({ adapter })` can run the same golden cases through an injected provider adapter.
 - `EVAL_MODE=provider` routes the CLI through the configured AI provider adapter, while `npm run test:evals:provider:local` verifies the provider-eval path without calling an external model.
 - `createPipelineReleaseEvidence` binds a passing or failing evaluation report to pipeline, prompt, provider, model, and ruleset versions.
@@ -577,7 +577,7 @@ Current repository status:
 - `GET /analysis-evaluations/latest` exposes the latest gate summary and promotion evidence hash through the NestJS API for dashboards and CI checks. It reads persisted `analysis_evaluations` and `pipeline_releases` when `DATABASE_URL` is set, and falls back to the local replay gate without a database.
 - `npm run test:no-infra` is the local and CI entrypoint for the no-infrastructure harness gate set.
 - `.github/workflows/ci.yml` runs `npm run test:no-infra` on pull requests and pushes, and `npm run test:ci-workflow` verifies that the workflow and package script continue to include the required gates.
-- The next expansion should grow the locale-specific masking fixture set with reviewer-labeled false-positive samples and run full Postgres/Temporal release persistence verification once local Docker Compose is available.
+- The next expansion should add reviewer-labeled production samples to the masking fixture set once data handling approvals are available.
 
 ## 7. Data Model
 
@@ -1560,7 +1560,7 @@ These tools can still be useful locally or for experiments, but they should not 
 
 - Implemented first replay golden dataset with a minimum case-count gate.
 - Implemented `npm run test:evals` for prompt/model/ruleset regression checks.
-- Implemented fixture-driven `npm run test:pii:local` for a first local PII masking trap gate before provider calls, including HK/CN/SG phone formats, grouped card numbers, HKID, IBAN, and false-positive protection for OTPs, dates, template IDs, batch IDs, and campaign IDs.
+- Implemented fixture-driven `npm run test:pii:local` for a local PII masking trap gate before provider calls, including HK/CN/SG/India phone formats, grouped card numbers, HKID, Singapore NRIC/FIN, India PAN, IBAN, and false-positive protection for OTPs, dates, template IDs, batch IDs, campaign IDs, regional-looking SKUs, rules, tickets, and experiment IDs.
 - Implemented provider-eval path for running the same golden cases through configured provider adapters.
 - Implemented local release evidence generation for evaluation-gated pipeline promotion.
 - Implemented local release evidence artifact writing for CI/CD or human approval handoff.
@@ -1575,7 +1575,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented and verified `npm run test:harness:temporal` for the full API -> Temporal -> worker -> Postgres analysis evidence loop with local header authorization and persisted analysis output, review task, and audit event checks.
 - Implemented `npm run test:no-infra` plus GitHub Actions CI for no-infrastructure typecheck, secret scan, backend smoke, readiness probes, runtime lifecycle checks, API surface checks, PII gate, eval gates, release mapping gates, web contract checks, workflow verification, deploy config checks, build, bundle budget, and local UI verification.
 - Implemented contract-backed backend smoke parsing for key API success and error responses via `packages/contracts`.
-- Next: grow the locale-specific PII trap fixture set with reviewer-labeled false-positive samples before production promotion.
+- Next: add reviewer-labeled production PII/false-positive samples once data handling approvals are available.
 
 ## 16. Key Open Questions
 

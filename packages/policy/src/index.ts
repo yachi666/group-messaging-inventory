@@ -108,6 +108,20 @@ export function maskTemplateContent(content: string): MaskTemplateContentResult 
   );
   maskedContent = replaceWithFinding(
     maskedContent,
+    /\b(?:NRIC|FIN)\s+[STFGM]\d{7}[A-Z]\b/g,
+    '{{government_id}}',
+    'government_id',
+    findings,
+  );
+  maskedContent = replaceWithFinding(
+    maskedContent,
+    /\bPAN\s+[A-Z]{5}\d{4}[A-Z]\b/g,
+    'PAN {{government_id}}',
+    'government_id',
+    findings,
+  );
+  maskedContent = replaceWithFinding(
+    maskedContent,
     /\bIBAN\s+[A-Z]{2}\d{2}(?:\s?[A-Z0-9]{4}){2,7}(?:\s?[A-Z0-9]{1,4})?\b/g,
     'IBAN {{account}}',
     'account',
@@ -129,7 +143,7 @@ export function maskTemplateContent(content: string): MaskTemplateContentResult 
   );
   maskedContent = replaceWithFinding(
     maskedContent,
-    /(?<!\d)(?:\+852[\s.-]?)?[569]\d{3}[\s.-]?\d{4}\b/g,
+    /(?<!\d)(?:(?:phone|mobile|call|tel|whatsapp)\s*[:#-]?\s*)?(?:\+852[\s.-]?)[569]\d{3}[\s.-]?\d{4}\b|\b(?:phone|mobile|call|tel|whatsapp)\s*[:#-]?\s*[569]\d{3}[\s.-]?\d{4}\b/gi,
     '{{phone}}',
     'phone',
     findings,
@@ -143,7 +157,14 @@ export function maskTemplateContent(content: string): MaskTemplateContentResult 
   );
   maskedContent = replaceWithFinding(
     maskedContent,
-    /\b(?:SG\s+mobile\s*)?[689]\d{3}[\s.-]?\d{4}\b/gi,
+    /(?<!\d)(?:(?:SG\s+)?(?:phone|mobile|call|tel|whatsapp)\s*[:#-]?\s*)?(?:\+65[\s.-]?)[689]\d{3}[\s.-]?\d{4}\b|\b(?:SG\s+)?(?:phone|mobile|call|tel|whatsapp)\s*[:#-]?\s*[689]\d{3}[\s.-]?\d{4}\b/gi,
+    '{{phone}}',
+    'phone',
+    findings,
+  );
+  maskedContent = replaceWithFinding(
+    maskedContent,
+    /(?<!\d)(?:(?:IN\s+)?(?:phone|mobile|call|tel|whatsapp)\s*[:#-]?\s*)?(?:\+91[\s.-]?)[6-9]\d{4}[\s.-]?\d{5}\b|\b(?:IN\s+)?(?:phone|mobile|call|tel|whatsapp)\s*[:#-]?\s*[6-9]\d{4}[\s.-]?\d{5}\b/gi,
     '{{phone}}',
     'phone',
     findings,
@@ -198,13 +219,16 @@ function containsHighRiskRawPii(content: string) {
   return (
     /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(content) ||
     /\bHKID\s+[A-Z]\d{6}\([0-9A]\)(?=\s|$|[.,;])/.test(content) ||
+    /\b(?:NRIC|FIN)\s+[STFGM]\d{7}[A-Z]\b/.test(content) ||
+    /\bPAN\s+[A-Z]{5}\d{4}[A-Z]\b/.test(content) ||
     /\bIBAN\s+[A-Z]{2}\d{2}(?:\s?[A-Z0-9]{4}){2,7}(?:\s?[A-Z0-9]{1,4})?\b/.test(content) ||
     /\b(?:account|acct)\s*(?:number|no\.?|#)?\s*[:#-]?\s*\d{6,19}\b/i.test(content) ||
     /\b(?:card|pan)\s*[:#-]?\s*(?:\d[ -]?){13,19}\b/i.test(content) ||
     /\b\d{12,19}\b/.test(content) ||
-    /(?<!\d)(?:\+852[\s.-]?)?[569]\d{3}[\s.-]?\d{4}\b/.test(content) ||
+    /(?<!\d)(?:(?:phone|mobile|call|tel|whatsapp)\s*[:#-]?\s*)?(?:\+852[\s.-]?)[569]\d{3}[\s.-]?\d{4}\b|\b(?:phone|mobile|call|tel|whatsapp)\s*[:#-]?\s*[569]\d{3}[\s.-]?\d{4}\b/i.test(content) ||
     /(?<!\d)(?:\+86[\s.-]?)?1[3-9]\d[\s.-]?\d{4}[\s.-]?\d{4}\b/.test(content) ||
-    /\b(?:SG\s+mobile\s*)?[689]\d{3}[\s.-]?\d{4}\b/i.test(content) ||
+    /(?<!\d)(?:(?:SG\s+)?(?:phone|mobile|call|tel|whatsapp)\s*[:#-]?\s*)?(?:\+65[\s.-]?)[689]\d{3}[\s.-]?\d{4}\b|\b(?:SG\s+)?(?:phone|mobile|call|tel|whatsapp)\s*[:#-]?\s*[689]\d{3}[\s.-]?\d{4}\b/i.test(content) ||
+    /(?<!\d)(?:(?:IN\s+)?(?:phone|mobile|call|tel|whatsapp)\s*[:#-]?\s*)?(?:\+91[\s.-]?)[6-9]\d{4}[\s.-]?\d{5}\b|\b(?:IN\s+)?(?:phone|mobile|call|tel|whatsapp)\s*[:#-]?\s*[6-9]\d{4}[\s.-]?\d{5}\b/i.test(content) ||
     /(?<!\d)(?:\+?\d{1,3}[\s.-])?(?:\(\d{3}\)[\s.-]?|\d{3}[\s.-])\d{3}[\s.-]\d{4}\b/.test(
       content,
     )
