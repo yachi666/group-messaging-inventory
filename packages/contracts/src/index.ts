@@ -219,6 +219,13 @@ export const reviewTasksResponseSchema = z.object({
   reviewTasks: z.array(reviewTaskResponseSchema),
 });
 
+export const transitionReviewTaskSchema = z.object({
+  actorId: z.string().min(1),
+  status: z.enum(['Assigned', 'InReview', 'PendingApproval', 'Resolved', 'Dismissed']),
+  reason: z.string().min(1).max(1000).optional(),
+  assignedTo: z.string().min(1).optional(),
+});
+
 export const auditEvidenceEventSchema = z.object({
   auditEventId: z.string().min(1),
   actorId: z.string().min(1).nullable(),
@@ -444,6 +451,8 @@ export type DecideChangeRequestRequest = z.infer<typeof decideChangeRequestSchem
 export type ListChangeRequestsQuery = z.infer<typeof listChangeRequestsQuerySchema>;
 export type ChangeRequestsResponse = z.infer<typeof changeRequestsResponseSchema>;
 export type ListReviewTasksQuery = z.infer<typeof listReviewTasksQuerySchema>;
+export type TransitionReviewTaskRequest = z.infer<typeof transitionReviewTaskSchema>;
+export type ReviewTaskResponse = z.infer<typeof reviewTaskResponseSchema>;
 export type ReviewTasksResponse = z.infer<typeof reviewTasksResponseSchema>;
 export type ListAuditEventsQuery = z.infer<typeof listAuditEventsQuerySchema>;
 export type AuditEventsResponse = z.infer<typeof auditEventsResponseSchema>;

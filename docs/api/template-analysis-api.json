@@ -63,6 +63,15 @@
       "response": "reviewTasksResponseSchema"
     },
     {
+      "operationId": "transitionReviewTask",
+      "method": "POST",
+      "path": "/review-tasks/{taskId}/transition",
+      "status": 200,
+      "roles": ["analysis_runner", "change_checker"],
+      "request": "transitionReviewTaskSchema",
+      "response": "reviewTaskResponseSchema"
+    },
+    {
       "operationId": "listChangeRequests",
       "method": "GET",
       "path": "/change-requests",

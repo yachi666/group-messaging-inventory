@@ -20,6 +20,7 @@ import {
   listReviewTasksQuerySchema,
   submitAnalysisRunSchema,
   submitChangeRequestSchema,
+  transitionReviewTaskSchema,
   type CreateCurrentVersionChangeRequestRequest,
   type CreateLifecycleChangeRequestRequest,
   type CreateMappingChangeRequestRequest,
@@ -29,6 +30,7 @@ import {
   type ListReviewTasksQuery,
   type SubmitAnalysisRunRequest,
   type SubmitChangeRequestRequest,
+  type TransitionReviewTaskRequest,
 } from '@gmi/contracts';
 import { RequiresRoles } from '../../auth/governance-auth.guard.js';
 import { AnalysisRunsService } from './analysis-runs.service.js';
@@ -81,6 +83,20 @@ export class AnalysisRunsController {
     const request = listReviewTasksQuerySchema.parse(query) satisfies ListReviewTasksQuery;
 
     return this.analysisRuns.listReviewTasks(request);
+  }
+
+  @Post('review-tasks/:taskId/transition')
+  @HttpCode(HttpStatus.OK)
+  @RequiresRoles('analysis_runner', 'change_checker')
+  transitionReviewTask(@Param('taskId') taskId: string, @Body() body: unknown) {
+    const request = transitionReviewTaskSchema.parse(
+      body,
+    ) satisfies TransitionReviewTaskRequest;
+
+    return this.analysisRuns.transitionReviewTask({
+      taskId,
+      request,
+    });
   }
 
   @Get('change-requests')

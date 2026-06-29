@@ -322,6 +322,14 @@ export type ListReviewTasksRecord = {
   limit?: number;
 };
 
+export type TransitionReviewTaskRecord = {
+  taskId: string;
+  actorId: string;
+  status: Exclude<ReviewTaskStatus, 'Open'>;
+  assignedTo?: string;
+  reason?: string;
+};
+
 export type ConfirmAnalysisRunRecord = {
   runId: string;
   reviewStatus: 'reviewed';
@@ -595,6 +603,7 @@ export type AnalysisRunRepository = {
   ): Promise<MappingChangeRequestRecord>;
   listChangeRequests(command?: ListChangeRequestsRecord): Promise<MappingChangeRequestRecord[]>;
   listReviewTasks(command?: ListReviewTasksRecord): Promise<ReviewTaskRecord[]>;
+  transitionReviewTask(command: TransitionReviewTaskRecord): Promise<ReviewTaskRecord>;
   listAuditEvents(command?: ListAuditEventsRecord): Promise<AuditEvidenceEventRecord[]>;
   getChangeRequestEvidencePackage(
     changeRequestId: string,
@@ -663,6 +672,7 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
   private readonly completedRuns = new Map<string, CompletedAnalysisRunRecord>();
   private readonly reviewTaskIndex = new Map<string, string>();
   private readonly reviewTasks = new Map<string, ReviewTaskRecord>();
+  private readonly auditEvents: AuditEvidenceEventRecord[] = [];
   private readonly idempotencyIndex = new Map<string, string>();
   private readonly changeRequests = new Map<string, TemplateChangeRequestRecord>();
   private readonly changeRequestIdempotencyIndex = new Map<string, string>();
@@ -984,6 +994,43 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
       .slice(0, command.limit ?? 100);
   }
 
+  async transitionReviewTask(command: TransitionReviewTaskRecord): Promise<ReviewTaskRecord> {
+    const task = this.getExistingReviewTask(command.taskId);
+    assertReviewTaskTransition(task, command.status);
+
+    const transitionedAt = new Date().toISOString();
+    const assignedTo =
+      command.status === 'Assigned' || command.status === 'InReview'
+        ? command.assignedTo ?? task.assignedTo ?? command.actorId
+        : task.assignedTo;
+    const resolvedAt =
+      command.status === 'Resolved' || command.status === 'Dismissed'
+        ? transitionedAt
+        : task.resolvedAt;
+    const transitioned: ReviewTaskRecord = {
+      ...task,
+      status: command.status,
+      assignedTo,
+      resolvedAt,
+    };
+
+    this.reviewTasks.set(transitioned.taskId, transitioned);
+    this.auditEvents.push({
+      auditEventId: `AUD-${command.taskId}-${command.status}-${this.auditEvents.length + 1}`,
+      actorId: command.actorId,
+      action: 'review_task_transitioned',
+      objectType: task.objectType,
+      objectId: task.objectId,
+      sourceRunId: task.sourceRunId,
+      changeRequestId: null,
+      beforeRef: task.status,
+      afterRef: command.reason ? `${command.status}: ${command.reason}` : command.status,
+      createdAt: transitionedAt,
+    });
+
+    return transitioned;
+  }
+
   async getChangeRequestEvidencePackage(
     changeRequestId: string,
   ): Promise<ChangeRequestEvidencePackageRecord | null> {
@@ -1017,8 +1064,12 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
   ): Promise<AuditEvidenceEventRecord[]> {
     const limit = command.limit ?? 100;
 
-    return Array.from(this.changeRequests.values())
-      .flatMap((changeRequest) => toAuditEvents(toChangeRequestRecord(changeRequest)))
+    return [
+      ...Array.from(this.changeRequests.values()).flatMap((changeRequest) =>
+        toAuditEvents(toChangeRequestRecord(changeRequest)),
+      ),
+      ...this.auditEvents,
+    ]
       .filter((event) => !command.objectType || event.objectType === command.objectType)
       .filter((event) => !command.objectId || event.objectId === command.objectId)
       .filter((event) => !command.sourceRunId || event.sourceRunId === command.sourceRunId)
@@ -1028,6 +1079,40 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
       )
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
       .slice(0, limit);
+  }
+
+  private getExistingReviewTask(taskId: string): ReviewTaskRecord {
+    const task = this.reviewTasks.get(taskId);
+
+    if (task) {
+      return task;
+    }
+
+    if (taskId === 'RT-LOCAL-SCAFFOLD') {
+      const localTask: ReviewTaskRecord = {
+        taskId: 'RT-LOCAL-SCAFFOLD',
+        taskType: 'analysis_review',
+        objectType: 'template',
+        objectId: 'tpluuid_local_scaffold',
+        sourceRunId: 'ATA-LOCAL-001',
+        priority: 'normal',
+        status: 'Open',
+        assignedTo: null,
+        reason: 'local scaffold review task for API contract verification',
+        createdAt: new Date().toISOString(),
+        resolvedAt: null,
+      };
+      this.reviewTasks.set(localTask.taskId, localTask);
+      return localTask;
+    }
+
+    throw new RepositoryError(
+      'invalid_state_transition',
+      'The review task was not found or is no longer actionable.',
+      {
+        taskId,
+      },
+    );
   }
 
   private createTemplateChangeRequest(
@@ -1212,6 +1297,32 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
     }
 
     return changeRequest;
+  }
+}
+
+function assertReviewTaskTransition(
+  task: ReviewTaskRecord,
+  targetStatus: TransitionReviewTaskRecord['status'],
+) {
+  const allowed: Record<ReviewTaskStatus, ReadonlyArray<TransitionReviewTaskRecord['status']>> = {
+    Open: ['Assigned', 'InReview', 'Dismissed'],
+    Assigned: ['InReview', 'PendingApproval', 'Resolved', 'Dismissed'],
+    InReview: ['PendingApproval', 'Resolved', 'Dismissed'],
+    PendingApproval: ['Resolved', 'Dismissed'],
+    Resolved: [],
+    Dismissed: [],
+  };
+
+  if (!allowed[task.status].includes(targetStatus)) {
+    throw new RepositoryError(
+      'invalid_state_transition',
+      'The requested review task transition is not allowed.',
+      {
+        taskId: task.taskId,
+        status: task.status,
+        targetStatus,
+      },
+    );
   }
 }
 

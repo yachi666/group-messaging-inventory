@@ -11,7 +11,7 @@ const evaluationsController = read(
 const healthController = read('apps/api/src/modules/health.controller.ts');
 const contracts = read('packages/contracts/src/index.ts');
 
-const expectedEndpointCount = 17;
+const expectedEndpointCount = 18;
 
 assertEqual(manifest.service, 'group-messaging-inventory-api', 'manifest service');
 assertEqual(manifest.basePath, '/', 'manifest basePath');
@@ -78,6 +78,12 @@ assertEndpoint('listReviewTasks', analysisController, {
   roles: ['analysis_reader', 'analysis_runner', 'auditor'],
   status: 200,
   requestSchema: 'listReviewTasksQuerySchema',
+});
+assertEndpoint('transitionReviewTask', analysisController, {
+  decorator: "@Post('review-tasks/:taskId/transition')",
+  roles: ['analysis_runner', 'change_checker'],
+  status: 200,
+  requestSchema: 'transitionReviewTaskSchema',
 });
 assertEndpoint('listChangeRequests', analysisController, {
   decorator: "@Get('change-requests')",

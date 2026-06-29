@@ -41,6 +41,7 @@ import type {
   SubmitChangeRequestRecord,
   SubmitAnalysisRunRecord,
   AuditEvidenceEventRecord,
+  TransitionReviewTaskRecord,
 } from './index.js';
 
 const { Pool } = pg;
@@ -883,6 +884,73 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
     return rows.map(mapReviewTask);
   }
 
+  async transitionReviewTask(command: TransitionReviewTaskRecord): Promise<ReviewTaskRecord> {
+    const transitionedAt = new Date();
+    const auditEventId = `AUD-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}-${randomUUID().slice(0, 8)}`;
+
+    return this.db.transaction().execute(async (trx) => {
+      const existing = await trx
+        .selectFrom('review_tasks')
+        .selectAll()
+        .where('task_id', '=', command.taskId)
+        .executeTakeFirst();
+
+      if (!existing) {
+        throw new RepositoryError(
+          'invalid_state_transition',
+          'The review task was not found or is no longer actionable.',
+          {
+            taskId: command.taskId,
+          },
+        );
+      }
+
+      const existingTask = mapReviewTask(existing);
+      assertReviewTaskTransition(existingTask, command.status);
+
+      const assignedTo =
+        command.status === 'Assigned' || command.status === 'InReview'
+          ? command.assignedTo ?? existing.assigned_to ?? command.actorId
+          : existing.assigned_to;
+      const resolvedAt =
+        command.status === 'Resolved' || command.status === 'Dismissed'
+          ? transitionedAt
+          : existing.resolved_at;
+
+      await trx
+        .updateTable('review_tasks')
+        .set({
+          status: command.status,
+          assigned_to: assignedTo,
+          resolved_at: resolvedAt,
+        })
+        .where('task_id', '=', command.taskId)
+        .execute();
+
+      await trx
+        .insertInto('audit_events')
+        .values({
+          audit_event_id: auditEventId,
+          actor_id: command.actorId,
+          action: 'review_task_transitioned',
+          object_type: existing.object_type,
+          object_id: existing.object_id,
+          source_run_id: existing.source_run_id,
+          change_request_id: null,
+          before_ref: existing.status,
+          after_ref: command.reason ? `${command.status}: ${command.reason}` : command.status,
+        })
+        .execute();
+
+      return mapReviewTask({
+        ...existing,
+        status: command.status,
+        assigned_to: assignedTo,
+        resolved_at: resolvedAt,
+      });
+    });
+  }
+
   async getChangeRequestEvidencePackage(
     changeRequestId: string,
   ): Promise<ChangeRequestEvidencePackageRecord | null> {
@@ -1436,6 +1504,35 @@ function toReviewTaskStatus(value: string): ReviewTaskRecord['status'] {
   }
 
   return 'Open';
+}
+
+function assertReviewTaskTransition(
+  task: ReviewTaskRecord,
+  targetStatus: TransitionReviewTaskRecord['status'],
+) {
+  const allowed: Record<
+    ReviewTaskRecord['status'],
+    ReadonlyArray<TransitionReviewTaskRecord['status']>
+  > = {
+    Open: ['Assigned', 'InReview', 'Dismissed'],
+    Assigned: ['InReview', 'PendingApproval', 'Resolved', 'Dismissed'],
+    InReview: ['PendingApproval', 'Resolved', 'Dismissed'],
+    PendingApproval: ['Resolved', 'Dismissed'],
+    Resolved: [],
+    Dismissed: [],
+  };
+
+  if (!allowed[task.status].includes(targetStatus)) {
+    throw new RepositoryError(
+      'invalid_state_transition',
+      'The requested review task transition is not allowed.',
+      {
+        taskId: task.taskId,
+        status: task.status,
+        targetStatus,
+      },
+    );
+  }
 }
 
 function asArray<T>(value: unknown): T[] {

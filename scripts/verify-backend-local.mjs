@@ -14,6 +14,7 @@ import {
   changeRequestsResponseSchema,
   latestAnalysisEvaluationResponseSchema,
   readinessResponseSchema,
+  reviewTaskResponseSchema,
   reviewTasksResponseSchema,
   standardErrorSchema,
   submitAnalysisRunResponseSchema,
@@ -134,6 +135,7 @@ try {
     resultsResponse.results[0].routing.reviewTaskId,
     'review task id matches analysis routing',
   );
+  await verifyReviewTaskLifecycle(reviewTasksResponse.reviewTasks[0].taskId);
 
   const latestEvaluation = await getJson(`${baseUrl}/analysis-evaluations/latest`);
   latestAnalysisEvaluationResponseSchema.parse(latestEvaluation);
@@ -156,6 +158,89 @@ try {
   );
 } finally {
   api.kill('SIGINT');
+}
+
+async function verifyReviewTaskLifecycle(taskId) {
+  const assignedResult = await postJsonWithStatus(
+    `${baseUrl}/review-tasks/${taskId}/transition`,
+    {
+      actorId: 'reviewer-local-smoke',
+      status: 'Assigned',
+      assignedTo: 'reviewer-local-smoke',
+      reason: 'backend smoke reviewer claim',
+    },
+  );
+  reviewTaskResponseSchema.parse(assignedResult.body);
+  assertEqual(assignedResult.status, 200, 'review task assign status code');
+  assertEqual(assignedResult.body.status, 'Assigned', 'review task assigned status');
+  assertEqual(
+    assignedResult.body.assignedTo,
+    'reviewer-local-smoke',
+    'review task assigned actor',
+  );
+
+  const inReview = await postJson(
+    `${baseUrl}/review-tasks/${taskId}/transition`,
+    {
+      actorId: 'reviewer-local-smoke',
+      status: 'InReview',
+      reason: 'backend smoke reviewer started work',
+    },
+  );
+  reviewTaskResponseSchema.parse(inReview);
+  assertEqual(inReview.status, 'InReview', 'review task in-review status');
+
+  const resolved = await postJson(
+    `${baseUrl}/review-tasks/${taskId}/transition`,
+    {
+      actorId: 'reviewer-local-smoke',
+      status: 'Resolved',
+      reason: 'backend smoke reviewer completed task',
+    },
+  );
+  reviewTaskResponseSchema.parse(resolved);
+  assertEqual(resolved.status, 'Resolved', 'review task resolved status');
+  assertEqual(typeof resolved.resolvedAt, 'string', 'review task resolved timestamp');
+
+  const invalidResponse = await fetch(
+    `${baseUrl}/review-tasks/${taskId}/transition`,
+    {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...defaultAuthHeaders(),
+      },
+      body: JSON.stringify({
+        actorId: 'reviewer-local-smoke',
+        status: 'InReview',
+        reason: 'backend smoke terminal task cannot reopen',
+      }),
+    },
+  );
+  const invalidBody = await invalidResponse.json();
+  standardErrorSchema.parse(invalidBody);
+  assertEqual(invalidResponse.status, 422, 'review task invalid transition status');
+  assertEqual(
+    invalidBody.error?.code,
+    'invalid_state_transition',
+    'review task invalid transition code',
+  );
+
+  const auditEventsResponse = await getJson(
+    `${baseUrl}/audit-events?sourceRunId=${encodeURIComponent(resolved.sourceRunId)}`,
+  );
+  auditEventsResponseSchema.parse(auditEventsResponse);
+  const reviewTaskEvents = auditEventsResponse.auditEvents.filter(
+    (event) => event.action === 'review_task_transitioned',
+  );
+  if (reviewTaskEvents.length < 3) {
+    throw new Error('review task lifecycle audit events were missing');
+  }
+  assertEqual(
+    reviewTaskEvents.some((event) => event.afterRef?.includes('Resolved')),
+    true,
+    'review task resolved audit event',
+  );
 }
 
 async function verifyStandardValidationError() {

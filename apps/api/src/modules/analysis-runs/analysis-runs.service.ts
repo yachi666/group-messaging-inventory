@@ -17,8 +17,10 @@ import type {
   ListChangeRequestsQuery,
   ListReviewTasksQuery,
   ReviewTasksResponse,
+  ReviewTaskResponse,
   SubmitChangeRequestRequest,
   SubmitAnalysisRunRequest,
+  TransitionReviewTaskRequest,
 } from '@gmi/contracts';
 import type { AiTemplateAnalysisOutput } from '@gmi/domain';
 import type { AnalysisRunRepository } from '@gmi/db';
@@ -61,6 +63,11 @@ type SubmitChangeRequestCommand = {
 type DecideChangeRequestCommand = {
   changeRequestId: string;
   request: DecideChangeRequestRequest;
+};
+
+type TransitionReviewTaskCommand = {
+  taskId: string;
+  request: TransitionReviewTaskRequest;
 };
 
 @Injectable()
@@ -151,6 +158,18 @@ export class AnalysisRunsService {
     return {
       reviewTasks,
     };
+  }
+
+  async transitionReviewTask(
+    command: TransitionReviewTaskCommand,
+  ): Promise<ReviewTaskResponse> {
+    return this.repository.transitionReviewTask({
+      taskId: command.taskId,
+      actorId: command.request.actorId,
+      status: command.request.status,
+      assignedTo: command.request.assignedTo,
+      reason: command.request.reason,
+    });
   }
 
   async confirmRun(runId: string): Promise<ConfirmAnalysisRunResponse> {
