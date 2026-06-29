@@ -49,6 +49,7 @@ const requiredNoInfraCommands = [
   'npm run test:runtime-config',
   'npm run test:runtime-lifecycle',
   'npm run test:api-surface',
+  'npm run test:ai-adapter',
   'npm run test:pii:local',
   'npm run test:evals',
   'npm run test:evals:release:local',

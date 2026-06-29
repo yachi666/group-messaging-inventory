@@ -1432,7 +1432,8 @@ Current repository status:
 - OpenAI-compatible output is parsed as JSON and constrained by the same `aiTemplateAnalysisOutputSchema` before returning to the business harness.
 - OpenAI-compatible provider-specific request fields can be supplied through `OPENAI_COMPATIBLE_EXTRA_BODY_JSON`; this keeps DeepSeek-style `thinking` and `reasoning_effort` options out of business code.
 - OpenAI-compatible calls use `OPENAI_COMPATIBLE_TIMEOUT_MS` so worker activities do not hang indefinitely on provider/network stalls.
-- OpenAI-compatible calls use `OPENAI_COMPATIBLE_MAX_RETRIES` for bounded retries on transient HTTP 408, 429, 5xx, and network failures; non-retryable 4xx errors fail fast with a stable `provider_error:*` message.
+- OpenAI-compatible calls use `OPENAI_COMPATIBLE_MAX_RETRIES` and `OPENAI_COMPATIBLE_RETRY_BACKOFF_MS` for bounded retries with exponential backoff on transient HTTP 408, 429, 5xx, and network failures; non-retryable 4xx errors fail fast with a stable `provider_error:*` message.
+- `npm run test:ai-adapter` verifies OpenAI-compatible retry, backoff, provider-specific request fields, structured output parsing, and deterministic-only no-provider behavior without calling an external model.
 - When analysis fails after provider retries, the Temporal workflow calls failure persistence before rethrowing so Temporal retains retry/failure semantics while Postgres-backed runs are marked `Failed` with `errors_json` and an audit event.
 - DeepSeek can be configured as `AI_PROVIDER=openai-compatible` with `OPENAI_COMPATIBLE_BASE_URL=https://api.deepseek.com` and `OPENAI_COMPATIBLE_MODEL=deepseek-v4-flash`.
 - A native Anthropic adapter remains a planned provider-specific adapter when direct Claude SDK features are needed.

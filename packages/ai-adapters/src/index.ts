@@ -47,7 +47,9 @@ export type OpenAICompatibleChatAnalysisAdapterOptions = {
   extraBody?: Record<string, unknown>;
   timeoutMs?: number;
   maxRetries?: number;
+  retryBackoffMs?: number;
   fetchImpl?: typeof fetch;
+  sleep?: (durationMs: number) => Promise<void>;
 };
 
 const templateAnalysisOutputGuardrail: OutputGuardrail<
@@ -158,12 +160,16 @@ export class OpenAICompatibleChatAnalysisAdapter implements AiAnalysisAdapter {
   private readonly providerName: string;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
+  private readonly retryBackoffMs: number;
+  private readonly sleep: (durationMs: number) => Promise<void>;
 
   constructor(private readonly options: OpenAICompatibleChatAnalysisAdapterOptions) {
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.providerName = options.providerName ?? 'openai-compatible';
     this.timeoutMs = options.timeoutMs ?? 60_000;
     this.maxRetries = options.maxRetries ?? 2;
+    this.retryBackoffMs = options.retryBackoffMs ?? 250;
+    this.sleep = options.sleep ?? sleep;
   }
 
   async analyzeTemplate(input: AiTemplateAnalysisInput): Promise<AiTemplateAnalysisOutput> {
@@ -209,16 +215,27 @@ export class OpenAICompatibleChatAnalysisAdapter implements AiAnalysisAdapter {
           response.status,
           response.statusText,
         );
+        await this.waitBeforeRetry(attempt);
       } catch (error) {
         lastError = error;
 
         if (attempt === this.maxRetries) {
           throw createProviderNetworkError(this.providerName, error);
         }
+
+        await this.waitBeforeRetry(attempt);
       }
     }
 
     throw createProviderNetworkError(this.providerName, lastError);
+  }
+
+  private async waitBeforeRetry(attempt: number) {
+    const delayMs = this.retryBackoffMs * 2 ** attempt;
+
+    if (delayMs > 0) {
+      await this.sleep(delayMs);
+    }
   }
 
   private buildRequestInit(input: AiTemplateAnalysisInput): RequestInit {
@@ -286,6 +303,10 @@ export function createAiAnalysisAdapterFromEnv(
       maxRetries: parseOptionalNonNegativeInteger(
         env.OPENAI_COMPATIBLE_MAX_RETRIES,
         'OPENAI_COMPATIBLE_MAX_RETRIES',
+      ),
+      retryBackoffMs: parseOptionalNonNegativeInteger(
+        env.OPENAI_COMPATIBLE_RETRY_BACKOFF_MS,
+        'OPENAI_COMPATIBLE_RETRY_BACKOFF_MS',
       ),
     });
   }
@@ -391,6 +412,12 @@ function createProviderNetworkError(providerName: string, error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
 
   return new Error(`provider_error:${providerName}:network:${message}`);
+}
+
+function sleep(durationMs: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, durationMs);
+  });
 }
 
 function buildAnalysisPrompt(input: AiTemplateAnalysisInput) {

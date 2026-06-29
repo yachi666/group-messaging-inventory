@@ -7,6 +7,11 @@ assertEqual(defaultApi.authMode, 'header', 'default auth mode');
 assertEqual(defaultApi.workflow.driver, 'none', 'default workflow driver');
 assertEqual(defaultApi.workflow.temporalAddress, '127.0.0.1:7233', 'default temporal address');
 assertEqual(defaultApi.aiProvider.provider, 'noop', 'default AI provider');
+assertEqual(
+  defaultApi.aiProvider.openaiCompatibleRetryBackoffMs,
+  250,
+  'default OpenAI-compatible retry backoff',
+);
 assertEqual(defaultApi.readinessTimeoutMs, 1000, 'default readiness timeout');
 
 const worker = loadRuntimeConfig('worker', {
@@ -56,12 +61,14 @@ assertConfigIssues(
       API_AUTH_MODE: 'cookie',
       DATABASE_URL: 'not a url',
       OPENAI_COMPATIBLE_MAX_RETRIES: '-2',
+      OPENAI_COMPATIBLE_RETRY_BACKOFF_MS: '-1',
     }),
   [
     'PORT must be a positive integer.',
     'READINESS_TIMEOUT_MS must be a positive integer.',
     'API_AUTH_MODE must be one of: header, disabled.',
     'OPENAI_COMPATIBLE_MAX_RETRIES must be a non-negative integer.',
+    'OPENAI_COMPATIBLE_RETRY_BACKOFF_MS must be a non-negative integer.',
     'DATABASE_URL must be a valid URL.',
   ],
   'invalid numeric and enum values',

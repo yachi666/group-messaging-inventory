@@ -21,6 +21,7 @@ export type RuntimeConfig = {
     openaiCompatibleProviderName?: string;
     openaiCompatibleTimeoutMs?: number;
     openaiCompatibleMaxRetries?: number;
+    openaiCompatibleRetryBackoffMs?: number;
   };
   readinessTimeoutMs: number;
 };
@@ -94,6 +95,12 @@ export function loadRuntimeConfig(
     issues,
     2,
   );
+  const openaiCompatibleRetryBackoffMs = readOptionalNonNegativeInteger(
+    env.OPENAI_COMPATIBLE_RETRY_BACKOFF_MS,
+    'OPENAI_COMPATIBLE_RETRY_BACKOFF_MS',
+    issues,
+    250,
+  );
 
   if (env.DATABASE_URL) {
     readOptionalUrl(env.DATABASE_URL, 'DATABASE_URL', issues);
@@ -126,6 +133,7 @@ export function loadRuntimeConfig(
       openaiCompatibleProviderName: trimToUndefined(env.OPENAI_COMPATIBLE_PROVIDER_NAME),
       openaiCompatibleTimeoutMs,
       openaiCompatibleMaxRetries,
+      openaiCompatibleRetryBackoffMs,
     },
     readinessTimeoutMs,
   };

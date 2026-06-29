@@ -102,7 +102,24 @@ OPENAI_TRACE_INCLUDE_SENSITIVE_DATA=false
 npm run dev:worker
 ```
 
-业务 Harness 仍然负责 workflow 状态、policy routing、持久化和 review gates。OpenAI SDK 只封装在 `@gmi/ai-adapters` 后面，用于模型编排、结构化输出、guardrails 和 tracing。
+需要通过 LiteLLM、vLLM、OpenRouter、内部模型网关或 DeepSeek 这类 OpenAI-compatible chat-completions API 执行分析时，设置：
+
+```bash
+AI_PROVIDER=openai-compatible
+OPENAI_COMPATIBLE_BASE_URL=https://api.deepseek.com
+OPENAI_COMPATIBLE_API_KEY=$DEEPSEEK_API_KEY
+OPENAI_COMPATIBLE_MODEL=deepseek-v4-flash
+OPENAI_COMPATIBLE_PROVIDER_NAME=deepseek
+OPENAI_COMPATIBLE_EXTRA_BODY_JSON='{"thinking":{"type":"enabled"},"reasoning_effort":"high"}'
+OPENAI_COMPATIBLE_TIMEOUT_MS=60000
+OPENAI_COMPATIBLE_MAX_RETRIES=2
+OPENAI_COMPATIBLE_RETRY_BACKOFF_MS=250
+npm run dev:worker
+```
+
+OpenAI-compatible adapter 会对 HTTP 408、429、5xx 和网络错误做有界重试与可配置指数 backoff；不可重试的 4xx 会快速失败并返回稳定的 `provider_error:*` 消息。`npm run test:ai-adapter` 会在本地校验 retry、backoff、provider-specific request fields、结构化输出解析，以及 `deterministic_only` 不调用 provider 的行为。
+
+业务 Harness 仍然负责 workflow 状态、policy routing、持久化和 review gates。Provider SDK 与兼容 API 只封装在 `@gmi/ai-adapters` 后面，用于模型编排、结构化输出、guardrails 和 tracing。
 
 本地治理 API 授权先使用轻量 header 模式，后续可替换为 SSO 或 API Gateway 注入的身份上下文：
 

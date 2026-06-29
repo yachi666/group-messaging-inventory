@@ -115,6 +115,7 @@ OPENAI_COMPATIBLE_PROVIDER_NAME=internal-gateway
 OPENAI_COMPATIBLE_EXTRA_BODY_JSON=
 OPENAI_COMPATIBLE_TIMEOUT_MS=60000
 OPENAI_COMPATIBLE_MAX_RETRIES=2
+OPENAI_COMPATIBLE_RETRY_BACKOFF_MS=250
 npm run dev:worker
 ```
 
@@ -130,11 +131,12 @@ OPENAI_COMPATIBLE_PROVIDER_NAME=deepseek
 OPENAI_COMPATIBLE_EXTRA_BODY_JSON='{"thinking":{"type":"enabled"},"reasoning_effort":"high"}'
 OPENAI_COMPATIBLE_TIMEOUT_MS=60000
 OPENAI_COMPATIBLE_MAX_RETRIES=2
+OPENAI_COMPATIBLE_RETRY_BACKOFF_MS=250
 npm run dev:worker
 ```
 
 The standalone curl example lives at `scripts/examples/deepseek-chat-completions.curl`.
-The OpenAI-compatible adapter retries transient provider failures such as HTTP 408, 429, 5xx, and network errors, while non-retryable 4xx errors fail fast with a stable `provider_error:*` message.
+The OpenAI-compatible adapter retries transient provider failures such as HTTP 408, 429, 5xx, and network errors with configurable exponential backoff, while non-retryable 4xx errors fail fast with a stable `provider_error:*` message. `npm run test:ai-adapter` verifies retry, backoff, provider-specific request fields, output schema parsing, and deterministic-only no-provider behavior locally.
 
 The business harness still owns workflow state, policy routing, persistence, and review gates. Provider SDKs and OpenAI-compatible APIs are used only behind `@gmi/ai-adapters` for model orchestration, structured output, guardrails, and tracing.
 
