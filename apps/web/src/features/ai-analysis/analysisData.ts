@@ -174,6 +174,11 @@ export const initialAnalysisResults = [
 ] as const satisfies ReadonlyArray<AiTemplateAnalysisResult>;
 
 export const fallbackLatestAnalysisEvaluation = {
+  source: {
+    kind: 'replay_fallback',
+    persisted: false,
+    generatedAt: '2026-06-28T00:00:00.000Z',
+  },
   evaluation: {
     suite: 'template-analysis-golden',
     datasetVersion: '2026-06-28.local',

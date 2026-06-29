@@ -272,6 +272,11 @@ export const analysisEvaluationThresholdsSchema = z.object({
 });
 
 export const latestAnalysisEvaluationResponseSchema = z.object({
+  source: z.object({
+    kind: z.enum(['postgres', 'replay_fallback']),
+    persisted: z.boolean(),
+    generatedAt: z.string().datetime(),
+  }),
   evaluation: z.object({
     suite: z.string().min(1),
     datasetVersion: z.string().min(1),

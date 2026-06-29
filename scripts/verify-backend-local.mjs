@@ -105,6 +105,8 @@ try {
 
   const latestEvaluation = await getJson(`${baseUrl}/analysis-evaluations/latest`);
   latestAnalysisEvaluationResponseSchema.parse(latestEvaluation);
+  assertEqual(latestEvaluation.source.kind, 'replay_fallback', 'latest eval source kind');
+  assertEqual(latestEvaluation.source.persisted, false, 'latest eval persisted flag');
   assertEqual(latestEvaluation.evaluation.suite, 'template-analysis-golden', 'latest eval suite');
   assertEqual(latestEvaluation.evaluation.verdict, 'pass', 'latest eval verdict');
   assertEqual(latestEvaluation.evaluation.metrics.caseCount, 7, 'latest eval case count');

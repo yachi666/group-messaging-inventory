@@ -64,6 +64,9 @@ const response = mapLatestEvaluationRowsToResponse({
 });
 
 assertEqual(response.evaluation.suite, 'template-analysis-golden', 'suite');
+assertEqual(response.source.kind, 'postgres', 'source kind');
+assertEqual(response.source.persisted, true, 'source persisted flag');
+assertEqual(response.source.generatedAt, '2026-06-28T00:00:00.000Z', 'source generated at');
 assertEqual(response.evaluation.mode, 'replay', 'mode');
 assertEqual(response.evaluation.verdict, 'pass', 'verdict');
 assertEqual(response.evaluation.metrics.caseCount, 7, 'case count');

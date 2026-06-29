@@ -104,6 +104,12 @@ function formatRate(rate: number) {
   return `${Math.round(rate * 100)}%`;
 }
 
+function getEvaluationEvidenceLabel(evaluation: LatestAnalysisEvaluation) {
+  return evaluation.source.kind === 'postgres'
+    ? 'Postgres evidence'
+    : 'Replay fallback';
+}
+
 function getPlaceholderKind(placeholder: string) {
   const normalized = placeholder.toLowerCase();
   if (normalized.includes('amount') || normalized.includes('balance')) return 'Currency';
@@ -375,7 +381,11 @@ export function AiTemplateAnalysisPage() {
           <StatusChip tone={getReleaseGateTone(latestEvaluation.release.status)}>
             {latestEvaluation.release.status}
           </StatusChip>
-          <small>{evaluationSource === 'api' ? 'API' : 'Mock'} · {latestEvaluation.release.releaseId}</small>
+          <small>
+            {evaluationSource === 'api' ? 'API' : 'Mock'} ·{' '}
+            {getEvaluationEvidenceLabel(latestEvaluation)} ·{' '}
+            {latestEvaluation.release.releaseId}
+          </small>
         </div>
         <dl className="analysis-release-metrics">
           <div>

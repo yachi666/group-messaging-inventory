@@ -99,7 +99,11 @@ try {
   assertEqual(recordResponse.recordedRelease.releaseId, releaseId, 'recorded release id');
   assertEqual(recordResponse.recordedRelease.evidenceHash, evidence.evidenceHash, 'recorded hash');
   assertEqual(recordResponse.latest.release.releaseId, releaseId, 'response latest release id');
+  assertEqual(recordResponse.latest.source.kind, 'postgres', 'response latest source kind');
+  assertEqual(recordResponse.latest.source.persisted, true, 'response latest persisted flag');
   assertEqual(latest.release.releaseId, releaseId, 'GET latest release id');
+  assertEqual(latest.source.kind, 'postgres', 'GET latest source kind');
+  assertEqual(latest.source.persisted, true, 'GET latest persisted flag');
   assertEqual(latest.release.evidenceHash, evidence.evidenceHash, 'GET latest hash');
   assertEqual(latest.evaluation.verdict, 'pass', 'GET latest verdict');
 

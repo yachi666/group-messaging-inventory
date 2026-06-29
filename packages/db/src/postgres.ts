@@ -201,6 +201,11 @@ export function mapLatestEvaluationRowsToResponse(
   rows: LatestEvaluationRowsRecord,
 ): LatestAnalysisEvaluationResponseRecord {
   return {
+    source: {
+      kind: 'postgres',
+      persisted: true,
+      generatedAt: toIsoString(rows.release.created_at),
+    },
     evaluation: {
       suite: rows.evaluation.evaluation_suite,
       datasetVersion: rows.evaluation.dataset_version,

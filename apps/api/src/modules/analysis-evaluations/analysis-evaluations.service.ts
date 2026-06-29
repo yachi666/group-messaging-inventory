@@ -43,6 +43,11 @@ export class AnalysisEvaluationsService {
     });
 
     return latestAnalysisEvaluationResponseSchema.parse({
+      source: {
+        kind: 'replay_fallback',
+        persisted: false,
+        generatedAt: release.createdAt,
+      },
       evaluation: {
         suite: report.suite,
         datasetVersion: report.datasetVersion,

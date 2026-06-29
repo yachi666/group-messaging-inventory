@@ -272,6 +272,8 @@ npm run test:harness:temporal
 
 在 Postgres-backed 模式下，analysis run 会按照存储状态保持为 `Queued`、`Running`、`Failed` 或 `Succeeded`。只有 worker 写入 `analysis_outputs` 之后，API response 才会包含 `output` 和 policy routing。
 
+`GET /analysis-evaluations/latest` 在配置 `DATABASE_URL` 时读取持久化的 `analysis_evaluations` 与 `pipeline_releases`；未配置数据库时回退到本地 replay gate。响应包含 `source.kind`、`source.persisted` 和 `source.generatedAt`，让发布看板能够区分 Postgres-backed evidence 与本地 replay fallback 数据。
+
 ## 🎨 设计方向
 
 视觉语言记录在 [DESIGN.md](./DESIGN.md)。界面采用友好且信息密度较高的治理仪表盘风格，包括浅色导航、紧凑表格、圆角指标卡、平静的状态标签和面向审计的语言。

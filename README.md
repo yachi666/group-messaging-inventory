@@ -365,7 +365,8 @@ npm run test:harness:temporal
 This smoke uses the local header authorization mode, starts the API and worker on an isolated Temporal task queue, submits an analysis run, waits for worker completion, and verifies persisted `analysis_outputs`, `review_tasks`, and `audit_events`.
 
 In Postgres-backed mode, analysis runs remain `Queued`, `Running`, `Failed`, or `Succeeded` according to the stored run state. API responses include `output` and policy routing only after the worker records `analysis_outputs`. If provider analysis ultimately fails, the worker records a failed run with structured error metadata and an audit event before preserving Temporal retry/failure semantics.
-`GET /analysis-evaluations/latest` reads persisted `analysis_evaluations` and `pipeline_releases` when `DATABASE_URL` is set, and falls back to the local replay gate when no database is configured.
+
+`GET /analysis-evaluations/latest` reads persisted `analysis_evaluations` and `pipeline_releases` when `DATABASE_URL` is set, and falls back to the local replay gate when no database is configured. The response includes `source.kind`, `source.persisted`, and `source.generatedAt` so release dashboards can distinguish Postgres-backed evidence from local replay fallback data.
 
 ## 🎨 Design Direction
 

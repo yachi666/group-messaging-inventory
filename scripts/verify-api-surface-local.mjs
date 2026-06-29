@@ -16,6 +16,11 @@ const expectedEndpointCount = 16;
 assertEqual(manifest.service, 'group-messaging-inventory-api', 'manifest service');
 assertEqual(manifest.basePath, '/', 'manifest basePath');
 assertEqual(manifest.endpoints.length, expectedEndpointCount, 'manifest endpoint count');
+assertSourceContains(
+  contracts,
+  "kind: z.enum(['postgres', 'replay_fallback'])",
+  'latest evaluation source provenance schema',
+);
 
 const operationIds = new Set();
 for (const endpoint of manifest.endpoints) {

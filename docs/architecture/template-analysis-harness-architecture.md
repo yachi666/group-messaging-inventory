@@ -576,7 +576,7 @@ Current repository status:
 - `npm run test:evals:release-persistence:pg` writes a passing evaluation plus release evidence into Postgres and reads it back through the latest-evaluation repository path.
 - `POST /analysis-evaluations/release-evidence` accepts hash-verified release evidence through the TypeScript API so production-impacting evidence writes can be protected by API auth, request validation, and audit-adjacent controls instead of direct table writes.
 - `npm run test:evals:release-api:pg` verifies the API-owned release evidence ingestion path, including invalid-hash rejection and latest-evaluation readback.
-- `GET /analysis-evaluations/latest` exposes the latest gate summary and promotion evidence hash through the NestJS API for dashboards and CI checks. It reads persisted `analysis_evaluations` and `pipeline_releases` when `DATABASE_URL` is set, and falls back to the local replay gate without a database.
+- `GET /analysis-evaluations/latest` exposes the latest gate summary and promotion evidence hash through the NestJS API for dashboards and CI checks. It reads persisted `analysis_evaluations` and `pipeline_releases` when `DATABASE_URL` is set, and falls back to the local replay gate without a database. The response includes source provenance (`source.kind`, `source.persisted`, and `source.generatedAt`) so dashboards and approval workflows can distinguish Postgres-backed release evidence from non-persisted replay fallback data.
 - `npm run test:no-infra` is the local and CI entrypoint for the no-infrastructure harness gate set.
 - `.github/workflows/ci.yml` runs `npm run test:no-infra` on pull requests and pushes, and `npm run test:ci-workflow` verifies that the workflow and package script continue to include the required gates.
 - The next expansion should add reviewer-labeled production samples to the masking fixture set once data handling approvals are available.
@@ -1574,7 +1574,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented `npm run test:evals:release-persistence:pg` for Postgres-backed evaluation and release evidence readback.
 - Implemented `POST /analysis-evaluations/release-evidence` and `npm run test:evals:release-api:pg` for API-owned release evidence ingestion with hash verification.
 - Implemented bounded OpenAI-compatible provider retry policy and stable provider-error classification for transient 408/429/5xx/network failures.
-- Implemented `GET /analysis-evaluations/latest` for a database-aware API query surface over evaluation gate status and release evidence hash, with local replay fallback when no database is configured.
+- Implemented `GET /analysis-evaluations/latest` for a database-aware API query surface over evaluation gate status and release evidence hash, with local replay fallback when no database is configured and explicit source provenance in the response contract.
 - Implemented worker failure persistence activity and repository support for marking failed analysis runs with structured error metadata.
 - Implemented shared `@gmi/runtime-config` startup validation for API and worker configuration.
 - Implemented and verified `npm run test:harness:temporal` for the full API -> Temporal -> worker -> Postgres analysis evidence loop with local header authorization and persisted analysis output, review task, and audit event checks.

@@ -409,6 +409,11 @@ export type PipelineReleaseEvidenceLike = {
 };
 
 export type LatestAnalysisEvaluationResponseRecord = {
+  source: {
+    kind: 'postgres' | 'replay_fallback';
+    persisted: boolean;
+    generatedAt: string;
+  };
   evaluation: {
     suite: string;
     datasetVersion: string;

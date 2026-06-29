@@ -50,6 +50,11 @@ export type AiTemplateAnalysisFilter = {
 };
 
 export type LatestAnalysisEvaluation = {
+  source: {
+    kind: 'postgres' | 'replay_fallback';
+    persisted: boolean;
+    generatedAt: string;
+  };
   evaluation: {
     suite: string;
     datasetVersion: string;
