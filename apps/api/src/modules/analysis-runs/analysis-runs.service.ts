@@ -88,7 +88,7 @@ export class AnalysisRunsService {
 
     return {
       ...run,
-      pollUrl: `/api/analysis-runs/${run.runId}`,
+      pollUrl: `/analysis-runs/${run.runId}`,
       workflow,
     };
   }

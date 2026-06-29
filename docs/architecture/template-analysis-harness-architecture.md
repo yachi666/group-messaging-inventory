@@ -942,6 +942,8 @@ Rules:
 
 ## 10. API Design
 
+The current NestJS implementation mounts routes at the root path for local development, for example `/analysis-runs/{runId}`. The `/api` prefix shown in the target API design can be added later through a global Nest prefix, API gateway, or ingress route when the deployment surface is finalized. Runtime response links should match the currently mounted route space.
+
 ### 10.1 Query APIs
 
 ```http
@@ -1021,7 +1023,7 @@ Response:
   "status": "Queued",
   "templateUuid": "tpluuid_2048",
   "versionId": "tv_2048_0003",
-  "pollUrl": "/api/analysis-runs/AR-20260626-000187",
+  "pollUrl": "/analysis-runs/AR-20260626-000187",
   "createdAt": "2026-06-26T09:32:14Z"
 }
 ```

@@ -66,6 +66,11 @@ try {
   submitAnalysisRunResponseSchema.parse(submitResponse);
 
   assertEqual(submitResponse.status, 'Queued', 'submit status');
+  assertEqual(
+    submitResponse.pollUrl,
+    `/analysis-runs/${submitResponse.runId}`,
+    'submit poll URL',
+  );
   assertEqual(submitResponse.workflow.driver, 'none', 'workflow driver');
   assertEqual(submitResponse.workflow.started, false, 'workflow started');
 
