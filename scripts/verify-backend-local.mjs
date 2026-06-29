@@ -8,6 +8,7 @@ import {
   aiTemplateAnalysisResultsResponseSchema,
   analysisRunResponseSchema,
   changeRequestEvidencePackageSchema,
+  confirmAnalysisRunResponseSchema,
   auditEventsResponseSchema,
   changeRequestResponseSchema,
   changeRequestsResponseSchema,
@@ -80,6 +81,14 @@ try {
   analysisRunResponseSchema.parse(runResponse);
   assertEqual(runResponse.status, 'Succeeded', 'get run status');
   assertEqual(runResponse.routing.policyDecision, 'auto_record', 'scaffold routing decision');
+
+  const confirmResult = await postJsonWithStatus(
+    `${baseUrl}/analysis-runs/${submitResponse.runId}/confirm`,
+    {},
+  );
+  confirmAnalysisRunResponseSchema.parse(confirmResult.body);
+  assertEqual(confirmResult.status, 200, 'confirm status code');
+  assertEqual(confirmResult.body.reviewStatus, 'reviewed', 'confirm review status');
 
   await verifyBaseRevisionConflict(submitResponse.runId);
   await verifyAnalysisRunTerminalGuard(submitResponse.runId);
@@ -359,7 +368,7 @@ async function verifyCurrentVersionChangeRequest() {
   assertEqual(changeRequest.status, 'PendingApproval', 'current version submitted status');
   assertEqual(changeRequest.objectId, 'pending-template-tv-current-version-smoke', 'current version object');
 
-  const approved = await postJson(
+  const approvalResult = await postJsonWithStatus(
     `${baseUrl}/change-requests/${changeRequest.changeRequestId}/decision`,
     {
       actorId: 'version-checker-local-smoke',
@@ -367,7 +376,9 @@ async function verifyCurrentVersionChangeRequest() {
       reason: 'backend smoke current version approval',
     },
   );
+  const approved = approvalResult.body;
   changeRequestResponseSchema.parse(approved);
+  assertEqual(approvalResult.status, 200, 'current version decision status code');
   assertEqual(approved.status, 'Approved', 'current version approved status');
 
   const followUpChangeRequest = await postJson(
@@ -401,13 +412,15 @@ async function verifyMakerCheckerDecisionFlow() {
   );
   changeRequestResponseSchema.parse(changeRequest);
 
-  const submitted = await postJson(
+  const submitChangeRequestResult = await postJsonWithStatus(
     `${baseUrl}/change-requests/${changeRequest.changeRequestId}/submit`,
     {
       actorId: 'maker-local-smoke',
     },
   );
+  const submitted = submitChangeRequestResult.body;
   changeRequestResponseSchema.parse(submitted);
+  assertEqual(submitChangeRequestResult.status, 200, 'submit change request status code');
   assertEqual(submitted.status, 'PendingApproval', 'submitted change request status');
   assertEqual(submitted.submittedBy, 'maker-local-smoke', 'submitted actor');
 
@@ -445,7 +458,7 @@ async function verifyMakerCheckerDecisionFlow() {
   assertEqual(selfApprovalResponse.status, 403, 'self approval status');
   assertEqual(selfApprovalBody.error?.code, 'access_denied', 'self approval error code');
 
-  const approved = await postJson(
+  const decisionResult = await postJsonWithStatus(
     `${baseUrl}/change-requests/${changeRequest.changeRequestId}/decision`,
     {
       actorId: 'checker-local-smoke',
@@ -453,7 +466,9 @@ async function verifyMakerCheckerDecisionFlow() {
       reason: 'backend smoke checker approval',
     },
   );
+  const approved = decisionResult.body;
   changeRequestResponseSchema.parse(approved);
+  assertEqual(decisionResult.status, 200, 'checker decision status code');
   assertEqual(approved.status, 'Approved', 'checker decision status');
   assertEqual(approved.checkedBy, 'checker-local-smoke', 'checker actor');
 

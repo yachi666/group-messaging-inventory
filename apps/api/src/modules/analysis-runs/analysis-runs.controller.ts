@@ -61,6 +61,7 @@ export class AnalysisRunsController {
   }
 
   @Post('analysis-runs/:runId/confirm')
+  @HttpCode(HttpStatus.OK)
   @RequiresRoles('analysis_reader', 'analysis_runner')
   confirmAnalysisRun(@Param('runId') runId: string) {
     return this.analysisRuns.confirmRun(runId);
@@ -149,6 +150,7 @@ export class AnalysisRunsController {
   }
 
   @Post('change-requests/:changeRequestId/submit')
+  @HttpCode(HttpStatus.OK)
   @RequiresRoles('change_maker')
   submitChangeRequest(@Param('changeRequestId') changeRequestId: string, @Body() body: unknown) {
     const request = submitChangeRequestSchema.parse(body) satisfies SubmitChangeRequestRequest;
@@ -160,6 +162,7 @@ export class AnalysisRunsController {
   }
 
   @Post('change-requests/:changeRequestId/decision')
+  @HttpCode(HttpStatus.OK)
   @RequiresRoles('change_checker')
   decideChangeRequest(@Param('changeRequestId') changeRequestId: string, @Body() body: unknown) {
     const request = decideChangeRequestSchema.parse(body) satisfies DecideChangeRequestRequest;
