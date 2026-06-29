@@ -19,6 +19,8 @@ export type SimilarTemplateMatch = {
 
 export type AiTemplateAnalysisResult = {
   id: string;
+  templateUuid: string;
+  versionId: string;
   templateId: string;
   name: string;
   channel: Channel;

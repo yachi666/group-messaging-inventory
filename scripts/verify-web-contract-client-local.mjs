@@ -10,6 +10,10 @@ const analysisApi = await readFile(
   path.join(repoRoot, 'apps/web/src/features/ai-analysis/analysisApi.ts'),
   'utf8',
 );
+const aiTemplateAnalysisPage = await readFile(
+  path.join(repoRoot, 'apps/web/src/features/ai-analysis/AiTemplateAnalysisPage.tsx'),
+  'utf8',
+);
 const changeRequestApi = await readFile(
   path.join(repoRoot, 'apps/web/src/features/review-queue/changeRequestApi.ts'),
   'utf8',
@@ -39,9 +43,33 @@ if (dependencies['@gmi/contracts'] !== '0.1.0') {
 for (const expectedSchema of [
   'aiTemplateAnalysisResultsResponseSchema',
   'latestAnalysisEvaluationResponseSchema',
+  'submitAnalysisRunResponseSchema',
+  'analysisRunResponseSchema',
 ]) {
   if (!analysisApi.includes(expectedSchema)) {
     throw new Error(`analysisApi.ts must parse API responses with ${expectedSchema}.`);
+  }
+}
+
+for (const expectedSource of [
+  'submitTemplateReanalysisRun',
+  'fetchAnalysisRun',
+  "roles: ['analysis_runner']",
+  "roles: ['analysis_reader']",
+]) {
+  if (!analysisApi.includes(expectedSource)) {
+    throw new Error(`analysisApi.ts must keep the API-backed analysis run flow: ${expectedSource}`);
+  }
+}
+
+for (const expectedSource of [
+  'data-testid="analysis-run-reanalysis"',
+  'data-testid="analysis-run-status"',
+  'submitTemplateReanalysisRun({',
+  'fetchAnalysisRun(submittedRun.runId)',
+]) {
+  if (!aiTemplateAnalysisPage.includes(expectedSource)) {
+    throw new Error(`AiTemplateAnalysisPage.tsx must keep the API-backed re-analysis flow: ${expectedSource}`);
   }
 }
 

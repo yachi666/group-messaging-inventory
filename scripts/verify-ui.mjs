@@ -116,6 +116,7 @@ await page.getByTestId('ai-template-analysis-page').waitFor();
 await page.getByTestId('analysis-release-gate').waitFor();
 await page.getByText('Release gate', { exact: true }).waitFor();
 await page.getByText('ReadyForPromotion', { exact: true }).waitFor();
+await page.getByTestId('analysis-run-reanalysis').waitFor();
 
 // The shell and primary page title respond to the locale control.
 await page.getByLabel('Language').selectOption('zh-CN');

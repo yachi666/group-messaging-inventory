@@ -7,6 +7,8 @@ import type {
 export const initialAnalysisResults = [
   {
     id: 'ATA-001248',
+    templateUuid: 'tpluuid-2048',
+    versionId: 'tv-2048-v1',
     templateId: 'TPL-2048',
     name: 'Payment due reminder',
     channel: 'SMS',
@@ -37,6 +39,8 @@ export const initialAnalysisResults = [
   },
   {
     id: 'ATA-001249',
+    templateUuid: 'tpluuid-3091',
+    versionId: 'tv-3091-v1',
     templateId: 'TPL-3091',
     name: 'Card fraud alert',
     channel: 'Push',
@@ -66,6 +70,8 @@ export const initialAnalysisResults = [
   },
   {
     id: 'ATA-001250',
+    templateUuid: 'tpluuid-4100',
+    versionId: 'tv-4100-v1',
     templateId: 'TPL-4100',
     name: 'OTP verification',
     channel: 'SMS',
@@ -89,6 +95,8 @@ export const initialAnalysisResults = [
   },
   {
     id: 'ATA-001251',
+    templateUuid: 'tpluuid-5120',
+    versionId: 'tv-5120-v1',
     templateId: 'TPL-5120',
     name: 'Mortgage renewal notice',
     channel: 'Email',
@@ -118,6 +126,8 @@ export const initialAnalysisResults = [
   },
   {
     id: 'ATA-001252',
+    templateUuid: 'tpluuid-6133',
+    versionId: 'tv-6133-v1',
     templateId: 'TPL-6133',
     name: 'Statement available',
     channel: 'In-app',
@@ -145,6 +155,8 @@ export const initialAnalysisResults = [
   },
   {
     id: 'ATA-001253',
+    templateUuid: 'tpluuid-7204',
+    versionId: 'tv-7204-v1',
     templateId: 'TPL-7204',
     name: 'Loan disbursement',
     channel: 'Email',

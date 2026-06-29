@@ -19,13 +19,16 @@ import {
   confirmAnalysisRun,
   createLifecycleChangeRequest,
   createMappingChangeRequest,
+  fetchAnalysisRun,
   fetchAnalysisResults,
   fetchLatestAnalysisEvaluation,
   getFallbackAnalysisResults,
   getFallbackLatestAnalysisEvaluation,
+  submitTemplateReanalysisRun,
 } from './analysisApi';
 import { initialAnalysisResults } from './analysisData';
 import type {
+  AiMessageType,
   AiTemplateAnalysisResult,
   AnalysisLifecycleStatus,
   AnalysisReviewStatus,
@@ -34,6 +37,25 @@ import type {
 } from './analysisTypes';
 
 type StatusChipTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'accent';
+
+type AnalysisRunStatus =
+  | 'Queued'
+  | 'Running'
+  | 'Retrying'
+  | 'Succeeded'
+  | 'Failed'
+  | 'Cancelled';
+
+type ActiveAnalysisRun = {
+  runId: string;
+  status: AnalysisRunStatus;
+  versionId: string;
+  pollUrl: string;
+  workflowStarted: boolean;
+  error?: string;
+};
+
+const terminalRunStatuses = ['Succeeded', 'Failed', 'Cancelled'] as const;
 
 const reviewStatusLabelKeys = {
   'needs-review': 'analysis.statusNeedsReview',
@@ -96,6 +118,17 @@ function getReleaseGateTone(status: LatestAnalysisEvaluation['release']['status'
   return status === 'ReadyForPromotion' ? 'success' : 'danger';
 }
 
+function getAnalysisRunTone(status: AnalysisRunStatus): StatusChipTone {
+  if (status === 'Succeeded') return 'success';
+  if (status === 'Failed' || status === 'Cancelled') return 'danger';
+  if (status === 'Retrying') return 'warning';
+  return 'info';
+}
+
+function isTerminalAnalysisRunStatus(status: AnalysisRunStatus) {
+  return terminalRunStatuses.some((terminalStatus) => terminalStatus === status);
+}
+
 function getScoreWidth(score: number) {
   return `${Math.max(0, Math.min(100, score))}%`;
 }
@@ -108,6 +141,25 @@ function getEvaluationEvidenceLabel(evaluation: LatestAnalysisEvaluation) {
   return evaluation.source.kind === 'postgres'
     ? 'Postgres evidence'
     : 'Replay fallback';
+}
+
+function normalizeAiMessageType(value: string): AiMessageType {
+  const normalized = value.toLowerCase().replace(/[\s_-]+/g, '');
+  if (normalized.includes('otp') || normalized.includes('verification')) return 'OTP';
+  if (
+    normalized.includes('transaction') ||
+    normalized.includes('payment') ||
+    normalized.includes('statement')
+  ) {
+    return 'Transaction';
+  }
+  if (normalized.includes('marketing') || normalized.includes('promotion')) return 'Marketing';
+  if (normalized.includes('profile') || normalized.includes('update')) return 'Profile update';
+  return 'Alert';
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function getPlaceholderKind(placeholder: string) {
@@ -147,6 +199,7 @@ export function AiTemplateAnalysisPage() {
     getFallbackLatestAnalysisEvaluation(),
   );
   const [evaluationSource, setEvaluationSource] = useState<'mock' | 'api'>('mock');
+  const [activeAnalysisRun, setActiveAnalysisRun] = useState<ActiveAnalysisRun | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -224,6 +277,115 @@ export function AiTemplateAnalysisPage() {
         result.id === selectedResult.id ? { ...result, ...changes } : result,
       ),
     );
+  }
+
+  async function runReanalysis() {
+    if (activeAnalysisRun && !isTerminalAnalysisRunStatus(activeAnalysisRun.status)) {
+      return;
+    }
+
+    setNoticeKey(null);
+    setActiveAnalysisRun({
+      runId: 'pending',
+      status: 'Queued',
+      versionId: selectedResult.versionId,
+      pollUrl: `/template-versions/${selectedResult.versionId}/analysis-runs`,
+      workflowStarted: false,
+    });
+
+    try {
+      const submittedRun = await submitTemplateReanalysisRun({
+        versionId: selectedResult.versionId,
+        reason: `Manual re-analysis requested from AI Template Analysis for ${selectedResult.templateId}.`,
+      });
+
+      setActiveAnalysisRun({
+        runId: submittedRun.runId,
+        status: submittedRun.status,
+        versionId: submittedRun.versionId,
+        pollUrl: submittedRun.pollUrl,
+        workflowStarted: submittedRun.workflow.started,
+      });
+
+      let run = await fetchAnalysisRun(submittedRun.runId);
+
+      for (let attempt = 0; attempt < 4 && !isTerminalAnalysisRunStatus(run.status); attempt += 1) {
+        setActiveAnalysisRun((currentRun) => ({
+          runId: run.runId,
+          status: run.status,
+          versionId: run.versionId,
+          pollUrl: currentRun?.pollUrl ?? submittedRun.pollUrl,
+          workflowStarted: currentRun?.workflowStarted ?? submittedRun.workflow.started,
+        }));
+        await sleep(1200);
+        run = await fetchAnalysisRun(submittedRun.runId);
+      }
+
+      setActiveAnalysisRun((currentRun) => ({
+        runId: run.runId,
+        status: run.status,
+        versionId: run.versionId,
+        pollUrl: currentRun?.pollUrl ?? submittedRun.pollUrl,
+        workflowStarted: currentRun?.workflowStarted ?? submittedRun.workflow.started,
+      }));
+
+      if (run.output) {
+        const nearestMatch = run.output.candidateMatches[0]
+          ? {
+              templateId: run.output.candidateMatches[0].useCaseId,
+              name: run.output.candidateMatches[0].name,
+              similarity: run.output.candidateMatches[0].similarity,
+            }
+          : undefined;
+
+        setResults((current) =>
+          current.map((result) =>
+            result.id === selectedResult.id
+              ? {
+                  ...result,
+                  id: run.runId,
+                  templateUuid: run.templateUuid,
+                  versionId: run.versionId,
+                  templateId: run.versionId,
+                  analyzedAt: run.completedAt ?? run.startedAt ?? result.analyzedAt,
+                  extractedPattern: run.output?.extractedPattern ?? result.extractedPattern,
+                  maskedMessage: run.output?.extractedPattern ?? result.maskedMessage,
+                  placeholders:
+                    run.output?.placeholders.map((placeholder) => placeholder.token) ??
+                    result.placeholders,
+                  aiMessageType: normalizeAiMessageType(
+                    run.output?.aiMessageType ?? result.aiMessageType,
+                  ),
+                  governanceClassification:
+                    run.output?.governanceClassificationSuggestion ??
+                    result.governanceClassification,
+                  confidence: run.output?.overallConfidence ?? result.confidence,
+                  qualityScore: run.output?.qualityScore ?? result.qualityScore,
+                  ...(nearestMatch ? { nearestMatch } : {}),
+                  anomalies: run.output?.anomalies ?? result.anomalies,
+                  reviewStatus:
+                    (run.output?.overallConfidence ?? result.confidence) >= 90
+                      ? 'reviewed'
+                      : 'needs-review',
+                  explanation: run.output?.businessExplanation ?? result.explanation,
+                }
+              : result,
+          ),
+        );
+        setSelectedId(run.runId);
+      }
+
+      setNoticeKey('analysis.noticeReanalysisSubmitted');
+    } catch (error) {
+      setActiveAnalysisRun((currentRun) => ({
+        runId: currentRun?.runId ?? 'failed',
+        status: 'Failed',
+        versionId: currentRun?.versionId ?? selectedResult.versionId,
+        pollUrl: currentRun?.pollUrl ?? `/template-versions/${selectedResult.versionId}/analysis-runs`,
+        workflowStarted: currentRun?.workflowStarted ?? false,
+        error: error instanceof Error ? error.message : 'Re-analysis failed',
+      }));
+    }
   }
 
   function selectResult(resultId: string) {
@@ -357,6 +519,19 @@ export function AiTemplateAnalysisPage() {
             </div>
           </div>
           <div className="analysis-header-actions">
+            <button
+              className="button"
+              data-testid="analysis-run-reanalysis"
+              disabled={
+                activeAnalysisRun
+                  ? !isTerminalAnalysisRunStatus(activeAnalysisRun.status)
+                  : false
+              }
+              onClick={runReanalysis}
+              type="button"
+            >
+              {t('analysis.runReanalysis')}
+            </button>
             <button className="button button-primary" data-testid="analysis-confirm" onClick={confirmAnalysis} type="button">
               {t('analysis.confirmClassification')}
             </button>
@@ -374,6 +549,19 @@ export function AiTemplateAnalysisPage() {
       </header>
 
       {noticeKey ? <div className="analysis-workbench-notice" data-testid="analysis-notice">{t(noticeKey)}</div> : null}
+      {activeAnalysisRun ? (
+        <div className="analysis-workbench-notice" data-testid="analysis-run-status">
+          <strong>{t('analysis.reanalysisRun')}</strong>
+          <StatusChip tone={getAnalysisRunTone(activeAnalysisRun.status)}>
+            {activeAnalysisRun.status}
+          </StatusChip>
+          <span>{activeAnalysisRun.runId}</span>
+          <small>
+            {activeAnalysisRun.error ??
+              `${activeAnalysisRun.workflowStarted ? 'Temporal' : 'API'} · ${activeAnalysisRun.pollUrl}`}
+          </small>
+        </div>
+      ) : null}
 
       <section className="analysis-release-gate" data-testid="analysis-release-gate">
         <div className="analysis-release-status">

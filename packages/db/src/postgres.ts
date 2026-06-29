@@ -514,6 +514,7 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
         'ar.version_id',
         'ar.created_at',
         'ar.masked_input_summary',
+        'tv.template_uuid',
         'tv.masked_content',
         'ao.extracted_pattern',
         'ao.placeholders_json',
@@ -546,6 +547,8 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
 
       return {
         id: row.run_id,
+        templateUuid: row.template_uuid,
+        versionId: row.version_id,
         templateId: row.version_id,
         name: row.version_id,
         channel: 'SMS',

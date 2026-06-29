@@ -226,6 +226,8 @@ export const confirmAnalysisRunResponseSchema = z.object({
 
 export const aiTemplateAnalysisResultSchema = z.object({
   id: z.string().min(1),
+  templateUuid: z.string().min(1),
+  versionId: z.string().min(1),
   templateId: z.string().min(1),
   name: z.string().min(1),
   channel: channelSchema,

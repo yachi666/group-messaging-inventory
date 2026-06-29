@@ -102,6 +102,16 @@ try {
   if (!Array.isArray(resultsResponse.results) || resultsResponse.results.length === 0) {
     throw new Error('analysis results projection was empty');
   }
+  assertEqual(
+    typeof resultsResponse.results[0].templateUuid,
+    'string',
+    'analysis result template uuid',
+  );
+  assertEqual(
+    typeof resultsResponse.results[0].versionId,
+    'string',
+    'analysis result version id',
+  );
 
   const latestEvaluation = await getJson(`${baseUrl}/analysis-evaluations/latest`);
   latestAnalysisEvaluationResponseSchema.parse(latestEvaluation);

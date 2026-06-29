@@ -577,6 +577,7 @@ Current repository status:
 - `POST /analysis-evaluations/release-evidence` accepts hash-verified release evidence through the TypeScript API so production-impacting evidence writes can be protected by API auth, request validation, and audit-adjacent controls instead of direct table writes.
 - `npm run test:evals:release-api:pg` verifies the API-owned release evidence ingestion path, including invalid-hash rejection and latest-evaluation readback.
 - `GET /analysis-evaluations/latest` exposes the latest gate summary and promotion evidence hash through the NestJS API for dashboards and CI checks. It reads persisted `analysis_evaluations` and `pipeline_releases` when `DATABASE_URL` is set, and falls back to the local replay gate without a database. The response includes source provenance (`source.kind`, `source.persisted`, and `source.generatedAt`) so dashboards and approval workflows can distinguish Postgres-backed release evidence from non-persisted replay fallback data.
+- The AI Template Analysis frontend can now submit manual re-analysis through `POST /template-versions/{versionId}/analysis-runs` and poll `GET /analysis-runs/{runId}`. Analysis result projections include both `templateUuid` and `versionId`, keeping display labels separate from command identities.
 - `npm run test:no-infra` is the local and CI entrypoint for the no-infrastructure harness gate set.
 - `.github/workflows/ci.yml` runs `npm run test:no-infra` on pull requests and pushes, and `npm run test:ci-workflow` verifies that the workflow and package script continue to include the required gates.
 - The next expansion should add reviewer-labeled production samples to the masking fixture set once data handling approvals are available.
@@ -968,6 +969,7 @@ Query API requirements:
 - Apply row-level access scope before returning results.
 - Return only approved values by default, with explicit pending-change metadata.
 - Include `etag` or `revision` for objects that can be changed through Change Requests.
+- Projection responses that drive commands must carry stable object identities such as `templateUuid`, `versionId`, and `runId`; UI labels like external template IDs must not be reused as command identifiers.
 
 ### 10.2 Command APIs
 

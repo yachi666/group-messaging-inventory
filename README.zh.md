@@ -219,6 +219,8 @@ npm run test:backend
 
 该 smoke test 覆盖 API validation、analysis run submission、repository domain errors、Change Request 创建、maker-checker submit/decision、禁止自审批、待审批队列 projection，以及 Change Request evidence package。
 
+AI Template Analysis 前端使用同一组 contract 读取结果 projection，并可以通过 `POST /template-versions/{versionId}/analysis-runs` 发起人工 re-analysis，再用返回的 run id 轮询 `GET /analysis-runs/{runId}`。Analysis result projection 会同时返回 `templateUuid` 与 `versionId`，保证 UI command 使用稳定治理身份，而不是展示标签。
+
 运行 golden dataset evaluation gate：
 
 ```bash

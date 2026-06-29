@@ -491,6 +491,8 @@ export type LatestEvaluationRowsRecord = {
 
 export type AiTemplateAnalysisProjection = {
   id: string;
+  templateUuid: string;
+  versionId: string;
   templateId: string;
   name: string;
   channel: 'SMS' | 'Email' | 'Push' | 'In-app';
@@ -701,6 +703,8 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
       .filter(hasCompletedOutput)
       .map((run) => ({
       id: run.runId,
+      templateUuid: run.templateUuid,
+      versionId: run.versionId,
       templateId: run.versionId,
       name: run.versionId,
       channel: 'SMS' as const,
@@ -734,6 +738,8 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
     return [
       {
         id: 'ATA-LOCAL-001',
+        templateUuid: 'tpluuid_local_scaffold',
+        versionId: 'tv_local_scaffold',
         templateId: 'TPL-LOCAL-001',
         name: 'Payment due reminder',
         channel: 'SMS',

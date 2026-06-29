@@ -4283,6 +4283,10 @@ body:has(.review-workbench) .chat-launcher-mark { width: 32px; height: 32px; }
 }
 
 .analysis-workbench-notice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
   padding: 9px 12px;
   color: var(--color-info);
   font-size: 11px;
@@ -4290,6 +4294,13 @@ body:has(.review-workbench) .chat-launcher-mark { width: 32px; height: 32px; }
   background: var(--color-info-soft);
   border: 1px solid var(--color-lavender);
   border-radius: var(--radius-sm);
+}
+
+.analysis-workbench-notice small {
+  flex-basis: 100%;
+  color: var(--color-muted);
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .analysis-release-gate {

@@ -1,6 +1,10 @@
 import {
   aiTemplateAnalysisResultsResponseSchema,
+  analysisRunResponseSchema,
   latestAnalysisEvaluationResponseSchema,
+  submitAnalysisRunResponseSchema,
+  type AnalysisRunResponse,
+  type SubmitAnalysisRunResponse,
 } from '@gmi/contracts';
 
 import {
@@ -45,6 +49,46 @@ export async function fetchLatestAnalysisEvaluation(
   const payload = latestAnalysisEvaluationResponseSchema.parse(await response.json());
 
   return payload;
+}
+
+export async function submitTemplateReanalysisRun(input: {
+  versionId: string;
+  reason: string;
+}): Promise<SubmitAnalysisRunResponse> {
+  const response = await apiFetch(
+    `/template-versions/${encodeURIComponent(input.versionId)}/analysis-runs`,
+    {
+      body: JSON.stringify({
+        triggerType: 'manual_reanalysis',
+        reason: input.reason,
+        effort: 'normal',
+        requestedOutputs: ['analysis_output', 'policy_routing'],
+      }),
+      headers: {
+        'idempotency-key': `web-reanalysis-${input.versionId}-${Date.now()}`,
+      },
+      method: 'POST',
+      roles: ['analysis_runner'],
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to submit re-analysis run: ${response.status}`);
+  }
+
+  return submitAnalysisRunResponseSchema.parse(await response.json());
+}
+
+export async function fetchAnalysisRun(runId: string): Promise<AnalysisRunResponse> {
+  const response = await apiFetch(`/analysis-runs/${encodeURIComponent(runId)}`, {
+    roles: ['analysis_reader'],
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load analysis run: ${response.status}`);
+  }
+
+  return analysisRunResponseSchema.parse(await response.json());
 }
 
 export async function confirmAnalysisRun(runId: string): Promise<void> {
