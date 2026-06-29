@@ -181,6 +181,14 @@ postgres://gmi:gmi@127.0.0.1:55432/gmi
 
 Temporal runs on `127.0.0.1:7233`, with the Temporal UI on `http://127.0.0.1:8233`.
 
+Run the local deploy profile with API, worker, and web containers:
+
+```bash
+docker compose --profile app up --build gmi-api gmi-worker gmi-web
+```
+
+The containerized API is available on `http://127.0.0.1:4000`, and the web app is served on `http://127.0.0.1:5080`. The app profile uses `AI_PROVIDER=noop`, header-based local authorization, Postgres, and Temporal by default. Run `npm run db:migrate` before starting a fresh database.
+
 Run type checks:
 
 ```bash

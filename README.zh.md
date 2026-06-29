@@ -142,6 +142,14 @@ postgres://gmi:gmi@127.0.0.1:55432/gmi
 
 Temporal 运行在 `127.0.0.1:7233`，Temporal UI 位于 `http://127.0.0.1:8233`。
 
+使用本地 deploy profile 一起启动 API、worker 与 web 容器：
+
+```bash
+docker compose --profile app up --build gmi-api gmi-worker gmi-web
+```
+
+容器化 API 位于 `http://127.0.0.1:4000`，前端位于 `http://127.0.0.1:5080`。该 app profile 默认使用 `AI_PROVIDER=noop`、本地 header 授权、Postgres 与 Temporal。全新数据库启动前需要先运行 `npm run db:migrate`。
+
 运行类型检查：
 
 ```bash
@@ -165,9 +173,10 @@ npm run preview
 在提交 PR 或发布前，建议运行：
 
 ```bash
-npm run typecheck
-npm run build
+npm run test:no-infra
 ```
+
+该命令会执行类型检查、secret scan、后台 smoke、PII masking、golden evals、release evidence、CI workflow、部署配置、构建、前端 bundle 和本地 UI 验证。
 
 仓库还包含基于 Playwright 的 UI 验证脚本：
 

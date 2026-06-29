@@ -60,6 +60,75 @@ services:
     ports:
       - '8233:8080'
 
+  gmi-api:
+    profiles:
+      - app
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: gmi-api
+    depends_on:
+      gmi-postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgres://gmi:gmi@gmi-postgres:5432/gmi
+      ANALYSIS_WORKFLOW_DRIVER: temporal
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: template-analysis
+      AI_PROVIDER: noop
+      API_AUTH_MODE: header
+    ports:
+      - '4000:4000'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  gmi-worker:
+    profiles:
+      - app
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: gmi-worker
+    depends_on:
+      gmi-postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgres://gmi:gmi@gmi-postgres:5432/gmi
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: template-analysis
+      AI_PROVIDER: noop
+
+  gmi-web:
+    profiles:
+      - app
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://127.0.0.1:4000
+    container_name: gmi-web
+    depends_on:
+      gmi-api:
+        condition: service_healthy
+    ports:
+      - '5080:80'
+
 volumes:
   gmi_postgres_data:
   gmi_temporal_postgres_data:

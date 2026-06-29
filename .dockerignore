@@ -1,0 +1,15 @@
+.git
+.github
+.DS_Store
+node_modules
+npm-debug.log*
+coverage
+apps/*/dist
+packages/*/dist
+packages/*/*.tsbuildinfo
+.env
+.env.*
+!.env.example
+README*.md
+docs
+design
