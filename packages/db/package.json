@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit --pretty false",
     "migrate": "tsx src/migrate.ts",
+    "migrate:prod": "node dist/migrate.js",
     "smoke:pg": "tsx src/smoke.ts"
   },
   "dependencies": {

@@ -60,6 +60,20 @@ services:
     ports:
       - '8233:8080'
 
+  gmi-db-migrate:
+    profiles:
+      - app
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: gmi-db-migrate
+    depends_on:
+      gmi-postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://gmi:gmi@gmi-postgres:5432/gmi
+    command: ['npm', 'run', 'migrate:prod', '-w', '@gmi/db']
+
   gmi-api:
     profiles:
       - app
@@ -68,8 +82,8 @@ services:
       dockerfile: apps/api/Dockerfile
     container_name: gmi-api
     depends_on:
-      gmi-postgres:
-        condition: service_healthy
+      gmi-db-migrate:
+        condition: service_completed_successfully
       temporal:
         condition: service_started
     environment:

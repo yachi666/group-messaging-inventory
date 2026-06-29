@@ -1488,14 +1488,25 @@ Start as a modular monolith plus Temporal worker, not as many microservices.
 Initial deployable units:
 
 ```text
+web
 api
 worker
+db-migrate one-shot job
 eval-worker optional
 postgres
 temporal
 ```
 
 Keep module boundaries strict in code, but avoid splitting into separate network services until there is operational pressure. The first hard boundary should be the provider adapter interface, not a microservice boundary.
+
+For the local deploy profile, the API, worker, and web app should be containerized as separate runtime units while sharing the same npm-workspaces source tree and shared packages at build time. Database migration should run as a one-shot job before the API starts, not as a manual prerequisite and not inside the API request path. This keeps startup deterministic, makes fresh environments repeatable, and matches the intended future promotion flow where schema changes are explicit release steps.
+
+The current local Docker Compose profile follows that shape:
+
+- `gmi-db-migrate` runs `@gmi/db` production migrations and must complete successfully before `gmi-api`.
+- `gmi-api` exposes the NestJS API on port 4000 and uses header auth, Temporal workflow driver, Postgres, and the deterministic `noop` AI provider by default.
+- `gmi-worker` consumes the same Temporal task queue and writes analysis evidence through the shared repository layer.
+- `gmi-web` serves the Vite production bundle through nginx on port 5080.
 
 ### 14.11 Not Recommended
 
