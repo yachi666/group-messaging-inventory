@@ -116,7 +116,11 @@ if (!reviewTaskApi.includes('reviewTasksResponseSchema')) {
   throw new Error('reviewTaskApi.ts must parse API responses with reviewTasksResponseSchema.');
 }
 
-if (!reviewTaskApi.includes('/review-tasks?status=Open&objectType=template&limit=100')) {
+if (!reviewTaskApi.includes('fetchReviewTasksByStatuses')) {
+  throw new Error('reviewTaskApi.ts must expose status-filtered review task loading.');
+}
+
+if (!reviewTaskApi.includes('/review-tasks?status=${encodeURIComponent(status)}&objectType=template&limit=100')) {
   throw new Error('reviewTaskApi.ts must call the filtered review task API.');
 }
 
@@ -149,12 +153,16 @@ for (const expectedApiPath of [
 }
 
 for (const expectedSource of [
-  'fetchOpenReviewTasks(controller.signal)',
+  'fetchReviewTasksForTab(activeReviewQueueTab, controller.signal)',
+  "fetchReviewTasksByStatuses(['Assigned', 'InReview', 'PendingApproval'], signal)",
+  "fetchReviewTasksByStatuses(['Resolved', 'Dismissed'], signal)",
+  'filterFallbackQueueItems(activeReviewQueueTab)',
   'await transitionReviewTask({',
   'tasks.map(toQueueItem)',
   'data-testid="review-task-claim"',
   'data-testid="review-task-start"',
   'data-testid="review-task-resolve"',
+  'updateQueueItemsForActiveTab(items, updatedItem, activeReviewQueueTab)',
   'Review task API unavailable. Showing local discovery queue.',
   'data-testid="review-task-refresh"',
   'fetchPendingChangeRequests(controller.signal)',

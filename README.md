@@ -162,7 +162,7 @@ curl -H 'x-actor-id: auditor-local' \
 `/audit-events` supports filtering by `objectType`, `objectId`, `sourceRunId`, `changeRequestId`, and `limit`.
 `/review-tasks` exposes analysis review tasks with `status`, `objectType`, `objectId`, `sourceRunId`, and `limit` filters so review-required analysis results can be traced from the workbench into a reviewer queue.
 `POST /review-tasks/{taskId}/transition` lets reviewers claim, start, escalate, resolve, or dismiss review tasks with actor attribution and audit events.
-The Review Queue Discovery view reads open template review tasks from this API, can claim/start/resolve API-backed tasks, and falls back to local discovery data when the API is unavailable.
+The Review Queue Discovery, My Tasks, and Completed tabs load status-filtered template review tasks from this API. API-backed tasks can be claimed, started, and resolved from the queue, with local fallback data when the API is unavailable.
 
 API submission can either enqueue only or start the Temporal workflow. For the full local harness path, run Temporal and set:
 

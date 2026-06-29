@@ -23,7 +23,7 @@ import {
   type ChangeRequest,
   type ChangeRequestEvidencePackage,
 } from './changeRequestApi';
-import { fetchOpenReviewTasks, transitionReviewTask, type ReviewTask } from './reviewTaskApi';
+import { fetchReviewTasksByStatuses, transitionReviewTask, type ReviewTask } from './reviewTaskApi';
 
 type QueueStatus = 'Needs review' | 'Assigned' | 'In review' | 'Pending approval' | 'Resolved' | 'Dismissed' | 'Overdue';
 
@@ -42,6 +42,8 @@ type QueueItem = {
   assignedTo?: string | null;
   isApiBacked?: boolean;
 };
+
+type ReviewTaskQueueTab = 'Discovery Review' | 'My Tasks' | 'Completed';
 
 const fallbackQueueItems: QueueItem[] = [
   { id: 'UC-76821', taskId: 'UC-76821', name: 'Card repayment reminder', platform: 'MDP', channel: 'SMS', market: 'Hong Kong', confidence: 87, priority: 'High', age: '3d', status: 'Needs review' },
@@ -99,26 +101,36 @@ export function ReviewQueuePage() {
   const [isLoadingReviewTasks, setIsLoadingReviewTasks] = useState(false);
   const [transitioningTaskId, setTransitioningTaskId] = useState<string | null>(null);
 
-  const queueSource = apiQueueItems ?? fallbackQueueItems;
+  const activeReviewQueueTab = toReviewQueueTab(activeTab);
+  const fallbackQueueSource = useMemo(
+    () => filterFallbackQueueItems(activeReviewQueueTab),
+    [activeReviewQueueTab],
+  );
+  const queueSource = apiQueueItems ?? fallbackQueueSource;
   const visibleItems = useMemo(() => queueSource.filter((item) => `${item.name} ${item.id} ${item.market}`.toLowerCase().includes(query.toLowerCase())), [query, queueSource]);
-  const selected = queueSource.find((item) => item.id === selectedId) ?? queueSource[0] ?? fallbackQueueItems[0];
+  const selected = queueSource.find((item) => item.id === selectedId) ?? queueSource[0] ?? fallbackQueueSource[0] ?? fallbackQueueItems[0];
   const selectedTaskIsTerminal =
     selected.reviewTaskStatus === 'Resolved' || selected.reviewTaskStatus === 'Dismissed';
   const selectedTaskIsBusy = transitioningTaskId === selected.taskId;
+  const localQueueLabel = activeReviewQueueTab
+    ? `Local ${activeReviewQueueTab.toLowerCase()} queue`
+    : 'Local review queue';
 
   function loadReviewTasks() {
     const controller = new AbortController();
     setIsLoadingReviewTasks(true);
     setReviewTaskNotice(null);
+    setApiQueueItems(null);
 
-    fetchOpenReviewTasks(controller.signal)
+    const queueLabel = activeReviewQueueTab ?? 'Discovery Review';
+    fetchReviewTasksForTab(activeReviewQueueTab, controller.signal)
       .then((tasks) => {
         const taskItems = tasks.map(toQueueItem);
         setApiQueueItems(taskItems);
         setReviewTaskNotice(
           taskItems.length > 0
-            ? `Loaded ${taskItems.length} open review task${taskItems.length === 1 ? '' : 's'} from API.`
-            : 'No open API review tasks.',
+            ? `Loaded ${taskItems.length} ${queueLabel.toLowerCase()} review task${taskItems.length === 1 ? '' : 's'} from API.`
+            : `No API review tasks for ${queueLabel}.`,
         );
         if (taskItems[0]) {
           setSelectedId(taskItems[0].id);
@@ -136,16 +148,20 @@ export function ReviewQueuePage() {
   }
 
   useEffect(() => {
+    if (!activeReviewQueueTab) {
+      return undefined;
+    }
+
     const controller = loadReviewTasks();
 
     return () => controller.abort();
-  }, []);
+  }, [activeReviewQueueTab]);
 
   useEffect(() => {
     if (!queueSource.some((item) => item.id === selectedId)) {
-      setSelectedId(queueSource[0]?.id ?? fallbackQueueItems[0].id);
+      setSelectedId(queueSource[0]?.id ?? fallbackQueueSource[0]?.id ?? fallbackQueueItems[0].id);
     }
-  }, [queueSource, selectedId]);
+  }, [fallbackQueueSource, queueSource, selectedId]);
 
   function flash(message: string) {
     setNotice(message);
@@ -172,11 +188,11 @@ export function ReviewQueuePage() {
       });
       const updatedItem = toQueueItem(updatedTask);
       setApiQueueItems((items) =>
-        items?.map((item) => (item.taskId === updatedItem.taskId ? updatedItem : item)) ?? [
-          updatedItem,
-        ],
+        updateQueueItemsForActiveTab(items, updatedItem, activeReviewQueueTab),
       );
-      setSelectedId(updatedItem.id);
+      if (belongsToQueueTab(updatedItem, activeReviewQueueTab)) {
+        setSelectedId(updatedItem.id);
+      }
       setReviewTaskNotice(`Review task ${updatedItem.taskId} moved to ${updatedItem.status}.`);
     } catch {
       setReviewTaskNotice('Review task update failed. Refresh and try again.');
@@ -211,7 +227,7 @@ export function ReviewQueuePage() {
       </div>
 
       <div className="approval-sync-banner" role="status">
-        <span>{reviewTaskNotice ?? (apiQueueItems === null ? 'Local discovery queue' : 'API review tasks')}</span>
+        <span>{reviewTaskNotice ?? (apiQueueItems === null ? localQueueLabel : `API ${activeReviewQueueTab?.toLowerCase() ?? 'review'} tasks`)}</span>
         <button data-testid="review-task-refresh" disabled={isLoadingReviewTasks} onClick={() => loadReviewTasks()} type="button">
           <ArrowPathIcon />{isLoadingReviewTasks ? 'Refreshing' : 'Refresh review tasks'}
         </button>
@@ -305,6 +321,69 @@ export function ReviewQueuePage() {
 function Metric({ value, label }: { value: string; label: string }) { return <div><strong>{value}</strong><span>{label}</span></div>; }
 function WorkbenchSection({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) { return <section className="workbench-section"><header><h3>{title}</h3>{action}</header>{children}</section>; }
 function Field({ label, value }: { label: string; value: string }) { return <div className="business-field"><span>{label}</span><strong>{value}</strong><PencilSquareIcon /></div>; }
+
+function toReviewQueueTab(tab: string): ReviewTaskQueueTab | null {
+  if (tab === 'Discovery Review' || tab === 'My Tasks' || tab === 'Completed') {
+    return tab;
+  }
+
+  return null;
+}
+
+function fetchReviewTasksForTab(tab: ReviewTaskQueueTab | null, signal?: AbortSignal) {
+  if (tab === 'My Tasks') {
+    return fetchReviewTasksByStatuses(['Assigned', 'InReview', 'PendingApproval'], signal);
+  }
+
+  if (tab === 'Completed') {
+    return fetchReviewTasksByStatuses(['Resolved', 'Dismissed'], signal);
+  }
+
+  return fetchReviewTasksByStatuses(['Open'], signal);
+}
+
+function filterFallbackQueueItems(tab: ReviewTaskQueueTab | null) {
+  if (tab === 'My Tasks') {
+    return fallbackQueueItems.filter((item) => item.status === 'Pending approval');
+  }
+
+  if (tab === 'Completed') {
+    return fallbackQueueItems.filter((item) => item.status === 'Overdue');
+  }
+
+  return fallbackQueueItems.filter((item) => item.status === 'Needs review');
+}
+
+function belongsToQueueTab(item: QueueItem, tab: ReviewTaskQueueTab | null) {
+  if (tab === 'My Tasks') {
+    return (
+      item.reviewTaskStatus === 'Assigned' ||
+      item.reviewTaskStatus === 'InReview' ||
+      item.reviewTaskStatus === 'PendingApproval'
+    );
+  }
+
+  if (tab === 'Completed') {
+    return item.reviewTaskStatus === 'Resolved' || item.reviewTaskStatus === 'Dismissed';
+  }
+
+  return item.reviewTaskStatus === 'Open';
+}
+
+function updateQueueItemsForActiveTab(
+  items: QueueItem[] | null,
+  updatedItem: QueueItem,
+  tab: ReviewTaskQueueTab | null,
+) {
+  const currentItems = items ?? [];
+  const withoutUpdated = currentItems.filter((item) => item.taskId !== updatedItem.taskId);
+
+  if (!belongsToQueueTab(updatedItem, tab)) {
+    return withoutUpdated;
+  }
+
+  return [updatedItem, ...withoutUpdated];
+}
 
 function toQueueItem(task: ReviewTask): QueueItem {
   return {

@@ -23,21 +23,39 @@ type ReviewTaskTransitionStatus =
   | 'Resolved'
   | 'Dismissed';
 
+type ReviewTaskListStatus = ReviewTask['status'];
+
 export async function fetchOpenReviewTasks(
   signal?: AbortSignal,
 ): Promise<ReadonlyArray<ReviewTask>> {
-  const response = await apiFetch('/review-tasks?status=Open&objectType=template&limit=100', {
-    roles: ['analysis_reader'],
-    signal,
-  });
+  return fetchReviewTasksByStatuses(['Open'], signal);
+}
 
-  if (!response.ok) {
-    throw new Error(`Failed to load review tasks: ${response.status}`);
-  }
+export async function fetchReviewTasksByStatuses(
+  statuses: ReadonlyArray<ReviewTaskListStatus>,
+  signal?: AbortSignal,
+): Promise<ReadonlyArray<ReviewTask>> {
+  const taskGroups = await Promise.all(
+    statuses.map(async (status) => {
+      const response = await apiFetch(
+        `/review-tasks?status=${encodeURIComponent(status)}&objectType=template&limit=100`,
+        {
+          roles: ['analysis_reader'],
+          signal,
+        },
+      );
 
-  const payload = reviewTasksResponseSchema.parse(await response.json());
+      if (!response.ok) {
+        throw new Error(`Failed to load review tasks: ${response.status}`);
+      }
 
-  return payload.reviewTasks;
+      const payload = reviewTasksResponseSchema.parse(await response.json());
+
+      return payload.reviewTasks;
+    }),
+  );
+
+  return taskGroups.flat();
 }
 
 export async function transitionReviewTask(input: {
