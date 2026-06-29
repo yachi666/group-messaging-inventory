@@ -237,7 +237,7 @@ npm run test:backend
 
 This smoke test covers API validation, analysis run submission, repository domain errors, Change Request creation, maker-checker submission/decision, self-approval blocking, pending approval queue projection, Change Request evidence packages, and the local latest-evaluation query surface. Key success and error responses are parsed through the shared Zod response contracts in `packages/contracts`.
 
-The AI Template Analysis frontend uses the same contracts for result projections and can submit a manual re-analysis through `POST /template-versions/{versionId}/analysis-runs`, then poll `GET /analysis-runs/{runId}` with the returned run id. Analysis result projections include both `templateUuid` and `versionId` so UI commands use stable governance identities instead of display labels.
+The AI Template Analysis frontend uses the same contracts for result projections and can submit a manual re-analysis through `POST /template-versions/{versionId}/analysis-runs`, then poll `GET /analysis-runs/{runId}` with the returned run id. Analysis result projections include both `templateUuid` and `versionId` so UI commands use stable governance identities instead of display labels. They also carry routing metadata (`policyDecision`, `reviewTaskId`, and `changeRequestId`) so the workbench can show why a result is auto-recorded, review-required, or blocked.
 
 For the golden dataset evaluation gate, run:
 

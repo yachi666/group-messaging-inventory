@@ -513,6 +513,11 @@ export type AiTemplateAnalysisProjection = {
   owner: string;
   reviewStatus: 'needs-review' | 'reviewed' | 'merged';
   lifecycleStatus: 'active' | 'demised';
+  routing: {
+    reviewTaskId: string | null;
+    changeRequestId: string | null;
+    policyDecision: string;
+  };
   explanation: string[];
 };
 
@@ -728,6 +733,11 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
       reviewStatus:
         run.output.overallConfidence >= 90 ? ('reviewed' as const) : ('needs-review' as const),
       lifecycleStatus: 'active' as const,
+      routing: {
+        reviewTaskId: this.reviewTaskIndex.get(run.runId) ?? null,
+        changeRequestId: null,
+        policyDecision: this.reviewTaskIndex.has(run.runId) ? 'review_required' : 'auto_record',
+      },
       explanation: [...run.output.businessExplanation],
     }));
 
@@ -761,6 +771,11 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
         owner: 'Unassigned',
         reviewStatus: 'needs-review',
         lifecycleStatus: 'active',
+        routing: {
+          reviewTaskId: 'RT-LOCAL-SCAFFOLD',
+          changeRequestId: null,
+          policyDecision: 'review_required',
+        },
         explanation: [...localAnalysisOutput.businessExplanation],
       },
     ];

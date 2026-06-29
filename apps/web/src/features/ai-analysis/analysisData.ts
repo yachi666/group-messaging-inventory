@@ -4,6 +4,17 @@ import type {
   SimilarTemplateMatch,
 } from './analysisTypes';
 
+function mockRouting(
+  policyDecision: string,
+  reviewTaskId: string | null = null,
+): AiTemplateAnalysisResult['routing'] {
+  return {
+    reviewTaskId,
+    changeRequestId: null,
+    policyDecision,
+  };
+}
+
 export const initialAnalysisResults = [
   {
     id: 'ATA-001248',
@@ -31,6 +42,7 @@ export const initialAnalysisResults = [
     owner: 'A. Morgan',
     reviewStatus: 'needs-review',
     lifecycleStatus: 'active',
+    routing: mockRouting('review_required', 'RT-ATA-001248'),
     explanation: [
       'Detected payment context with amount and due date.',
       'Mapped the message to the servicing governance class.',
@@ -63,6 +75,7 @@ export const initialAnalysisResults = [
     owner: 'J. Singh',
     reviewStatus: 'reviewed',
     lifecycleStatus: 'active',
+    routing: mockRouting('auto_record'),
     explanation: [
       'Identified as fraud alert due to “suspicious charge” phrase.',
       'High urgency and PII present (card last4).',
@@ -88,6 +101,7 @@ export const initialAnalysisResults = [
     owner: 'L. Chen',
     reviewStatus: 'merged',
     lifecycleStatus: 'active',
+    routing: mockRouting('auto_record'),
     explanation: [
       'Strong OTP signature (short numeric token).',
       'Classified as Regulatory due to authentication context.',
@@ -119,6 +133,7 @@ export const initialAnalysisResults = [
     owner: 'K. Patel',
     reviewStatus: 'needs-review',
     lifecycleStatus: 'active',
+    routing: mockRouting('review_required', 'RT-ATA-001251'),
     explanation: [
       'Detected renewal context; date extraction uncertain due to varied formats.',
       'Recommended human review for date parsing.',
@@ -149,6 +164,7 @@ export const initialAnalysisResults = [
     owner: 'S. Alvarez',
     reviewStatus: 'reviewed',
     lifecycleStatus: 'active',
+    routing: mockRouting('review_required', 'RT-ATA-001252'),
     explanation: [
       'Generic statement notification; classified as Marketing for opt-in campaigns.',
     ],
@@ -179,6 +195,7 @@ export const initialAnalysisResults = [
     owner: 'R. Thompson',
     reviewStatus: 'reviewed',
     lifecycleStatus: 'demised',
+    routing: mockRouting('blocked', 'RT-ATA-001253'),
     explanation: [
       'Disbursement confirmed; contains account last4 and settlement date.',
     ],

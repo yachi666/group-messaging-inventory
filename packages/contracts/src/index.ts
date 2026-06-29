@@ -250,6 +250,11 @@ export const aiTemplateAnalysisResultSchema = z.object({
   owner: z.string().min(1),
   reviewStatus: analysisReviewStatusSchema,
   lifecycleStatus: analysisLifecycleStatusSchema,
+  routing: z.object({
+    reviewTaskId: z.string().min(1).nullable(),
+    changeRequestId: z.string().min(1).nullable(),
+    policyDecision: z.string().min(1),
+  }),
   explanation: z.array(z.string().min(1)),
 });
 

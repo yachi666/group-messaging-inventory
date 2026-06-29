@@ -367,6 +367,11 @@ export function AiTemplateAnalysisPage() {
                     (run.output?.overallConfidence ?? result.confidence) >= 90
                       ? 'reviewed'
                       : 'needs-review',
+                  routing: run.routing ?? {
+                    reviewTaskId: null,
+                    changeRequestId: null,
+                    policyDecision: 'auto_record',
+                  },
                   explanation: run.output?.businessExplanation ?? result.explanation,
                 }
               : result,
@@ -773,6 +778,8 @@ export function AiTemplateAnalysisPage() {
               <dl className="analysis-lifecycle-list">
                 <div><dt>{t('analysis.reviewStatus')}</dt><dd><StatusChip tone={getReviewTone(selectedResult.reviewStatus)}><span data-testid="analysis-review-status">{t(reviewStatusLabelKeys[selectedResult.reviewStatus])}</span></StatusChip></dd></div>
                 <div><dt>{t('analysis.lifecycle')}</dt><dd><StatusChip tone={getLifecycleTone(selectedResult.lifecycleStatus)}><span data-testid="analysis-lifecycle-status">{t(lifecycleLabelKeys[selectedResult.lifecycleStatus])}</span></StatusChip></dd></div>
+                <div><dt>{t('analysis.policyDecision')}</dt><dd><span data-testid="analysis-policy-decision">{selectedResult.routing.policyDecision}</span></dd></div>
+                <div><dt>{t('analysis.reviewTask')}</dt><dd>{selectedResult.routing.reviewTaskId ?? t('analysis.noReviewTask')}</dd></div>
                 <div><dt>{t('analysis.created')}</dt><dd>{selectedResult.analyzedAt}</dd></div>
                 <div><dt>{t('analysis.occurrences')}</dt><dd>3 messages</dd></div>
                 <div><dt>{t('analysis.firstSeen')}</dt><dd>{selectedResult.analyzedAt}</dd></div>

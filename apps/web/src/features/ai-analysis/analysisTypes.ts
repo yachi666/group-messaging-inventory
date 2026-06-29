@@ -37,6 +37,11 @@ export type AiTemplateAnalysisResult = {
   owner: string;
   reviewStatus: AnalysisReviewStatus;
   lifecycleStatus: AnalysisLifecycleStatus;
+  routing: {
+    reviewTaskId: string | null;
+    changeRequestId: string | null;
+    policyDecision: string;
+  };
   explanation: ReadonlyArray<string>;
 };
 

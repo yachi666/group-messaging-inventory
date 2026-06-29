@@ -509,6 +509,7 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
       .selectFrom('analysis_runs as ar')
       .innerJoin('template_versions as tv', 'tv.version_id', 'ar.version_id')
       .leftJoin('analysis_outputs as ao', 'ao.run_id', 'ar.run_id')
+      .leftJoin('review_tasks as rt', 'rt.source_run_id', 'ar.run_id')
       .select([
         'ar.run_id',
         'ar.version_id',
@@ -525,6 +526,8 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
         'ao.candidate_matches_json',
         'ao.anomalies_json',
         'ao.business_explanation_json',
+        'rt.task_id as review_task_id',
+        'rt.priority as review_task_priority',
       ])
       .orderBy('ar.created_at', 'desc')
       .limit(50)
@@ -572,6 +575,15 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
         owner: 'Unassigned',
         reviewStatus: row.overall_confidence && row.overall_confidence >= 90 ? 'reviewed' : 'needs-review',
         lifecycleStatus: 'active',
+        routing: {
+          reviewTaskId: row.review_task_id ?? null,
+          changeRequestId: null,
+          policyDecision: row.review_task_id
+            ? row.review_task_priority === 'high'
+              ? 'blocked'
+              : 'review_required'
+            : 'auto_record',
+        },
         explanation: asArray<string>(row.business_explanation_json),
       };
     });

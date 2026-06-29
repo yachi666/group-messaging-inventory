@@ -112,6 +112,14 @@ try {
     'string',
     'analysis result version id',
   );
+  assertEqual(
+    typeof resultsResponse.results[0].routing?.policyDecision,
+    'string',
+    'analysis result policy decision',
+  );
+  if (!('reviewTaskId' in resultsResponse.results[0].routing)) {
+    throw new Error('analysis result routing must expose reviewTaskId');
+  }
 
   const latestEvaluation = await getJson(`${baseUrl}/analysis-evaluations/latest`);
   latestAnalysisEvaluationResponseSchema.parse(latestEvaluation);
