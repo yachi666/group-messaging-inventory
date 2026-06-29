@@ -1570,6 +1570,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented `GET /analysis-evaluations/latest` for a database-aware API query surface over evaluation gate status and release evidence hash, with local replay fallback when no database is configured.
 - Implemented worker failure persistence activity and repository support for marking failed analysis runs with structured error metadata.
 - Implemented shared `@gmi/runtime-config` startup validation for API and worker configuration.
+- Implemented and verified `npm run test:harness:temporal` for the full API -> Temporal -> worker -> Postgres analysis evidence loop with local header authorization and persisted analysis output, review task, and audit event checks.
 - Implemented `npm run test:no-infra` plus GitHub Actions CI for no-infrastructure typecheck, secret scan, backend smoke, readiness probes, runtime lifecycle checks, API surface checks, PII gate, eval gates, release mapping gates, web contract checks, workflow verification, deploy config checks, build, bundle budget, and local UI verification.
 - Implemented contract-backed backend smoke parsing for key API success and error responses via `packages/contracts`.
 - Next: grow the locale-specific PII trap fixture set with reviewer-labeled false-positive samples and run full Postgres/Temporal release persistence verification before production promotion.

@@ -244,6 +244,8 @@ npm run infra:up
 npm run test:harness:temporal
 ```
 
+这条 smoke 使用本地 header 授权模式，在隔离的 Temporal task queue 上启动 API 和 worker，提交 analysis run，等待 worker 完成，并验证已持久化的 `analysis_outputs`、`review_tasks` 和 `audit_events`。
+
 在 Postgres-backed 模式下，analysis run 会按照存储状态保持为 `Queued`、`Running`、`Failed` 或 `Succeeded`。只有 worker 写入 `analysis_outputs` 之后，API response 才会包含 `output` 和 policy routing。
 
 ## 🎨 设计方向

@@ -16,6 +16,10 @@ const taskQueue =
 const port = Number(process.env.API_SMOKE_PORT ?? 4130);
 const baseUrl = `http://127.0.0.1:${port}`;
 const timeoutMs = Number(process.env.HARNESS_SMOKE_TIMEOUT_MS ?? 60_000);
+const governanceHeaders = {
+  'x-actor-id': 'harness-temporal-smoke',
+  'x-gmi-roles': 'analysis_runner,analysis_reader,auditor',
+};
 
 const processes = [];
 let apiOutput = '';
@@ -73,6 +77,7 @@ try {
     },
     {
       'idempotency-key': idempotencyKey,
+      ...governanceHeaders,
     },
   );
 
@@ -137,7 +142,7 @@ async function pollCompletedRun(runId) {
   let latest;
 
   await waitForOutput(async () => {
-    latest = await getJson(`${baseUrl}/analysis-runs/${runId}`);
+    latest = await getJson(`${baseUrl}/analysis-runs/${runId}`, governanceHeaders);
     return latest.status === 'Succeeded' && Boolean(latest.output);
   }, `Run ${runId} did not complete with output`);
 
@@ -145,13 +150,13 @@ async function pollCompletedRun(runId) {
 }
 
 async function readEvidenceCounts(runId) {
-  const analysisOutputs = await sql<{ count: string }>`
+  const analysisOutputs = await sql`
     select count(*)::text as count from analysis_outputs where run_id = ${runId}
   `.execute(db);
-  const reviewTasks = await sql<{ count: string }>`
+  const reviewTasks = await sql`
     select count(*)::text as count from review_tasks where source_run_id = ${runId}
   `.execute(db);
-  const auditEvents = await sql<{ count: string }>`
+  const auditEvents = await sql`
     select count(*)::text as count
     from audit_events
     where source_run_id = ${runId}
@@ -165,8 +170,10 @@ async function readEvidenceCounts(runId) {
   };
 }
 
-async function getJson(url) {
-  const response = await fetch(url);
+async function getJson(url, headers = {}) {
+  const response = await fetch(url, {
+    headers,
+  });
 
   if (!response.ok) {
     throw new Error(`GET ${url} returned ${response.status}: ${await response.text()}`);
