@@ -45,13 +45,19 @@ const requiredNoInfraCommands = [
   'npm run typecheck',
   'npm run test:secrets',
   'npm run test:backend',
+  'npm run test:readiness',
+  'npm run test:runtime-lifecycle',
   'npm run test:pii:local',
   'npm run test:evals',
   'npm run test:evals:release:local',
   'npm run test:evals:release-persistence:local',
   'npm run test:evals:latest-api-mapping:local',
+  'npm run test:web-contracts',
   'npm run test:ci-workflow',
+  'npm run test:deploy-config',
   'npm run build',
+  'npm run test:web-bundle',
+  'npm run test:ui:local',
 ];
 
 for (const command of requiredNoInfraCommands) {
