@@ -92,6 +92,7 @@ Operational endpoints:
 - Every API response includes `x-request-id`. Send `x-request-id` on inbound requests to preserve a caller trace id; standard error responses also include `error.requestId`.
 - API access logs are emitted as single-line JSON with `event=http_request`, `requestId`, method, path, status code, and duration.
 - API and worker startup use shared runtime configuration validation through `@gmi/runtime-config`, so invalid provider, Temporal, port, timeout, or database URL settings fail early with actionable errors.
+- The implemented API surface is tracked in `docs/api/template-analysis-api.json` and checked by `npm run test:api-surface`.
 
 By default the worker uses `AI_PROVIDER=noop`, which keeps local development deterministic and does not call a model provider. To run the analysis activity through OpenAI Agents SDK, set:
 

@@ -1,0 +1,139 @@
+{
+  "service": "group-messaging-inventory-api",
+  "version": "2026-06-29.local",
+  "basePath": "/",
+  "endpoints": [
+    {
+      "operationId": "getHealth",
+      "method": "GET",
+      "path": "/health",
+      "status": 200,
+      "roles": [],
+      "response": "healthResponse"
+    },
+    {
+      "operationId": "getReadiness",
+      "method": "GET",
+      "path": "/ready",
+      "status": 200,
+      "roles": [],
+      "response": "readinessResponseSchema"
+    },
+    {
+      "operationId": "submitAnalysisRun",
+      "method": "POST",
+      "path": "/template-versions/{versionId}/analysis-runs",
+      "status": 202,
+      "roles": ["analysis_runner"],
+      "request": "submitAnalysisRunSchema",
+      "response": "submitAnalysisRunResponseSchema",
+      "idempotencyKey": true
+    },
+    {
+      "operationId": "getAnalysisRun",
+      "method": "GET",
+      "path": "/analysis-runs/{runId}",
+      "status": 200,
+      "roles": ["analysis_reader", "analysis_runner", "auditor"],
+      "response": "analysisRunResponseSchema"
+    },
+    {
+      "operationId": "confirmAnalysisRun",
+      "method": "POST",
+      "path": "/analysis-runs/{runId}/confirm",
+      "status": 200,
+      "roles": ["analysis_reader", "analysis_runner"],
+      "response": "confirmAnalysisRunResponseSchema"
+    },
+    {
+      "operationId": "listAnalysisResults",
+      "method": "GET",
+      "path": "/templates/analysis-results",
+      "status": 200,
+      "roles": ["analysis_reader", "analysis_runner", "auditor"],
+      "response": "aiTemplateAnalysisResultsResponseSchema"
+    },
+    {
+      "operationId": "listChangeRequests",
+      "method": "GET",
+      "path": "/change-requests",
+      "status": 200,
+      "roles": ["change_maker", "change_checker", "auditor"],
+      "request": "listChangeRequestsQuerySchema",
+      "response": "changeRequestsResponseSchema"
+    },
+    {
+      "operationId": "listAuditEvents",
+      "method": "GET",
+      "path": "/audit-events",
+      "status": 200,
+      "roles": ["change_checker", "auditor"],
+      "request": "listAuditEventsQuerySchema",
+      "response": "auditEventsResponseSchema"
+    },
+    {
+      "operationId": "getChangeRequestEvidencePackage",
+      "method": "GET",
+      "path": "/change-requests/{changeRequestId}/evidence-package",
+      "status": 200,
+      "roles": ["change_checker", "auditor"],
+      "response": "changeRequestEvidencePackageSchema"
+    },
+    {
+      "operationId": "createMappingChangeRequest",
+      "method": "POST",
+      "path": "/templates/{templateUuid}/mapping-change-requests",
+      "status": 201,
+      "roles": ["change_maker"],
+      "request": "createMappingChangeRequestSchema",
+      "response": "changeRequestResponseSchema",
+      "idempotencyKey": true
+    },
+    {
+      "operationId": "createLifecycleChangeRequest",
+      "method": "POST",
+      "path": "/templates/{templateUuid}/lifecycle-change-requests",
+      "status": 201,
+      "roles": ["change_maker"],
+      "request": "createLifecycleChangeRequestSchema",
+      "response": "changeRequestResponseSchema",
+      "idempotencyKey": true
+    },
+    {
+      "operationId": "createCurrentVersionChangeRequest",
+      "method": "POST",
+      "path": "/template-versions/{versionId}/current-version-change-requests",
+      "status": 201,
+      "roles": ["change_maker"],
+      "request": "createCurrentVersionChangeRequestSchema",
+      "response": "changeRequestResponseSchema",
+      "idempotencyKey": true
+    },
+    {
+      "operationId": "submitChangeRequest",
+      "method": "POST",
+      "path": "/change-requests/{changeRequestId}/submit",
+      "status": 200,
+      "roles": ["change_maker"],
+      "request": "submitChangeRequestSchema",
+      "response": "changeRequestResponseSchema"
+    },
+    {
+      "operationId": "decideChangeRequest",
+      "method": "POST",
+      "path": "/change-requests/{changeRequestId}/decision",
+      "status": 200,
+      "roles": ["change_checker"],
+      "request": "decideChangeRequestSchema",
+      "response": "changeRequestResponseSchema"
+    },
+    {
+      "operationId": "getLatestEvaluation",
+      "method": "GET",
+      "path": "/analysis-evaluations/latest",
+      "status": 200,
+      "roles": ["analysis_reader", "analysis_runner", "auditor"],
+      "response": "latestAnalysisEvaluationResponseSchema"
+    }
+  ]
+}

@@ -944,6 +944,8 @@ Rules:
 
 The current NestJS implementation mounts routes at the root path for local development, for example `/analysis-runs/{runId}`. The `/api` prefix shown in the target API design can be added later through a global Nest prefix, API gateway, or ingress route when the deployment surface is finalized. Runtime response links should match the currently mounted route space.
 
+The implemented local API surface is tracked in `docs/api/template-analysis-api.json`. `npm run test:api-surface` verifies that route decorators, roles, status codes, and request schema parsers remain aligned with that manifest.
+
 ### 10.1 Query APIs
 
 ```http
@@ -1567,7 +1569,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented `GET /analysis-evaluations/latest` for a database-aware API query surface over evaluation gate status and release evidence hash, with local replay fallback when no database is configured.
 - Implemented worker failure persistence activity and repository support for marking failed analysis runs with structured error metadata.
 - Implemented shared `@gmi/runtime-config` startup validation for API and worker configuration.
-- Implemented `npm run test:no-infra` plus GitHub Actions CI for no-infrastructure typecheck, secret scan, backend smoke, readiness probes, runtime lifecycle checks, PII gate, eval gates, release mapping gates, web contract checks, workflow verification, deploy config checks, build, bundle budget, and local UI verification.
+- Implemented `npm run test:no-infra` plus GitHub Actions CI for no-infrastructure typecheck, secret scan, backend smoke, readiness probes, runtime lifecycle checks, API surface checks, PII gate, eval gates, release mapping gates, web contract checks, workflow verification, deploy config checks, build, bundle budget, and local UI verification.
 - Implemented contract-backed backend smoke parsing for key API success and error responses via `packages/contracts`.
 - Next: grow the locale-specific PII trap fixture set with reviewer-labeled false-positive samples and run full Postgres/Temporal release persistence verification before production promotion.
 
