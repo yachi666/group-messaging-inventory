@@ -1,15 +1,17 @@
 import { NativeConnection, Worker } from '@temporalio/worker';
+import { loadRuntimeConfig } from '@gmi/runtime-config';
 import * as activities from './workflows/activities.js';
 import { shutdownAnalysisRunRepository } from './workflows/activities.js';
 
-const taskQueue = process.env.TEMPORAL_TASK_QUEUE ?? 'template-analysis';
-const address = process.env.TEMPORAL_ADDRESS ?? '127.0.0.1:7233';
+const runtimeConfig = loadRuntimeConfig('worker');
+const taskQueue = runtimeConfig.workflow.temporalTaskQueue;
+const address = runtimeConfig.workflow.temporalAddress ?? '127.0.0.1:7233';
 
 const connection = await NativeConnection.connect({ address });
 
 const worker = await Worker.create({
   connection,
-  namespace: process.env.TEMPORAL_NAMESPACE ?? 'default',
+  namespace: runtimeConfig.workflow.temporalNamespace,
   taskQueue,
   workflowsPath: new URL('./workflows/index.js', import.meta.url).pathname,
   activities,

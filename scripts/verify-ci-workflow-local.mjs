@@ -46,6 +46,7 @@ const requiredNoInfraCommands = [
   'npm run test:secrets',
   'npm run test:backend',
   'npm run test:readiness',
+  'npm run test:runtime-config',
   'npm run test:runtime-lifecycle',
   'npm run test:pii:local',
   'npm run test:evals',

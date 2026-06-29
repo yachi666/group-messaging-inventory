@@ -23,6 +23,9 @@
     },
     {
       "path": "../../packages/policy"
+    },
+    {
+      "path": "../../packages/runtime-config"
     }
   ],
   "include": ["src/**/*.ts"]

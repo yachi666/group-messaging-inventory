@@ -1,11 +1,13 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import { loadRuntimeConfig } from '@gmi/runtime-config';
 import { AppModule } from './modules/app.module.js';
 import { StandardErrorFilter } from './filters/standard-error.filter.js';
 import { accessLogMiddleware } from './middleware/access-log.middleware.js';
 import { requestIdMiddleware } from './middleware/request-id.middleware.js';
 
-const port = Number(process.env.PORT ?? 4000);
+const runtimeConfig = loadRuntimeConfig('api');
+const port = runtimeConfig.port ?? 4000;
 const corsOrigin = process.env.API_CORS_ORIGIN;
 
 const app = await NestFactory.create(AppModule);
