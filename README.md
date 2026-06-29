@@ -161,6 +161,7 @@ curl -H 'x-actor-id: auditor-local' \
 
 `/audit-events` supports filtering by `objectType`, `objectId`, `sourceRunId`, `changeRequestId`, and `limit`.
 `/review-tasks` exposes analysis review tasks with `status`, `objectType`, `objectId`, `sourceRunId`, and `limit` filters so review-required analysis results can be traced from the workbench into a reviewer queue.
+The Review Queue Discovery view reads open template review tasks from this API and falls back to local discovery data when the API is unavailable.
 
 API submission can either enqueue only or start the Temporal workflow. For the full local harness path, run Temporal and set:
 

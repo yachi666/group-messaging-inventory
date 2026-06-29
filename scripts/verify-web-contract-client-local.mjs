@@ -18,6 +18,10 @@ const changeRequestApi = await readFile(
   path.join(repoRoot, 'apps/web/src/features/review-queue/changeRequestApi.ts'),
   'utf8',
 );
+const reviewTaskApi = await readFile(
+  path.join(repoRoot, 'apps/web/src/features/review-queue/reviewTaskApi.ts'),
+  'utf8',
+);
 const reviewQueuePage = await readFile(
   path.join(repoRoot, 'apps/web/src/features/review-queue/ReviewQueuePage.tsx'),
   'utf8',
@@ -90,6 +94,18 @@ if (auditApi.includes('as AuditEventsResponse')) {
   throw new Error('auditApi.ts must not cast audit events before schema parsing.');
 }
 
+if (!reviewTaskApi.includes('reviewTasksResponseSchema')) {
+  throw new Error('reviewTaskApi.ts must parse API responses with reviewTasksResponseSchema.');
+}
+
+if (!reviewTaskApi.includes('/review-tasks?status=Open&objectType=template&limit=100')) {
+  throw new Error('reviewTaskApi.ts must call the filtered review task API.');
+}
+
+if (reviewTaskApi.includes('as ReviewTask')) {
+  throw new Error('reviewTaskApi.ts must not cast review tasks before schema parsing.');
+}
+
 for (const expectedSchema of [
   'changeRequestsResponseSchema',
   'changeRequestResponseSchema',
@@ -115,6 +131,10 @@ for (const expectedApiPath of [
 }
 
 for (const expectedSource of [
+  'fetchOpenReviewTasks(controller.signal)',
+  'tasks.map(toQueueItem)',
+  'Review task API unavailable. Showing local discovery queue.',
+  'data-testid="review-task-refresh"',
   'fetchPendingChangeRequests(controller.signal)',
   'changeRequests.map(toApprovalItem)',
   'isApiBacked: true',
@@ -133,6 +153,7 @@ if (!reviewQueuePage.includes('Approval API unavailable. Showing local mock appr
 for (const [fileName, source] of [
   ['analysisApi.ts', analysisApi],
   ['changeRequestApi.ts', changeRequestApi],
+  ['reviewTaskApi.ts', reviewTaskApi],
   ['auditApi.ts', auditApi],
 ]) {
   if (!source.includes('apiFetch')) {

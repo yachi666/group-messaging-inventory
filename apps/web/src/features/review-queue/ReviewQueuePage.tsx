@@ -23,6 +23,7 @@ import {
   type ChangeRequest,
   type ChangeRequestEvidencePackage,
 } from './changeRequestApi';
+import { fetchOpenReviewTasks, type ReviewTask } from './reviewTaskApi';
 
 type QueueStatus = 'Needs review' | 'Pending approval' | 'Overdue';
 
@@ -38,7 +39,7 @@ type QueueItem = {
   status: QueueStatus;
 };
 
-const queueItems: QueueItem[] = [
+const fallbackQueueItems: QueueItem[] = [
   { id: 'UC-76821', name: 'Card repayment reminder', platform: 'MDP', channel: 'SMS', market: 'Hong Kong', confidence: 87, priority: 'High', age: '3d', status: 'Needs review' },
   { id: 'TPL-55411', name: 'Order confirmation v3', platform: 'SFMC', channel: 'Email', market: 'UK', confidence: 64, priority: 'Medium', age: '5d', status: 'Needs review' },
   { id: 'UC-76818', name: 'Password reset email', platform: 'ICCM', channel: 'Email', market: 'Singapore', confidence: 91, priority: 'High', age: '1d', status: 'Pending approval' },
@@ -83,15 +84,60 @@ export function ReviewQueuePage() {
   const { locale } = useI18n();
   const zh = locale === 'zh-CN';
   const [activeTab, setActiveTab] = useState('Discovery Review');
-  const [selectedId, setSelectedId] = useState(queueItems[0].id);
+  const [selectedId, setSelectedId] = useState(fallbackQueueItems[0].id);
   const [query, setQuery] = useState('');
   const [notes, setNotes] = useState('Confirmed as a standard servicing reminder for card repayment. Templates and variables align with the existing Repayment Management taxonomy.');
   const [highQuality, setHighQuality] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [splitting, setSplitting] = useState(false);
+  const [apiQueueItems, setApiQueueItems] = useState<QueueItem[] | null>(null);
+  const [reviewTaskNotice, setReviewTaskNotice] = useState<string | null>(null);
+  const [isLoadingReviewTasks, setIsLoadingReviewTasks] = useState(false);
 
-  const visibleItems = useMemo(() => queueItems.filter((item) => `${item.name} ${item.id} ${item.market}`.toLowerCase().includes(query.toLowerCase())), [query]);
-  const selected = queueItems.find((item) => item.id === selectedId) ?? queueItems[0];
+  const queueSource = apiQueueItems ?? fallbackQueueItems;
+  const visibleItems = useMemo(() => queueSource.filter((item) => `${item.name} ${item.id} ${item.market}`.toLowerCase().includes(query.toLowerCase())), [query, queueSource]);
+  const selected = queueSource.find((item) => item.id === selectedId) ?? queueSource[0] ?? fallbackQueueItems[0];
+
+  function loadReviewTasks() {
+    const controller = new AbortController();
+    setIsLoadingReviewTasks(true);
+    setReviewTaskNotice(null);
+
+    fetchOpenReviewTasks(controller.signal)
+      .then((tasks) => {
+        const taskItems = tasks.map(toQueueItem);
+        setApiQueueItems(taskItems);
+        setReviewTaskNotice(
+          taskItems.length > 0
+            ? `Loaded ${taskItems.length} open review task${taskItems.length === 1 ? '' : 's'} from API.`
+            : 'No open API review tasks.',
+        );
+        if (taskItems[0]) {
+          setSelectedId(taskItems[0].id);
+        }
+      })
+      .catch(() => {
+        setApiQueueItems(null);
+        setReviewTaskNotice('Review task API unavailable. Showing local discovery queue.');
+      })
+      .finally(() => {
+        setIsLoadingReviewTasks(false);
+      });
+
+    return controller;
+  }
+
+  useEffect(() => {
+    const controller = loadReviewTasks();
+
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (!queueSource.some((item) => item.id === selectedId)) {
+      setSelectedId(queueSource[0]?.id ?? fallbackQueueItems[0].id);
+    }
+  }, [queueSource, selectedId]);
 
   function flash(message: string) {
     setNotice(message);
@@ -123,6 +169,13 @@ export function ReviewQueuePage() {
         ))}
       </div>
 
+      <div className="approval-sync-banner" role="status">
+        <span>{reviewTaskNotice ?? (apiQueueItems === null ? 'Local discovery queue' : 'API review tasks')}</span>
+        <button data-testid="review-task-refresh" disabled={isLoadingReviewTasks} onClick={() => loadReviewTasks()} type="button">
+          <ArrowPathIcon />{isLoadingReviewTasks ? 'Refreshing' : 'Refresh review tasks'}
+        </button>
+      </div>
+
       <div className="workbench-grid">
         <aside className="queue-panel">
           <div className="queue-tools">
@@ -142,7 +195,7 @@ export function ReviewQueuePage() {
               </button>
             ))}
           </div>
-          <footer className="queue-footer"><span>1–{visibleItems.length} of 128 items</span><span>‹ &nbsp; <b>1</b> &nbsp; 2 &nbsp; 3 &nbsp; … &nbsp; 11 &nbsp; ›</span></footer>
+          <footer className="queue-footer"><span>1–{visibleItems.length} of {queueSource.length} items</span><span>‹ &nbsp; <b>1</b> &nbsp; 2 &nbsp; 3 &nbsp; … &nbsp; 11 &nbsp; ›</span></footer>
         </aside>
 
         <main className="candidate-panel">
@@ -210,6 +263,47 @@ export function ReviewQueuePage() {
 function Metric({ value, label }: { value: string; label: string }) { return <div><strong>{value}</strong><span>{label}</span></div>; }
 function WorkbenchSection({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) { return <section className="workbench-section"><header><h3>{title}</h3>{action}</header>{children}</section>; }
 function Field({ label, value }: { label: string; value: string }) { return <div className="business-field"><span>{label}</span><strong>{value}</strong><PencilSquareIcon /></div>; }
+
+function toQueueItem(task: ReviewTask): QueueItem {
+  return {
+    id: task.sourceRunId ?? task.taskId,
+    name: task.reason,
+    platform: task.objectType === 'template' ? 'Template' : task.objectType,
+    channel: task.taskType,
+    market: task.objectId,
+    confidence: toTaskConfidence(task.priority),
+    priority: toQueuePriority(task.priority),
+    age: formatTaskAge(task.createdAt),
+    status: toQueueStatus(task.status),
+  };
+}
+
+function toQueuePriority(priority: string): QueueItem['priority'] {
+  const normalized = priority.toLowerCase();
+  if (normalized === 'high' || normalized === 'critical') return 'High';
+  if (normalized === 'low') return 'Low';
+  return 'Medium';
+}
+
+function toTaskConfidence(priority: string) {
+  const normalized = priority.toLowerCase();
+  if (normalized === 'high' || normalized === 'critical') return 91;
+  if (normalized === 'low') return 68;
+  return 82;
+}
+
+function toQueueStatus(status: ReviewTask['status']): QueueStatus {
+  if (status === 'PendingApproval') return 'Pending approval';
+  if (status === 'Resolved' || status === 'Dismissed') return 'Overdue';
+  return 'Needs review';
+}
+
+function formatTaskAge(createdAt: string) {
+  const createdTime = Date.parse(createdAt);
+  if (!Number.isFinite(createdTime)) return '1d';
+  const days = Math.max(1, Math.ceil((Date.now() - createdTime) / 86_400_000));
+  return `${days}d`;
+}
 
 function GovernanceApprovalWorkbench({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: string) => void }) {
   const { locale } = useI18n(); const zh = locale === 'zh-CN';

@@ -43,6 +43,8 @@ await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
 // Discovery Review is the default action center.
 await page.getByRole('heading', { name: 'Review Queue' }).waitFor();
 await page.getByRole('heading', { name: 'AI Extraction Flow' }).waitFor();
+await page.getByTestId('review-task-refresh').waitFor();
+await page.getByRole('status').getByText(/Review task API unavailable|API review tasks|open review tasks/).waitFor();
 await page.getByRole('button', { name: 'Submit for Approval' }).click();
 await page.getByRole('status').getByText('Submitted to Governance Approval').waitFor();
 
