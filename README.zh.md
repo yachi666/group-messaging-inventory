@@ -84,6 +84,11 @@ npm run dev:api
 npm run dev:worker
 ```
 
+运行状态接口：
+
+- `GET /health` 是 API liveness check。
+- `GET /ready` 返回 API、Postgres、Temporal workflow driver 与 AI provider 配置的组件化 readiness。当启用 `DATABASE_URL` 或 `ANALYSIS_WORKFLOW_DRIVER=temporal` 时，readiness 会执行轻量依赖探测，而不只是检查环境变量是否存在。
+
 默认 worker 使用 `AI_PROVIDER=noop`，本地开发不会调用模型 provider。需要通过 OpenAI Agents SDK 执行分析活动时，设置：
 
 ```bash
