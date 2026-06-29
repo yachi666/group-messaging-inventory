@@ -9,6 +9,7 @@ const port = Number(process.env.PORT ?? 4000);
 const corsOrigin = process.env.API_CORS_ORIGIN;
 
 const app = await NestFactory.create(AppModule);
+app.enableShutdownHooks();
 app.use(requestIdMiddleware);
 app.use(accessLogMiddleware);
 app.useGlobalFilters(new StandardErrorFilter());

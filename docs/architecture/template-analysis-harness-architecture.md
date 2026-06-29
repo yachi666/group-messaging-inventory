@@ -1508,6 +1508,8 @@ The current local Docker Compose profile follows that shape:
 - `gmi-worker` consumes the same Temporal task queue and writes analysis evidence through the shared repository layer.
 - `gmi-web` serves the Vite production bundle through nginx on port 5080.
 
+Long-running runtimes must also own connection lifecycle. The API should enable Nest shutdown hooks so injected Postgres-backed repositories close their Kysely pools. The worker should handle `SIGINT` and `SIGTERM`, request Temporal worker shutdown, close the Temporal native connection, and release its lazily created Postgres repository.
+
 ### 14.11 Not Recommended
 
 Avoid:

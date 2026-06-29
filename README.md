@@ -187,7 +187,7 @@ Run the local deploy profile with API, worker, and web containers:
 docker compose --profile app up --build gmi-api gmi-worker gmi-web
 ```
 
-The containerized API is available on `http://127.0.0.1:4000`, and the web app is served on `http://127.0.0.1:5080`. The app profile uses `AI_PROVIDER=noop`, header-based local authorization, Postgres, and Temporal by default. A one-shot `gmi-db-migrate` service applies database migrations before the API starts.
+The containerized API is available on `http://127.0.0.1:4000`, and the web app is served on `http://127.0.0.1:5080`. The app profile uses `AI_PROVIDER=noop`, header-based local authorization, Postgres, and Temporal by default. A one-shot `gmi-db-migrate` service applies database migrations before the API starts. API and worker processes handle shutdown signals so Postgres and Temporal connections are released during container stop or deploy replacement.
 
 Run type checks:
 

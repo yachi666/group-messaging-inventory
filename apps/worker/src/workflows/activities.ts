@@ -166,6 +166,7 @@ export async function persistAnalysisFailureActivity(
 }
 
 let repository: AnalysisRunRepository | null | undefined;
+let repositoryShutdown: (() => Promise<void>) | undefined;
 
 function getAnalysisRunRepository() {
   if (repository !== undefined) {
@@ -181,9 +182,21 @@ function getAnalysisRunRepository() {
 
   const pool = createPostgresPool({ connectionString });
   const db = createPostgresDatabase(pool);
-  repository = new PostgresAnalysisRunRepository(db);
+  const postgresRepository = new PostgresAnalysisRunRepository(db);
+  repository = postgresRepository;
+  repositoryShutdown = () => postgresRepository.onModuleDestroy();
 
   return repository;
+}
+
+export async function shutdownAnalysisRunRepository() {
+  if (!repositoryShutdown) {
+    return;
+  }
+
+  await repositoryShutdown();
+  repositoryShutdown = undefined;
+  repository = undefined;
 }
 
 function resolveMaskedContent(input: RunTemplateAnalysisActivityInput) {

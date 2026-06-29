@@ -343,6 +343,10 @@ async function resolveMigrationsDir() {
 export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
   constructor(private readonly db: Kysely<Database>) {}
 
+  async onModuleDestroy() {
+    await this.db.destroy();
+  }
+
   async enqueueRun(command: SubmitAnalysisRunRecord): Promise<QueuedAnalysisRunRecord> {
     if (command.idempotencyKey) {
       const existing = await this.db

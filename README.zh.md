@@ -153,7 +153,7 @@ Temporal 运行在 `127.0.0.1:7233`，Temporal UI 位于 `http://127.0.0.1:8233`
 docker compose --profile app up --build gmi-api gmi-worker gmi-web
 ```
 
-容器化 API 位于 `http://127.0.0.1:4000`，前端位于 `http://127.0.0.1:5080`。该 app profile 默认使用 `AI_PROVIDER=noop`、本地 header 授权、Postgres 与 Temporal，并通过一次性的 `gmi-db-migrate` 服务在 API 启动前自动执行数据库迁移。
+容器化 API 位于 `http://127.0.0.1:4000`，前端位于 `http://127.0.0.1:5080`。该 app profile 默认使用 `AI_PROVIDER=noop`、本地 header 授权、Postgres 与 Temporal，并通过一次性的 `gmi-db-migrate` 服务在 API 启动前自动执行数据库迁移。API 与 worker 会处理停机信号，在容器停止或部署替换时释放 Postgres 与 Temporal 连接。
 
 运行类型检查：
 
