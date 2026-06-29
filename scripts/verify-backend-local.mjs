@@ -14,6 +14,7 @@ import {
   changeRequestsResponseSchema,
   latestAnalysisEvaluationResponseSchema,
   readinessResponseSchema,
+  reviewTasksResponseSchema,
   standardErrorSchema,
   submitAnalysisRunResponseSchema,
 } from '@gmi/contracts';
@@ -120,6 +121,19 @@ try {
   if (!('reviewTaskId' in resultsResponse.results[0].routing)) {
     throw new Error('analysis result routing must expose reviewTaskId');
   }
+
+  const reviewTasksResponse = await getJson(
+    `${baseUrl}/review-tasks?sourceRunId=${encodeURIComponent(resultsResponse.results[0].id)}`,
+  );
+  reviewTasksResponseSchema.parse(reviewTasksResponse);
+  if (!Array.isArray(reviewTasksResponse.reviewTasks) || reviewTasksResponse.reviewTasks.length === 0) {
+    throw new Error('review task projection was empty');
+  }
+  assertEqual(
+    reviewTasksResponse.reviewTasks[0].taskId,
+    resultsResponse.results[0].routing.reviewTaskId,
+    'review task id matches analysis routing',
+  );
 
   const latestEvaluation = await getJson(`${baseUrl}/analysis-evaluations/latest`);
   latestAnalysisEvaluationResponseSchema.parse(latestEvaluation);

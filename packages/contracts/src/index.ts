@@ -184,6 +184,41 @@ export const changeRequestsResponseSchema = z.object({
   changeRequests: z.array(changeRequestResponseSchema),
 });
 
+export const reviewTaskStatusSchema = z.enum([
+  'Open',
+  'Assigned',
+  'InReview',
+  'PendingApproval',
+  'Resolved',
+  'Dismissed',
+]);
+
+export const reviewTaskResponseSchema = z.object({
+  taskId: z.string().min(1),
+  taskType: z.string().min(1),
+  objectType: z.string().min(1),
+  objectId: z.string().min(1),
+  sourceRunId: z.string().min(1).nullable(),
+  priority: z.string().min(1),
+  status: reviewTaskStatusSchema,
+  assignedTo: z.string().min(1).nullable(),
+  reason: z.string().min(1),
+  createdAt: z.string().datetime(),
+  resolvedAt: z.string().datetime().nullable(),
+});
+
+export const listReviewTasksQuerySchema = z.object({
+  status: reviewTaskStatusSchema.optional(),
+  objectType: z.string().min(1).optional(),
+  objectId: z.string().min(1).optional(),
+  sourceRunId: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(100),
+});
+
+export const reviewTasksResponseSchema = z.object({
+  reviewTasks: z.array(reviewTaskResponseSchema),
+});
+
 export const auditEvidenceEventSchema = z.object({
   auditEventId: z.string().min(1),
   actorId: z.string().min(1).nullable(),
@@ -408,6 +443,8 @@ export type SubmitChangeRequestRequest = z.infer<typeof submitChangeRequestSchem
 export type DecideChangeRequestRequest = z.infer<typeof decideChangeRequestSchema>;
 export type ListChangeRequestsQuery = z.infer<typeof listChangeRequestsQuerySchema>;
 export type ChangeRequestsResponse = z.infer<typeof changeRequestsResponseSchema>;
+export type ListReviewTasksQuery = z.infer<typeof listReviewTasksQuerySchema>;
+export type ReviewTasksResponse = z.infer<typeof reviewTasksResponseSchema>;
 export type ListAuditEventsQuery = z.infer<typeof listAuditEventsQuerySchema>;
 export type AuditEventsResponse = z.infer<typeof auditEventsResponseSchema>;
 export type ChangeRequestEvidencePackage = z.infer<

@@ -300,6 +300,28 @@ export type ListChangeRequestsRecord = {
   status?: ChangeRequestStatus;
 };
 
+export type ReviewTaskRecord = {
+  taskId: string;
+  taskType: string;
+  objectType: string;
+  objectId: string;
+  sourceRunId: string | null;
+  priority: string;
+  status: ReviewTaskStatus;
+  assignedTo: string | null;
+  reason: string;
+  createdAt: string;
+  resolvedAt: string | null;
+};
+
+export type ListReviewTasksRecord = {
+  status?: ReviewTaskStatus;
+  objectType?: string;
+  objectId?: string;
+  sourceRunId?: string;
+  limit?: number;
+};
+
 export type ConfirmAnalysisRunRecord = {
   runId: string;
   reviewStatus: 'reviewed';
@@ -572,6 +594,7 @@ export type AnalysisRunRepository = {
     command: CreateCurrentVersionChangeRequestRecord,
   ): Promise<MappingChangeRequestRecord>;
   listChangeRequests(command?: ListChangeRequestsRecord): Promise<MappingChangeRequestRecord[]>;
+  listReviewTasks(command?: ListReviewTasksRecord): Promise<ReviewTaskRecord[]>;
   listAuditEvents(command?: ListAuditEventsRecord): Promise<AuditEvidenceEventRecord[]>;
   getChangeRequestEvidencePackage(
     changeRequestId: string,
@@ -639,6 +662,7 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
   private readonly queuedRuns = new Map<string, QueuedAnalysisRunRecord>();
   private readonly completedRuns = new Map<string, CompletedAnalysisRunRecord>();
   private readonly reviewTaskIndex = new Map<string, string>();
+  private readonly reviewTasks = new Map<string, ReviewTaskRecord>();
   private readonly idempotencyIndex = new Map<string, string>();
   private readonly changeRequests = new Map<string, TemplateChangeRequestRecord>();
   private readonly changeRequestIdempotencyIndex = new Map<string, string>();
@@ -794,6 +818,19 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
 
     if (reviewTaskId) {
       this.reviewTaskIndex.set(command.runId, reviewTaskId);
+      this.reviewTasks.set(reviewTaskId, {
+        taskId: reviewTaskId,
+        taskType: 'analysis_review',
+        objectType: 'template',
+        objectId: queuedRun?.templateUuid ?? 'pending-template-resolution',
+        sourceRunId: command.runId,
+        priority: command.policyDecision === 'blocked' ? 'high' : 'normal',
+        status: 'Open',
+        assignedTo: null,
+        reason: command.policyReasons.join(', ') || command.policyDecision,
+        createdAt: completedAt,
+        resolvedAt: null,
+      });
     }
 
     this.completedRuns.set(command.runId, {
@@ -916,6 +953,35 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
       .filter((changeRequest) => !command.status || changeRequest.status === command.status)
       .map(toChangeRequestRecord)
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  }
+
+  async listReviewTasks(command: ListReviewTasksRecord = {}): Promise<ReviewTaskRecord[]> {
+    const tasks =
+      this.reviewTasks.size > 0
+        ? Array.from(this.reviewTasks.values())
+        : [
+            {
+              taskId: 'RT-LOCAL-SCAFFOLD',
+              taskType: 'analysis_review',
+              objectType: 'template',
+              objectId: 'tpluuid_local_scaffold',
+              sourceRunId: 'ATA-LOCAL-001',
+              priority: 'normal',
+              status: 'Open' as const,
+              assignedTo: null,
+              reason: 'local scaffold review task for API contract verification',
+              createdAt: new Date().toISOString(),
+              resolvedAt: null,
+            },
+          ];
+
+    return tasks
+      .filter((task) => !command.status || task.status === command.status)
+      .filter((task) => !command.objectType || task.objectType === command.objectType)
+      .filter((task) => !command.objectId || task.objectId === command.objectId)
+      .filter((task) => !command.sourceRunId || task.sourceRunId === command.sourceRunId)
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .slice(0, command.limit ?? 100);
   }
 
   async getChangeRequestEvidencePackage(

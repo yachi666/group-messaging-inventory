@@ -17,6 +17,7 @@ import {
   decideChangeRequestSchema,
   listAuditEventsQuerySchema,
   listChangeRequestsQuerySchema,
+  listReviewTasksQuerySchema,
   submitAnalysisRunSchema,
   submitChangeRequestSchema,
   type CreateCurrentVersionChangeRequestRequest,
@@ -25,6 +26,7 @@ import {
   type DecideChangeRequestRequest,
   type ListAuditEventsQuery,
   type ListChangeRequestsQuery,
+  type ListReviewTasksQuery,
   type SubmitAnalysisRunRequest,
   type SubmitChangeRequestRequest,
 } from '@gmi/contracts';
@@ -71,6 +73,14 @@ export class AnalysisRunsController {
   @RequiresRoles('analysis_reader', 'analysis_runner', 'auditor')
   listAnalysisResults() {
     return this.analysisRuns.listAnalysisResults();
+  }
+
+  @Get('review-tasks')
+  @RequiresRoles('analysis_reader', 'analysis_runner', 'auditor')
+  listReviewTasks(@Query() query: unknown) {
+    const request = listReviewTasksQuerySchema.parse(query) satisfies ListReviewTasksQuery;
+
+    return this.analysisRuns.listReviewTasks(request);
   }
 
   @Get('change-requests')

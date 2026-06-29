@@ -54,6 +54,15 @@
       "response": "aiTemplateAnalysisResultsResponseSchema"
     },
     {
+      "operationId": "listReviewTasks",
+      "method": "GET",
+      "path": "/review-tasks",
+      "status": 200,
+      "roles": ["analysis_reader", "analysis_runner", "auditor"],
+      "request": "listReviewTasksQuerySchema",
+      "response": "reviewTasksResponseSchema"
+    },
+    {
       "operationId": "listChangeRequests",
       "method": "GET",
       "path": "/change-requests",

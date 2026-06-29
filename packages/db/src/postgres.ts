@@ -24,6 +24,7 @@ import type {
   ChangeRequestEvidencePackageRecord,
   ListAuditEventsRecord,
   ListChangeRequestsRecord,
+  ListReviewTasksRecord,
   LatestAnalysisEvaluationResponseRecord,
   LatestEvaluationRowsRecord,
   MappingChangeRequestRecord,
@@ -36,6 +37,7 @@ import type {
   RecordAnalysisFailureRecord,
   RecordAnalysisResultRecord,
   RecordEvaluationResultRecord,
+  ReviewTaskRecord,
   SubmitChangeRequestRecord,
   SubmitAnalysisRunRecord,
   AuditEvidenceEventRecord,
@@ -853,6 +855,34 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
     return rows.map(mapChangeRequest);
   }
 
+  async listReviewTasks(command: ListReviewTasksRecord = {}): Promise<ReviewTaskRecord[]> {
+    let query = this.db
+      .selectFrom('review_tasks')
+      .selectAll()
+      .orderBy('created_at', 'desc')
+      .limit(command.limit ?? 100);
+
+    if (command.status) {
+      query = query.where('status', '=', command.status);
+    }
+
+    if (command.objectType) {
+      query = query.where('object_type', '=', command.objectType);
+    }
+
+    if (command.objectId) {
+      query = query.where('object_id', '=', command.objectId);
+    }
+
+    if (command.sourceRunId) {
+      query = query.where('source_run_id', '=', command.sourceRunId);
+    }
+
+    const rows = await query.execute();
+
+    return rows.map(mapReviewTask);
+  }
+
   async getChangeRequestEvidencePackage(
     changeRequestId: string,
   ): Promise<ChangeRequestEvidencePackageRecord | null> {
@@ -1363,6 +1393,49 @@ function mapAuditEvent(row: {
     afterRef: row.after_ref,
     createdAt: toIsoString(row.created_at),
   };
+}
+
+function mapReviewTask(row: {
+  task_id: string;
+  task_type: string;
+  object_type: string;
+  object_id: string;
+  source_run_id: string | null;
+  priority: string;
+  status: string;
+  assigned_to: string | null;
+  reason: string;
+  created_at: unknown;
+  resolved_at: unknown;
+}): ReviewTaskRecord {
+  return {
+    taskId: row.task_id,
+    taskType: row.task_type,
+    objectType: row.object_type,
+    objectId: row.object_id,
+    sourceRunId: row.source_run_id,
+    priority: row.priority,
+    status: toReviewTaskStatus(row.status),
+    assignedTo: row.assigned_to,
+    reason: row.reason,
+    createdAt: toIsoString(row.created_at),
+    resolvedAt: row.resolved_at ? toIsoString(row.resolved_at) : null,
+  };
+}
+
+function toReviewTaskStatus(value: string): ReviewTaskRecord['status'] {
+  if (
+    value === 'Open' ||
+    value === 'Assigned' ||
+    value === 'InReview' ||
+    value === 'PendingApproval' ||
+    value === 'Resolved' ||
+    value === 'Dismissed'
+  ) {
+    return value;
+  }
+
+  return 'Open';
 }
 
 function asArray<T>(value: unknown): T[] {

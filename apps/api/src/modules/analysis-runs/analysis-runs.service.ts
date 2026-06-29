@@ -15,6 +15,8 @@ import type {
   DecideChangeRequestRequest,
   ListAuditEventsQuery,
   ListChangeRequestsQuery,
+  ListReviewTasksQuery,
+  ReviewTasksResponse,
   SubmitChangeRequestRequest,
   SubmitAnalysisRunRequest,
 } from '@gmi/contracts';
@@ -134,6 +136,20 @@ export class AnalysisRunsService {
         ...result,
         aiMessageType: normalizeAiMessageType(result.aiMessageType),
       })),
+    };
+  }
+
+  async listReviewTasks(query: ListReviewTasksQuery): Promise<ReviewTasksResponse> {
+    const reviewTasks = await this.repository.listReviewTasks({
+      status: query.status,
+      objectType: query.objectType,
+      objectId: query.objectId,
+      sourceRunId: query.sourceRunId,
+      limit: query.limit,
+    });
+
+    return {
+      reviewTasks,
     };
   }
 
