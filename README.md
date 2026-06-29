@@ -149,12 +149,13 @@ curl -H 'x-actor-id: analyst-local' \
   http://127.0.0.1:4000/ready
 ```
 
-Protected analysis and governance routes require one of these roles: `analysis_runner`, `analysis_reader`, `change_maker`, `change_checker`, or `auditor`. Health and readiness remain public. Set `API_AUTH_MODE=disabled` only for isolated local debugging.
+Protected analysis and governance routes require both `x-actor-id` and one of these roles: `analysis_runner`, `analysis_reader`, `change_maker`, `change_checker`, or `auditor`. Health and readiness remain public. Set `API_AUTH_MODE=disabled` only for isolated local debugging.
 
 The immutable governance ledger is exposed through:
 
 ```bash
-curl -H 'x-gmi-roles: auditor' \
+curl -H 'x-actor-id: auditor-local' \
+  -H 'x-gmi-roles: auditor' \
   'http://127.0.0.1:4000/audit-events?changeRequestId=CR-...'
 ```
 

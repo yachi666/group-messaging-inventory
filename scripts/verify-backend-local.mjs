@@ -178,6 +178,38 @@ async function verifyRbacRequired() {
 
   assertEqual(response.status, 403, 'rbac missing role status');
   assertEqual(body.error?.code, 'access_denied', 'rbac missing role error code');
+  assertEqual(
+    body.error?.message,
+    'Missing required role: analysis_runner',
+    'rbac missing role message',
+  );
+
+  const missingActorResponse = await fetch(
+    `${baseUrl}/template-versions/tv-rbac-missing-actor-smoke/analysis-runs`,
+    {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-gmi-roles': 'analysis_runner',
+      },
+      body: JSON.stringify({
+        triggerType: 'manual_reanalysis',
+        reason: 'backend local missing actor smoke',
+        effort: 'normal',
+        requestedOutputs: [],
+      }),
+    },
+  );
+  const missingActorBody = await missingActorResponse.json();
+  standardErrorSchema.parse(missingActorBody);
+
+  assertEqual(missingActorResponse.status, 403, 'rbac missing actor status');
+  assertEqual(missingActorBody.error?.code, 'access_denied', 'rbac missing actor error code');
+  assertEqual(
+    missingActorBody.error?.message,
+    'Missing required actor identity.',
+    'rbac missing actor message',
+  );
 }
 
 async function verifyReadiness() {

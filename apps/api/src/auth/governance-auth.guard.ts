@@ -39,6 +39,18 @@ export class GovernanceAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<{
       headers: Record<string, string | string[] | undefined>;
     }>();
+    const actorId = normalizeHeaderValue(request.headers['x-actor-id']);
+
+    if (!actorId) {
+      throw new ForbiddenException({
+        code: 'access_denied',
+        message: 'Missing required actor identity.',
+        details: {
+          requiredHeader: 'x-actor-id',
+        },
+      });
+    }
+
     const roles = parseHeaderList(request.headers['x-gmi-roles']);
 
     if (requiredRoles.some((role) => roles.has(role))) {
@@ -53,6 +65,12 @@ export class GovernanceAuthGuard implements CanActivate {
       },
     });
   }
+}
+
+function normalizeHeaderValue(value: string | string[] | undefined) {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  const trimmed = rawValue?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 function parseHeaderList(value: string | string[] | undefined) {

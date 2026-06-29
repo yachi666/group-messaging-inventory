@@ -1279,9 +1279,10 @@ Logs and traces:
 - Standard error responses include `error.requestId` so UI, API, worker, and provider logs can be correlated.
 - API access logs are emitted as single-line JSON with `event=http_request`, `requestId`, HTTP method, path, status code, and duration.
 - `/health` is the liveness endpoint; `/ready` reports API, database, workflow, and AI-provider readiness/configuration state without requiring local Docker infrastructure. Required external dependencies should be probed directly with bounded lightweight checks, for example Postgres `select 1` and a Temporal connection check, so deployment health reflects actual serviceability rather than only environment-variable presence.
-- Protected API routes use a replaceable governance authorization boundary. The current local implementation is `API_AUTH_MODE=header`, with `x-actor-id` and comma-separated `x-gmi-roles` headers. It is intentionally simple so an API gateway, SSO proxy, or service mesh identity layer can replace the header source without changing controller-level role requirements.
+- Protected API routes use a replaceable governance authorization boundary. The current local implementation is `API_AUTH_MODE=header`, with required `x-actor-id` and comma-separated `x-gmi-roles` headers for every protected route. It is intentionally simple so an API gateway, SSO proxy, or service mesh identity layer can replace the header source without changing controller-level role requirements.
 - Route-level roles are explicit: analysis submission requires `analysis_runner`; analysis reads require `analysis_reader`, `analysis_runner`, or `auditor`; change request creation/submission requires `change_maker`; decisions and evidence packages require `change_checker` or `auditor`.
 - The audit ledger is exposed through `/audit-events`, filtered by object, source run, change request, and limit. Evidence packages use the same event shape, so review workflows and ledger export share one contract.
+- `npm run test:backend` verifies that protected routes reject both missing-role and missing-actor requests in header auth mode.
 
 Alerts:
 

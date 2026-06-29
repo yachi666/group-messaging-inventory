@@ -130,12 +130,13 @@ curl -H 'x-actor-id: analyst-local' \
   http://127.0.0.1:4000/ready
 ```
 
-受保护的分析与治理路由需要以下角色之一：`analysis_runner`、`analysis_reader`、`change_maker`、`change_checker` 或 `auditor`。`/health` 与 `/ready` 保持公开。只有隔离本地调试时才建议设置 `API_AUTH_MODE=disabled`。
+受保护的分析与治理路由必须同时带 `x-actor-id` 和以下角色之一：`analysis_runner`、`analysis_reader`、`change_maker`、`change_checker` 或 `auditor`。`/health` 与 `/ready` 保持公开。只有隔离本地调试时才建议设置 `API_AUTH_MODE=disabled`。
 
 不可变治理账本通过以下接口暴露：
 
 ```bash
-curl -H 'x-gmi-roles: auditor' \
+curl -H 'x-actor-id: auditor-local' \
+  -H 'x-gmi-roles: auditor' \
   'http://127.0.0.1:4000/audit-events?changeRequestId=CR-...'
 ```
 
