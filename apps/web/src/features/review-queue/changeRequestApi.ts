@@ -59,7 +59,7 @@ export type ChangeRequestEvidencePackage = {
 export async function fetchPendingChangeRequests(
   signal?: AbortSignal,
 ): Promise<ReadonlyArray<ChangeRequest>> {
-  const response = await apiFetch('/change-requests?status=PendingApproval', {
+  const response = await apiFetch('/change-requests?status=PendingApproval&limit=100', {
     roles: ['change_checker'],
     signal,
   });

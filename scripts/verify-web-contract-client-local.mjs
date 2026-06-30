@@ -162,13 +162,17 @@ if (changeRequestApi.includes('actorId: input.actorId')) {
 }
 
 for (const expectedApiPath of [
-  '/change-requests?status=PendingApproval',
+  '/change-requests?status=PendingApproval&limit=100',
   '/change-requests/${encodeURIComponent(input.changeRequestId)}/decision',
   '/change-requests/${encodeURIComponent(changeRequestId)}/evidence-package',
 ]) {
   if (!changeRequestApi.includes(expectedApiPath)) {
     throw new Error(`changeRequestApi.ts must call ${expectedApiPath}.`);
   }
+}
+
+if (!analysisApi.includes('/templates/analysis-results?limit=100')) {
+  throw new Error('analysisApi.ts must request a bounded analysis results projection.');
 }
 
 for (const expectedSource of [

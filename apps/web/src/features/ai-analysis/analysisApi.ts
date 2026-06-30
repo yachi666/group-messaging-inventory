@@ -20,7 +20,7 @@ import { apiFetch } from '../../lib/apiClient';
 export async function fetchAnalysisResults(
   signal?: AbortSignal,
 ): Promise<ReadonlyArray<AiTemplateAnalysisResult>> {
-  const response = await apiFetch('/templates/analysis-results', {
+  const response = await apiFetch('/templates/analysis-results?limit=100', {
     roles: ['analysis_reader'],
     signal,
   });

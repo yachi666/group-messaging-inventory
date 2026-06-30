@@ -994,7 +994,7 @@ POST /api/templates/{templateUuid}/lifecycle-change-requests
 POST /api/change-requests/{changeRequestId}/submit
 POST /api/change-requests/{changeRequestId}/decision
 POST /api/review-tasks/{taskId}/transition
-GET /api/change-requests?status=PendingApproval
+GET /api/change-requests?status=PendingApproval&limit=100
 GET /api/change-requests/{changeRequestId}/evidence-package
 ```
 
@@ -1207,13 +1207,13 @@ Current repository status:
 The current `AI Template Analysis` screen can be backed by:
 
 ```http
-GET /api/templates/analysis-results
+GET /api/templates/analysis-results?limit=100
 ```
 
 The current `Review Queue > Governance Approval` screen can be backed by:
 
 ```http
-GET /api/change-requests?status=PendingApproval
+GET /api/change-requests?status=PendingApproval&limit=100
 POST /api/change-requests/{changeRequestId}/decision
 GET /api/change-requests/{changeRequestId}/evidence-package
 ```
@@ -1576,7 +1576,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Add mapping, lifecycle, and current-version Change Requests using the same command/state-machine pattern.
 - Enforce base revision, one-open-change-request-per-object, source-run-terminal, state-transition, and self-approval rules.
 - Implemented API slice: `POST /change-requests/{id}/submit` and `POST /change-requests/{id}/decision`.
-- Implemented query slice: `GET /change-requests?status=PendingApproval`.
+- Implemented query slice: `GET /change-requests?status=PendingApproval&limit=100`.
 - Implemented create-and-submit flow for mapping/lifecycle/current-version Change Requests via preferred `submitForApproval` plus authenticated `x-actor-id`; optional body `submitterActorId` remains compatibility-only for older local clients.
 - Persist maker/checker actors, decision reason, timestamps, and audit events.
 - Apply approved mapping/lifecycle/current-version patches to the governed Template and increment `approved_revision`.
