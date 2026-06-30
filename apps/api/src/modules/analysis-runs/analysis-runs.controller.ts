@@ -224,9 +224,9 @@ export class AnalysisRunsController {
   }
 }
 
-function resolveCommandActorId(headerActorId: string | undefined, bodyActorId: string) {
+function resolveCommandActorId(headerActorId: string | undefined, bodyActorId?: string) {
   const normalizedHeaderActorId = headerActorId?.trim();
-  return normalizedHeaderActorId || bodyActorId;
+  return normalizedHeaderActorId || bodyActorId || 'anonymous';
 }
 
 function withSubmitterActor<
@@ -235,7 +235,7 @@ function withSubmitterActor<
     | CreateLifecycleChangeRequestRequest
     | CreateCurrentVersionChangeRequestRequest,
 >(request: T, headerActorId: string | undefined): T {
-  if (!request.submitterActorId) {
+  if (!request.submitForApproval && !request.submitterActorId) {
     return request;
   }
 

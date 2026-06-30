@@ -79,7 +79,6 @@ export async function fetchPendingChangeRequests(
 
 export async function decideChangeRequest(input: {
   changeRequestId: string;
-  actorId: string;
   decision: 'Approved' | 'Rejected' | 'ChangesRequested';
   reason: string;
 }): Promise<ChangeRequest> {
@@ -87,7 +86,6 @@ export async function decideChangeRequest(input: {
     `/change-requests/${encodeURIComponent(input.changeRequestId)}/decision`,
     {
       body: JSON.stringify({
-        actorId: input.actorId,
         decision: input.decision,
         reason: input.reason,
       }),

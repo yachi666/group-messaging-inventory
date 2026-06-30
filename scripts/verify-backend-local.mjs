@@ -201,7 +201,6 @@ async function verifyReviewTaskLifecycle(taskId) {
   const inReview = await postJson(
     `${baseUrl}/review-tasks/${taskId}/transition`,
     {
-      actorId: 'spoofed-reviewer-local-smoke',
       status: 'InReview',
       reason: 'backend smoke reviewer started work',
     },
@@ -215,7 +214,6 @@ async function verifyReviewTaskLifecycle(taskId) {
   const resolved = await postJson(
     `${baseUrl}/review-tasks/${taskId}/transition`,
     {
-      actorId: 'spoofed-reviewer-local-smoke',
       status: 'Resolved',
       reason: 'backend smoke reviewer completed task',
     },
@@ -237,7 +235,6 @@ async function verifyReviewTaskLifecycle(taskId) {
         'x-actor-id': 'reviewer-local-smoke',
       },
       body: JSON.stringify({
-        actorId: 'spoofed-reviewer-local-smoke',
         status: 'InReview',
         reason: 'backend smoke terminal task cannot reopen',
       }),
@@ -583,7 +580,6 @@ async function verifyCurrentVersionChangeRequest() {
   const approvalResult = await postJsonWithStatus(
     `${baseUrl}/change-requests/${changeRequest.changeRequestId}/decision`,
     {
-      actorId: 'version-checker-local-smoke',
       decision: 'Approved',
       reason: 'backend smoke current version approval',
     },
@@ -630,7 +626,6 @@ async function verifyMakerCheckerDecisionFlow() {
   const submitChangeRequestResult = await postJsonWithStatus(
     `${baseUrl}/change-requests/${changeRequest.changeRequestId}/submit`,
     {
-      actorId: 'spoofed-maker-local-smoke',
     },
     {
       'x-actor-id': 'maker-local-smoke',
@@ -666,7 +661,6 @@ async function verifyMakerCheckerDecisionFlow() {
         'x-actor-id': 'maker-local-smoke',
       },
       body: JSON.stringify({
-        actorId: 'spoofed-maker-local-smoke',
         decision: 'Approved',
         reason: 'backend smoke self approval should be blocked',
       }),
@@ -680,7 +674,6 @@ async function verifyMakerCheckerDecisionFlow() {
   const decisionResult = await postJsonWithStatus(
     `${baseUrl}/change-requests/${changeRequest.changeRequestId}/decision`,
     {
-      actorId: 'spoofed-checker-local-smoke',
       decision: 'Approved',
       reason: 'backend smoke checker approval',
     },

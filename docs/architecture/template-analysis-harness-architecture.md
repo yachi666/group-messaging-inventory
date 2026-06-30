@@ -1216,7 +1216,7 @@ Current repository status:
 - Governance Approval fetches pending Change Requests from the API when available.
 - If the local API is unavailable, the screen falls back to the existing mock governance review data.
 - Checker decisions for API-backed Change Requests call the backend decision command and remove the item from the pending queue after success.
-- AI Template Analysis mapping and lifecycle actions include `submitterActorId` so created Change Requests can enter the pending approval queue immediately.
+- AI Template Analysis mapping and lifecycle actions send `submitForApproval: true`; the API resolves the maker from the authenticated `x-actor-id` header and treats request-body actor fields as backwards-compatible legacy input only.
 - Change Request evidence packages expose the CR, proposed patch, source Analysis Run, and audit events for review/export workflows.
 - `npm run test:web-contracts` verifies that the Governance Approval client keeps the pending queue, decision command, and evidence package calls on the shared `apiFetch` + Zod-contract path while retaining explicit mock fallback behavior.
 
@@ -1564,7 +1564,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Enforce base revision, one-open-change-request-per-object, source-run-terminal, state-transition, and self-approval rules.
 - Implemented API slice: `POST /change-requests/{id}/submit` and `POST /change-requests/{id}/decision`.
 - Implemented query slice: `GET /change-requests?status=PendingApproval`.
-- Implemented create-and-submit flow for mapping/lifecycle/current-version Change Requests via optional `submitterActorId`.
+- Implemented create-and-submit flow for mapping/lifecycle/current-version Change Requests via preferred `submitForApproval` plus authenticated `x-actor-id`; optional body `submitterActorId` remains compatibility-only for older local clients.
 - Persist maker/checker actors, decision reason, timestamps, and audit events.
 - Apply approved mapping/lifecycle/current-version patches to the governed Template and increment `approved_revision`.
 - Implemented Governance Approval screen wiring to pending Change Requests with explicit mock fallback and web-contract verification.

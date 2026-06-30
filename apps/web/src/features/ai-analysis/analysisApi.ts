@@ -107,7 +107,7 @@ export async function createMappingChangeRequest(input: {
   sourceRunId: string;
   targetUseCaseId: string;
   reason: string;
-  submitterActorId?: string;
+  submitForApproval?: boolean;
 }): Promise<void> {
   const response = await apiFetch(
     `/templates/${encodeURIComponent(input.templateUuid)}/mapping-change-requests`,
@@ -117,7 +117,7 @@ export async function createMappingChangeRequest(input: {
         sourceRunId: input.sourceRunId,
         targetUseCaseId: input.targetUseCaseId,
         reason: input.reason,
-        ...(input.submitterActorId ? { submitterActorId: input.submitterActorId } : {}),
+        submitForApproval: input.submitForApproval ?? false,
       }),
       method: 'POST',
       roles: ['change_maker'],
@@ -133,7 +133,7 @@ export async function createLifecycleChangeRequest(input: {
   templateUuid: string;
   sourceRunId: string;
   reason: string;
-  submitterActorId?: string;
+  submitForApproval?: boolean;
 }): Promise<void> {
   const response = await apiFetch(
     `/templates/${encodeURIComponent(input.templateUuid)}/lifecycle-change-requests`,
@@ -143,7 +143,7 @@ export async function createLifecycleChangeRequest(input: {
         sourceRunId: input.sourceRunId,
         targetLifecycleStatus: 'Retired',
         reason: input.reason,
-        ...(input.submitterActorId ? { submitterActorId: input.submitterActorId } : {}),
+        submitForApproval: input.submitForApproval ?? false,
       }),
       method: 'POST',
       roles: ['change_maker'],

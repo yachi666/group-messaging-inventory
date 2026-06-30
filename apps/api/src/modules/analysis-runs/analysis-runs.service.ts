@@ -57,17 +57,17 @@ type CreateCurrentVersionChangeRequestCommand = {
 
 type SubmitChangeRequestCommand = {
   changeRequestId: string;
-  request: SubmitChangeRequestRequest;
+  request: SubmitChangeRequestRequest & { actorId: string };
 };
 
 type DecideChangeRequestCommand = {
   changeRequestId: string;
-  request: DecideChangeRequestRequest;
+  request: DecideChangeRequestRequest & { actorId: string };
 };
 
 type TransitionReviewTaskCommand = {
   taskId: string;
-  request: TransitionReviewTaskRequest;
+  request: TransitionReviewTaskRequest & { actorId: string };
 };
 
 @Injectable()

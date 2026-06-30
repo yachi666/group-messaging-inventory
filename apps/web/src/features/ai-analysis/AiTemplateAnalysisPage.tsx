@@ -427,7 +427,7 @@ export function AiTemplateAnalysisPage() {
           sourceRunId: selectedResult.id,
           targetUseCaseId: selectedResult.nearestMatch.templateId,
           reason: `Merge ${selectedResult.templateId} into nearest match ${selectedResult.nearestMatch.templateId}.`,
-          submitterActorId: selectedResult.owner || 'analysis-workbench',
+          submitForApproval: true,
         });
         approvalSubmitted = true;
       } catch {
@@ -456,7 +456,7 @@ export function AiTemplateAnalysisPage() {
           templateUuid: selectedResult.templateId,
           sourceRunId: selectedResult.id,
           reason: `Retire ${selectedResult.templateId} from AI Template Analysis review.`,
-          submitterActorId: selectedResult.owner || 'analysis-workbench',
+          submitForApproval: true,
         });
         approvalSubmitted = true;
       } catch {

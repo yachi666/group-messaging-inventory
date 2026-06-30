@@ -62,6 +62,7 @@ for (const expectedSchema of [
 for (const expectedSource of [
   'submitTemplateReanalysisRun',
   'fetchAnalysisRun',
+  'submitForApproval: input.submitForApproval ?? false',
   "roles: ['analysis_runner']",
   "roles: ['analysis_reader']",
 ]) {
@@ -76,6 +77,7 @@ for (const expectedSource of [
   'data-testid="analysis-policy-decision"',
   'submitTemplateReanalysisRun({',
   'fetchAnalysisRun(submittedRun.runId)',
+  'submitForApproval: true',
 ]) {
   if (!aiTemplateAnalysisPage.includes(expectedSource)) {
     throw new Error(`AiTemplateAnalysisPage.tsx must keep the API-backed re-analysis flow: ${expectedSource}`);
@@ -136,6 +138,10 @@ if (reviewTaskApi.includes('as ReviewTask')) {
   throw new Error('reviewTaskApi.ts must not cast review tasks before schema parsing.');
 }
 
+if (reviewTaskApi.includes('actorId: input.actorId')) {
+  throw new Error('reviewTaskApi.ts must not send command actor IDs in request bodies.');
+}
+
 for (const expectedSchema of [
   'changeRequestsResponseSchema',
   'changeRequestResponseSchema',
@@ -148,6 +154,10 @@ for (const expectedSchema of [
 
 if (changeRequestApi.includes('as ChangeRequest')) {
   throw new Error('changeRequestApi.ts must not cast change requests before schema parsing.');
+}
+
+if (changeRequestApi.includes('actorId: input.actorId')) {
+  throw new Error('changeRequestApi.ts must not send command actor IDs in request bodies.');
 }
 
 for (const expectedApiPath of [

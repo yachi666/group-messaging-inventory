@@ -184,7 +184,6 @@ export function ReviewQueuePage() {
     try {
       const updatedTask = await transitionReviewTask({
         taskId: selected.taskId,
-        actorId: currentGovernanceActor.actorId,
         status,
         assignedTo: status === 'Assigned' || status === 'InReview' ? currentGovernanceActor.actorId : undefined,
         reason,
@@ -523,7 +522,6 @@ function GovernanceApprovalWorkbench({ activeTab, onTabChange }: { activeTab: st
     try {
       await decideChangeRequest({
         changeRequestId: selected.id,
-        actorId: currentActorId,
         decision: apiDecision,
         reason: comment.trim() || `Governance ${decision.toLowerCase()}`,
       });

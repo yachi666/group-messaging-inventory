@@ -78,7 +78,6 @@ export async function fetchReviewTasksByStatuses(
 
 export async function transitionReviewTask(input: {
   taskId: string;
-  actorId: string;
   status: ReviewTaskTransitionStatus;
   assignedTo?: string;
   reason: string;
@@ -89,7 +88,6 @@ export async function transitionReviewTask(input: {
       method: 'POST',
       roles: ['analysis_runner'],
       body: JSON.stringify({
-        actorId: input.actorId,
         status: input.status,
         assignedTo: input.assignedTo,
         reason: input.reason,

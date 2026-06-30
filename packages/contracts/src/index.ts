@@ -123,6 +123,7 @@ export const createMappingChangeRequestSchema = z.object({
   sourceRunId: z.string().min(1),
   targetUseCaseId: z.string().min(1),
   reason: z.string().min(1).max(1000),
+  submitForApproval: z.boolean().default(false),
   submitterActorId: z.string().min(1).optional(),
 });
 
@@ -131,6 +132,7 @@ export const createLifecycleChangeRequestSchema = z.object({
   sourceRunId: z.string().min(1),
   targetLifecycleStatus: z.enum(['Retired', 'Active', 'No Traffic']),
   reason: z.string().min(1).max(1000),
+  submitForApproval: z.boolean().default(false),
   submitterActorId: z.string().min(1).optional(),
 });
 
@@ -138,6 +140,7 @@ export const createCurrentVersionChangeRequestSchema = z.object({
   baseRevision: z.number().int().nonnegative(),
   sourceRunId: z.string().min(1),
   reason: z.string().min(1).max(1000),
+  submitForApproval: z.boolean().default(false),
   submitterActorId: z.string().min(1).optional(),
 });
 
@@ -167,11 +170,11 @@ export const changeRequestResponseSchema = z.object({
 });
 
 export const submitChangeRequestSchema = z.object({
-  actorId: z.string().min(1),
+  actorId: z.string().min(1).optional(),
 });
 
 export const decideChangeRequestSchema = z.object({
-  actorId: z.string().min(1),
+  actorId: z.string().min(1).optional(),
   decision: z.enum(['Approved', 'Rejected', 'ChangesRequested']),
   reason: z.string().min(1).max(1000),
 });
@@ -221,7 +224,7 @@ export const reviewTasksResponseSchema = z.object({
 });
 
 export const transitionReviewTaskSchema = z.object({
-  actorId: z.string().min(1),
+  actorId: z.string().min(1).optional(),
   status: z.enum(['Assigned', 'InReview', 'PendingApproval', 'Resolved', 'Dismissed']),
   reason: z.string().min(1).max(1000).optional(),
   assignedTo: z.string().min(1).optional(),

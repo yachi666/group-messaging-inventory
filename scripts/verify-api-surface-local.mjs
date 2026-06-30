@@ -27,6 +27,16 @@ assertSourceContains(
   'review task reviewer filter schema',
 );
 assertSourceContains(
+  contracts,
+  'submitForApproval: z.boolean().default(false)',
+  'change request submit intent schema',
+);
+assertSourceContains(
+  contracts,
+  'actorId: z.string().min(1).optional()',
+  'optional backwards-compatible command actor schema',
+);
+assertSourceContains(
   analysisController,
   'resolveCommandActorId(actorId, request.actorId)',
   'command actor header override',
