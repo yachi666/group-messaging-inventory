@@ -109,7 +109,7 @@ export class AnalysisRunsService {
       throw new NotFoundException(`Analysis run ${runId} was not found.`);
     }
 
-    const { output, ...runMetadata } = run;
+    const { errors, output, ...runMetadata } = run;
     const policy = output
       ? evaluateAnalysisPolicy({
           output,
@@ -122,6 +122,9 @@ export class AnalysisRunsService {
 
     return {
       ...runMetadata,
+      ...(errors && errors.length > 0
+        ? { errors: errors.map(toPublicAnalysisRunError) }
+        : {}),
       ...(output ? { output: toResponseOutput(output) } : {}),
       ...(policy
         ? {
@@ -325,6 +328,38 @@ function toResponseOutput(output: AiTemplateAnalysisOutput): AnalysisRunResponse
     businessExplanation: [...output.businessExplanation],
     technicalEvidence: [...output.technicalEvidence],
   };
+}
+
+function toPublicAnalysisRunError(
+  error: NonNullable<AnalysisRunResponse['errors']>[number],
+): NonNullable<AnalysisRunResponse['errors']>[number] {
+  return {
+    code: error.code,
+    message: toPublicAnalysisRunErrorMessage(error),
+    retryable: error.retryable,
+  };
+}
+
+function toPublicAnalysisRunErrorMessage(
+  error: NonNullable<AnalysisRunResponse['errors']>[number],
+) {
+  if (error.code === 'provider_error') {
+    const [, providerName, failureKind] = error.message.match(
+      /^provider_error:([^:]+):([^:]+)/,
+    ) ?? [];
+
+    if (providerName && failureKind) {
+      return `provider_error:${providerName}:${failureKind}`;
+    }
+
+    return 'provider_error';
+  }
+
+  if (error.code === 'schema_validation_failed') {
+    return 'schema_validation_failed';
+  }
+
+  return error.code;
 }
 
 function normalizeAiMessageType(
