@@ -229,7 +229,7 @@ npm run preview
 npm run test:no-infra
 ```
 
-该命令会执行类型检查、secret scan、后台 smoke、readiness 与 metrics smoke、PII masking、golden evals、release evidence、CI workflow、部署配置、构建、前端 bundle 和本地 UI 验证。
+该命令会执行类型检查、secret scan、后台 smoke、readiness 与 metrics smoke、PII masking、golden replay evals、无需外部模型调用的 provider-adapter evals、release evidence、CI workflow、部署配置、构建、前端 bundle 和本地 UI 验证。
 
 仓库还包含基于 Playwright 的 UI 验证脚本：
 

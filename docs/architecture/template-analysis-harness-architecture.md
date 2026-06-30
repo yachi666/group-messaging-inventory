@@ -581,7 +581,7 @@ Current repository status:
 - `GET /review-tasks` exposes analysis review tasks through the API with `status`, `objectType`, `objectId`, `sourceRunId`, `assignedTo`, and `limit` filters, making `review_tasks` usable by reviewer surfaces without direct table access.
 - `POST /review-tasks/{taskId}/transition` implements the first reviewer task lifecycle API. It supports `Assigned`, `InReview`, `PendingApproval`, `Resolved`, and `Dismissed` transitions, prevents terminal tasks from being reopened, stores assignment/resolution metadata, and writes `review_task_transitioned` audit events.
 - Review Queue Discovery, My Tasks, and Completed tabs read status-filtered template review tasks from `/review-tasks`; My Tasks also sends `assignedTo` for the current reviewer. The queue calls the transition API for claim/start/resolve actions and falls back to local queue data when the API is unavailable.
-- `npm run test:no-infra` is the local and CI entrypoint for the no-infrastructure harness gate set.
+- `npm run test:no-infra` is the local and CI entrypoint for the no-infrastructure harness gate set, including both replay-mode golden evaluation and injected provider-adapter evaluation without external model calls.
 - `.github/workflows/ci.yml` runs `npm run test:no-infra` on pull requests and pushes, and `npm run test:ci-workflow` verifies that the workflow and package script continue to include the required gates.
 - The next expansion should add reviewer-labeled production samples to the masking fixture set once data handling approvals are available.
 
@@ -1591,7 +1591,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented worker failure persistence activity and repository support for marking failed analysis runs with structured error metadata.
 - Implemented shared `@gmi/runtime-config` startup validation for API and worker configuration.
 - Implemented and verified `npm run test:harness:temporal` for the full API -> Temporal -> worker -> Postgres analysis evidence loop with local header authorization and persisted analysis output, review task, and audit event checks.
-- Implemented `npm run test:no-infra` plus GitHub Actions CI for no-infrastructure typecheck, secret scan, backend smoke, readiness probes, runtime lifecycle checks, API surface checks, PII gate, eval gates, release mapping gates, web contract checks, workflow verification, deploy config checks, build, bundle budget, and local UI verification.
+- Implemented `npm run test:no-infra` plus GitHub Actions CI for no-infrastructure typecheck, secret scan, backend smoke, readiness probes, runtime lifecycle checks, API surface checks, PII gate, replay and provider-adapter eval gates, release mapping gates, web contract checks, workflow verification, deploy config checks, build, bundle budget, and local UI verification.
 - Implemented contract-backed backend smoke parsing for key API success and error responses via `packages/contracts`.
 - Next: add reviewer-labeled production PII/false-positive samples once data handling approvals are available.
 

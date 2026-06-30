@@ -247,7 +247,7 @@ Before opening a pull request or publishing a release, run:
 npm run test:no-infra
 ```
 
-This runs type checks, secret scan, backend smoke, readiness and metrics smoke, PII masking gate, golden evals, release evidence gates, CI workflow verification, and build. The same no-infrastructure gate set is wired into `.github/workflows/ci.yml` for pull requests and pushes to `main` or `codex/**` branches.
+This runs type checks, secret scan, backend smoke, readiness and metrics smoke, PII masking gate, golden replay evals, provider-adapter evals without external model calls, release evidence gates, CI workflow verification, and build. The same no-infrastructure gate set is wired into `.github/workflows/ci.yml` for pull requests and pushes to `main` or `codex/**` branches.
 
 The repository also includes a Playwright-based UI verification script:
 

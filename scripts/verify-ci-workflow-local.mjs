@@ -52,6 +52,7 @@ const requiredNoInfraCommands = [
   'npm run test:ai-adapter',
   'npm run test:pii:local',
   'npm run test:evals',
+  'npm run test:evals:provider:local',
   'npm run test:evals:release:local',
   'npm run test:evals:release-persistence:local',
   'npm run test:evals:latest-api-mapping:local',
