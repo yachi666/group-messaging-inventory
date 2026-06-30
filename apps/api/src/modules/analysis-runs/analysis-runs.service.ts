@@ -30,6 +30,7 @@ import {
   analysisWorkflowClientToken,
 } from './analysis-runs.tokens.js';
 import type { AnalysisWorkflowClient } from './analysis-workflow-client.js';
+import { domainMetricsRegistry } from '../metrics.service.js';
 
 type SubmitRunCommand = {
   versionId: string;
@@ -93,6 +94,12 @@ export class AnalysisRunsService {
       templateUuid: run.templateUuid,
       versionId: run.versionId,
       effort: command.request.effort,
+    });
+
+    domainMetricsRegistry.recordAnalysisRunSubmitted({
+      triggerType: command.request.triggerType,
+      effort: command.request.effort,
+      workflowDriver: workflow.driver,
     });
 
     return {
@@ -177,7 +184,13 @@ export class AnalysisRunsService {
   }
 
   async confirmRun(runId: string): Promise<ConfirmAnalysisRunResponse> {
-    return this.repository.confirmRun(runId);
+    const response = await this.repository.confirmRun(runId);
+
+    domainMetricsRegistry.recordAnalysisRunConfirmed({
+      reviewStatus: response.reviewStatus,
+    });
+
+    return response;
   }
 
   async createMappingChangeRequest(

@@ -89,7 +89,7 @@ Operational endpoints:
 
 - `GET /health` is the API liveness check.
 - `GET /ready` returns component readiness for the API, Postgres, Temporal workflow driver, and AI provider configuration. When `DATABASE_URL` or `ANALYSIS_WORKFLOW_DRIVER=temporal` is enabled, readiness performs lightweight dependency probes instead of only checking environment variables.
-- `GET /metrics` exposes Prometheus-style API request counters and duration sums for local deployment observability. Labels are intentionally low-cardinality, currently `method` and `status_class`, so template ids, run ids, and change request ids do not leak into metric series.
+- `GET /metrics` exposes Prometheus-style API request counters, duration sums, and low-cardinality domain counters for analysis submissions, confirmations, and release evidence records. Labels intentionally avoid template ids, run ids, release ids, and change request ids.
 - Every API response includes `x-request-id`. Send `x-request-id` on inbound requests to preserve a caller trace id; standard error responses also include `error.requestId`.
 - API access logs are emitted as single-line JSON with `event=http_request`, `requestId`, `actorId`, `roleCount`, method, path, status code, and duration.
 - API and worker startup use shared runtime configuration validation through `@gmi/runtime-config`, so invalid provider, Temporal, port, timeout, or database URL settings fail early with actionable errors.

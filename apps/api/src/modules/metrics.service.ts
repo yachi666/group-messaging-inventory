@@ -11,6 +11,26 @@ type HttpMetricBucket = {
   durationMsSum: number;
 };
 
+type CounterBucket = {
+  count: number;
+};
+
+type AnalysisRunSubmittedMetric = {
+  triggerType: string;
+  effort: string;
+  workflowDriver: string;
+};
+
+type AnalysisRunConfirmedMetric = {
+  reviewStatus: string;
+};
+
+type ReleaseEvidenceRecordedMetric = {
+  verdict: string;
+  status: string;
+  promotionAllowed: boolean;
+};
+
 class HttpMetricsRegistry {
   private readonly buckets = new Map<string, HttpMetricBucket>();
 
@@ -81,10 +101,74 @@ class HttpMetricsRegistry {
 
 export const httpMetricsRegistry = new HttpMetricsRegistry();
 
+class DomainMetricsRegistry {
+  private readonly analysisRunSubmittedBuckets = new Map<string, CounterBucket>();
+  private readonly analysisRunConfirmedBuckets = new Map<string, CounterBucket>();
+  private readonly releaseEvidenceRecordedBuckets = new Map<string, CounterBucket>();
+
+  recordAnalysisRunSubmitted(metric: AnalysisRunSubmittedMetric) {
+    incrementCounter(this.analysisRunSubmittedBuckets, [
+      sanitizeLabel(metric.triggerType),
+      sanitizeLabel(metric.effort),
+      sanitizeLabel(metric.workflowDriver),
+    ]);
+  }
+
+  recordAnalysisRunConfirmed(metric: AnalysisRunConfirmedMetric) {
+    incrementCounter(this.analysisRunConfirmedBuckets, [
+      sanitizeLabel(metric.reviewStatus),
+    ]);
+  }
+
+  recordReleaseEvidenceRecorded(metric: ReleaseEvidenceRecordedMetric) {
+    incrementCounter(this.releaseEvidenceRecordedBuckets, [
+      sanitizeLabel(metric.verdict),
+      sanitizeLabel(metric.status),
+      metric.promotionAllowed ? 'true' : 'false',
+    ]);
+  }
+
+  reset() {
+    this.analysisRunSubmittedBuckets.clear();
+    this.analysisRunConfirmedBuckets.clear();
+    this.releaseEvidenceRecordedBuckets.clear();
+  }
+
+  toPrometheusText() {
+    const lines = [
+      '# HELP gmi_analysis_runs_submitted_total Total analysis runs accepted by trigger, effort, and workflow driver.',
+      '# TYPE gmi_analysis_runs_submitted_total counter',
+      ...formatCounterBuckets(
+        this.analysisRunSubmittedBuckets,
+        'gmi_analysis_runs_submitted_total',
+        ['trigger_type', 'effort', 'workflow_driver'],
+      ),
+      '# HELP gmi_analysis_runs_confirmed_total Total analysis run confirmations by review status.',
+      '# TYPE gmi_analysis_runs_confirmed_total counter',
+      ...formatCounterBuckets(
+        this.analysisRunConfirmedBuckets,
+        'gmi_analysis_runs_confirmed_total',
+        ['review_status'],
+      ),
+      '# HELP gmi_release_evidence_records_total Total release evidence records accepted by verdict, status, and promotion flag.',
+      '# TYPE gmi_release_evidence_records_total counter',
+      ...formatCounterBuckets(
+        this.releaseEvidenceRecordedBuckets,
+        'gmi_release_evidence_records_total',
+        ['verdict', 'status', 'promotion_allowed'],
+      ),
+    ];
+
+    return `${lines.join('\n')}\n`;
+  }
+}
+
+export const domainMetricsRegistry = new DomainMetricsRegistry();
+
 @Injectable()
 export class MetricsService {
   getPrometheusMetrics() {
-    return httpMetricsRegistry.toPrometheusText();
+    return `${httpMetricsRegistry.toPrometheusText()}${domainMetricsRegistry.toPrometheusText()}`;
   }
 }
 
@@ -97,7 +181,7 @@ function toStatusClass(statusCode: number) {
 }
 
 function sanitizeLabel(value: string) {
-  return value.replace(/[^A-Z0-9_:-]/g, '_');
+  return value.replace(/[^A-Za-z0-9_-]/g, '_');
 }
 
 function parseKey(key: string) {
@@ -106,4 +190,31 @@ function parseKey(key: string) {
     method,
     statusClass,
   };
+}
+
+function incrementCounter(buckets: Map<string, CounterBucket>, labelValues: string[]) {
+  const key = labelValues.join(':');
+  const bucket = buckets.get(key) ?? {
+    count: 0,
+  };
+
+  bucket.count += 1;
+  buckets.set(key, bucket);
+}
+
+function formatCounterBuckets(
+  buckets: Map<string, CounterBucket>,
+  metricName: string,
+  labelNames: string[],
+) {
+  return [...buckets.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, bucket]) => {
+      const labelValues = key.split(':');
+      const labels = labelNames
+        .map((labelName, index) => `${labelName}="${labelValues[index] ?? 'unknown'}"`)
+        .join(',');
+
+      return `${metricName}{${labels}} ${bucket.count}`;
+    });
 }

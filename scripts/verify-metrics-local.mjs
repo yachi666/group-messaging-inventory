@@ -1,10 +1,12 @@
 import { accessLogMiddleware } from '../apps/api/dist/middleware/access-log.middleware.js';
 import {
+  domainMetricsRegistry,
   httpMetricsRegistry,
   MetricsService,
 } from '../apps/api/dist/modules/metrics.service.js';
 
 httpMetricsRegistry.reset();
+domainMetricsRegistry.reset();
 
 emitRequestMetric({
   method: 'GET',
@@ -20,6 +22,19 @@ emitRequestMetric({
   method: 'POST',
   originalUrl: '/change-requests/cr-local/decision',
   statusCode: 403,
+});
+domainMetricsRegistry.recordAnalysisRunSubmitted({
+  triggerType: 'manual_reanalysis',
+  effort: 'normal',
+  workflowDriver: 'temporal',
+});
+domainMetricsRegistry.recordAnalysisRunConfirmed({
+  reviewStatus: 'reviewed',
+});
+domainMetricsRegistry.recordReleaseEvidenceRecorded({
+  verdict: 'pass',
+  status: 'ReadyForPromotion',
+  promotionAllowed: true,
 });
 
 const metrics = new MetricsService().getPrometheusMetrics();
@@ -45,8 +60,25 @@ assertIncludes(
   'gmi_api_http_request_duration_seconds_sum{method="POST",status_class="4xx"}',
   'duration sum metric',
 );
+assertIncludes(
+  metrics,
+  'gmi_analysis_runs_submitted_total{trigger_type="manual_reanalysis",effort="normal",workflow_driver="temporal"} 1',
+  'analysis run submitted metric',
+);
+assertIncludes(
+  metrics,
+  'gmi_analysis_runs_confirmed_total{review_status="reviewed"} 1',
+  'analysis run confirmed metric',
+);
+assertIncludes(
+  metrics,
+  'gmi_release_evidence_records_total{verdict="pass",status="ReadyForPromotion",promotion_allowed="true"} 1',
+  'release evidence recorded metric',
+);
 assertDoesNotInclude(metrics, 'tv-local', 'metrics must not expose high-cardinality ids');
 assertDoesNotInclude(metrics, 'cr-local', 'metrics must not expose high-cardinality ids');
+assertDoesNotInclude(metrics, 'AR-', 'metrics must not expose run ids');
+assertDoesNotInclude(metrics, 'REL-', 'metrics must not expose release ids');
 
 console.log('Metrics local smoke passed.');
 

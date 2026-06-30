@@ -19,6 +19,7 @@ import {
   verifyPipelineReleaseEvidence,
   type PipelineReleaseEvidence,
 } from '@gmi/evals';
+import { domainMetricsRegistry } from '../metrics.service.js';
 
 @Injectable()
 export class AnalysisEvaluationsService {
@@ -122,6 +123,12 @@ export class AnalysisEvaluationsService {
           },
         });
       }
+
+      domainMetricsRegistry.recordReleaseEvidenceRecorded({
+        verdict: evidence.evaluation.verdict,
+        status: evidence.status,
+        promotionAllowed: evidence.promotionAllowed,
+      });
 
       return recordPipelineReleaseEvidenceResponseSchema.parse({
         recordedEvaluation,

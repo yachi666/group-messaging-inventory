@@ -151,6 +151,7 @@ try {
   );
   assertIncludes(latestEvaluation.release.evidenceHash, 'sha256:', 'latest eval hash');
 
+  await verifyApiDomainMetrics(submitResponse.runId);
   await verifyWorkerActivities();
   await verifyPublicAnalysisRunErrorMapping();
 
@@ -159,6 +160,29 @@ try {
   );
 } finally {
   api.kill('SIGINT');
+}
+
+async function verifyApiDomainMetrics(runId) {
+  const response = await fetch(`${baseUrl}/metrics`);
+
+  if (!response.ok) {
+    throw new Error(`GET /metrics returned ${response.status}: ${await response.text()}`);
+  }
+
+  const metrics = await response.text();
+
+  assertIncludes(
+    metrics,
+    'gmi_analysis_runs_submitted_total{trigger_type="manual_reanalysis",effort="normal",workflow_driver="none"} 1',
+    'API analysis submitted metric',
+  );
+  assertIncludes(
+    metrics,
+    'gmi_analysis_runs_confirmed_total{review_status="reviewed"} 1',
+    'API analysis confirmed metric',
+  );
+  assertDoesNotInclude(metrics, runId, 'API metrics must not expose run ids');
+  assertDoesNotInclude(metrics, 'tv-backend-local-smoke', 'API metrics must not expose version ids');
 }
 
 async function verifyPublicAnalysisRunErrorMapping() {

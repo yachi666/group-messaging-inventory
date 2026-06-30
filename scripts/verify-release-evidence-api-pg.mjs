@@ -106,6 +106,7 @@ try {
   assertEqual(latest.source.persisted, true, 'GET latest persisted flag');
   assertEqual(latest.release.evidenceHash, evidence.evidenceHash, 'GET latest hash');
   assertEqual(latest.evaluation.verdict, 'pass', 'GET latest verdict');
+  await verifyReleaseEvidenceMetric(releaseId);
 
   console.log(
     JSON.stringify(
@@ -124,6 +125,26 @@ try {
     child.kill('SIGINT');
   }
   await db.destroy();
+}
+
+async function verifyReleaseEvidenceMetric(releaseId) {
+  const response = await fetch(`${baseUrl}/metrics`);
+
+  if (!response.ok) {
+    throw new Error(`GET /metrics returned ${response.status}: ${await response.text()}`);
+  }
+
+  const metrics = await response.text();
+
+  assertIncludes(
+    metrics,
+    'gmi_release_evidence_records_total{verdict="pass",status="ReadyForPromotion",promotion_allowed="true"} 1',
+    'release evidence metric',
+  );
+
+  if (metrics.includes(releaseId)) {
+    throw new Error('release evidence metric must not expose release ids');
+  }
 }
 
 function spawnManaged(command, args, env) {
@@ -200,6 +221,12 @@ async function waitForOutput(predicate, message) {
 function assertEqual(actual, expected, label) {
   if (actual !== expected) {
     throw new Error(`${label}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+  }
+}
+
+function assertIncludes(value, expected, label) {
+  if (!value.includes(expected)) {
+    throw new Error(`${label}: expected ${JSON.stringify(value)} to include ${expected}`);
   }
 }
 
