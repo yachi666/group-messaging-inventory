@@ -6,7 +6,7 @@ export type RuntimeConfig = {
   mode: RuntimeConfigMode;
   port?: number;
   databaseUrl?: string;
-  authMode?: 'header' | 'disabled';
+  authMode?: 'header' | 'gateway' | 'disabled';
   workflow: {
     driver: 'none' | 'temporal';
     temporalAddress?: string;
@@ -39,7 +39,13 @@ export function loadRuntimeConfig(
 ): RuntimeConfig {
   const issues: string[] = [];
   const port = mode === 'api' ? readOptionalPositiveInteger(env.PORT, 'PORT', issues, 4000) : undefined;
-  const authMode = readEnum(env.API_AUTH_MODE, 'API_AUTH_MODE', ['header', 'disabled'], issues, 'header');
+  const authMode = readEnum(
+    env.API_AUTH_MODE,
+    'API_AUTH_MODE',
+    ['header', 'gateway', 'disabled'],
+    issues,
+    'header',
+  );
   const workflowDriver = readEnum(
     env.ANALYSIS_WORKFLOW_DRIVER,
     'ANALYSIS_WORKFLOW_DRIVER',

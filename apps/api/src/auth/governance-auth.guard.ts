@@ -7,6 +7,11 @@ import {
   SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import {
+  applyInternalGovernanceHeaders,
+  resolveGovernanceAuthContext,
+  type GovernanceAuthHeaders,
+} from './governance-auth-context.js';
 
 export const requiredRolesMetadataKey = 'gmi:required-roles';
 
@@ -37,23 +42,26 @@ export class GovernanceAuthGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<{
-      headers: Record<string, string | string[] | undefined>;
+      headers: GovernanceAuthHeaders;
     }>();
-    const actorId = normalizeHeaderValue(request.headers['x-actor-id']);
+    const authContext = resolveGovernanceAuthContext(request.headers);
 
-    if (!actorId) {
+    if (!authContext.actorId) {
       throw new ForbiddenException({
         code: 'access_denied',
         message: 'Missing required actor identity.',
         details: {
-          requiredHeader: 'x-actor-id',
+          requiredHeader:
+            authContext.mode === 'gateway'
+              ? process.env.API_GATEWAY_ACTOR_HEADER ?? 'x-gmi-authenticated-actor'
+              : 'x-actor-id',
         },
       });
     }
 
-    const roles = parseHeaderList(request.headers['x-gmi-roles']);
+    applyInternalGovernanceHeaders(request.headers, authContext);
 
-    if (requiredRoles.some((role) => roles.has(role))) {
+    if (requiredRoles.some((role) => authContext.roles.has(role))) {
       return true;
     }
 
@@ -65,20 +73,4 @@ export class GovernanceAuthGuard implements CanActivate {
       },
     });
   }
-}
-
-function normalizeHeaderValue(value: string | string[] | undefined) {
-  const rawValue = Array.isArray(value) ? value[0] : value;
-  const trimmed = rawValue?.trim();
-  return trimmed ? trimmed : undefined;
-}
-
-function parseHeaderList(value: string | string[] | undefined) {
-  const rawValue = Array.isArray(value) ? value.join(',') : value ?? '';
-  return new Set(
-    rawValue
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean),
-  );
 }

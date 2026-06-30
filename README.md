@@ -151,6 +151,16 @@ curl -H 'x-actor-id: analyst-local' \
 
 Protected analysis and governance routes require both `x-actor-id` and one of these roles: `analysis_runner`, `analysis_reader`, `change_maker`, `change_checker`, or `auditor`. Health and readiness remain public. Set `API_AUTH_MODE=disabled` only for isolated local debugging.
 
+For an API gateway, SSO proxy, or service mesh that injects already-authenticated identity headers, use gateway mode:
+
+```bash
+API_AUTH_MODE=gateway
+API_GATEWAY_ACTOR_HEADER=x-gmi-authenticated-actor
+API_GATEWAY_ROLES_HEADER=x-gmi-authenticated-roles
+```
+
+Gateway mode ignores local client `x-actor-id` / `x-gmi-roles` as the source of truth, normalizes the trusted gateway actor into the internal command context, and keeps controller-level `@RequiresRoles(...)` checks unchanged.
+
 The web client centralizes its local actor context in `apps/web/src/lib/governanceActor.ts`. Override `VITE_GOVERNANCE_ACTOR_ID`, `VITE_GOVERNANCE_ACTOR_DISPLAY_NAME`, and `VITE_GOVERNANCE_ROLES` to align API auth headers, My Tasks reviewer filtering, and audit actor IDs during local testing.
 For protected command routes, the API uses the authenticated `x-actor-id` header as the command actor and ignores spoofed actor IDs in request bodies; body actor fields remain only for backwards-compatible local clients.
 

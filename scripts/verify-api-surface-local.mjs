@@ -9,6 +9,8 @@ const evaluationsController = read(
   'apps/api/src/modules/analysis-evaluations/analysis-evaluations.controller.ts',
 );
 const healthController = read('apps/api/src/modules/health.controller.ts');
+const governanceAuthContext = read('apps/api/src/auth/governance-auth-context.ts');
+const governanceAuthGuard = read('apps/api/src/auth/governance-auth.guard.ts');
 const contracts = read('packages/contracts/src/index.ts');
 
 const expectedEndpointCount = 18;
@@ -45,6 +47,21 @@ assertSourceContains(
   analysisController,
   'withSubmitterActor(request, actorId)',
   'auto-submit actor header override',
+);
+assertSourceContains(
+  governanceAuthContext,
+  "mode === 'gateway'",
+  'gateway auth mode context resolver',
+);
+assertSourceContains(
+  governanceAuthContext,
+  'x-gmi-authenticated-actor',
+  'default gateway actor header',
+);
+assertSourceContains(
+  governanceAuthGuard,
+  'applyInternalGovernanceHeaders(request.headers, authContext)',
+  'gateway auth normalizes internal command actor headers',
 );
 
 const operationIds = new Set();

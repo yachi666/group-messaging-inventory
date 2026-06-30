@@ -14,6 +14,11 @@ assertEqual(
 );
 assertEqual(defaultApi.readinessTimeoutMs, 1000, 'default readiness timeout');
 
+const gatewayApi = loadRuntimeConfig('api', {
+  API_AUTH_MODE: 'gateway',
+});
+assertEqual(gatewayApi.authMode, 'gateway', 'gateway auth mode');
+
 const worker = loadRuntimeConfig('worker', {
   TEMPORAL_ADDRESS: 'temporal:7233',
   TEMPORAL_NAMESPACE: 'prod',
@@ -66,7 +71,7 @@ assertConfigIssues(
   [
     'PORT must be a positive integer.',
     'READINESS_TIMEOUT_MS must be a positive integer.',
-    'API_AUTH_MODE must be one of: header, disabled.',
+    'API_AUTH_MODE must be one of: header, gateway, disabled.',
     'OPENAI_COMPATIBLE_MAX_RETRIES must be a non-negative integer.',
     'OPENAI_COMPATIBLE_RETRY_BACKOFF_MS must be a non-negative integer.',
     'DATABASE_URL must be a valid URL.',

@@ -133,6 +133,16 @@ curl -H 'x-actor-id: analyst-local' \
 
 受保护的分析与治理路由必须同时带 `x-actor-id` 和以下角色之一：`analysis_runner`、`analysis_reader`、`change_maker`、`change_checker` 或 `auditor`。`/health` 与 `/ready` 保持公开。只有隔离本地调试时才建议设置 `API_AUTH_MODE=disabled`。
 
+如果由 API Gateway、SSO proxy 或 service mesh 注入已认证身份，使用 gateway 模式：
+
+```bash
+API_AUTH_MODE=gateway
+API_GATEWAY_ACTOR_HEADER=x-gmi-authenticated-actor
+API_GATEWAY_ROLES_HEADER=x-gmi-authenticated-roles
+```
+
+Gateway 模式不会把本地客户端传来的 `x-actor-id` / `x-gmi-roles` 当成信任来源，而是把网关注入的 actor 规范化成内部 command context，并继续复用 controller 上的 `@RequiresRoles(...)` 角色声明。
+
 Web client 的本地 actor context 统一收敛在 `apps/web/src/lib/governanceActor.ts`。本地测试时可用 `VITE_GOVERNANCE_ACTOR_ID`、`VITE_GOVERNANCE_ACTOR_DISPLAY_NAME` 和 `VITE_GOVERNANCE_ROLES` 覆盖，从而让 API auth header、My Tasks reviewer 筛选和 audit actor ID 保持一致。
 对于受保护的 command route，API 会以认证后的 `x-actor-id` header 作为 command actor，并忽略 request body 中伪造的 actor ID；body actor 字段仅保留给本地旧客户端兼容。
 

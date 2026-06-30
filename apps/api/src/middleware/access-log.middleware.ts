@@ -1,3 +1,5 @@
+import { resolveGovernanceAuthContext } from '../auth/governance-auth-context.js';
+
 type RequestWithRequestId = {
   headers?: Record<string, string | string[] | undefined>;
   method?: string;
@@ -20,12 +22,14 @@ export function accessLogMiddleware(
 
   response.on('finish', () => {
     const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
+    const authContext = resolveGovernanceAuthContext(request.headers);
+
     console.log(
       JSON.stringify({
         event: 'http_request',
         requestId: request.requestId ?? 'unknown',
-        actorId: normalizeHeaderValue(request.headers?.['x-actor-id']) ?? 'anonymous',
-        roleCount: parseHeaderList(request.headers?.['x-gmi-roles']).size,
+        actorId: authContext.actorId ?? 'anonymous',
+        roleCount: authContext.roles.size,
         method: request.method ?? 'UNKNOWN',
         path: request.originalUrl ?? request.url ?? 'unknown',
         statusCode: response.statusCode ?? 0,
@@ -35,20 +39,4 @@ export function accessLogMiddleware(
   });
 
   next();
-}
-
-function normalizeHeaderValue(value: string | string[] | undefined) {
-  const rawValue = Array.isArray(value) ? value[0] : value;
-  const trimmed = rawValue?.trim();
-  return trimmed ? trimmed : undefined;
-}
-
-function parseHeaderList(value: string | string[] | undefined) {
-  const rawValue = Array.isArray(value) ? value.join(',') : value ?? '';
-  return new Set(
-    rawValue
-      .split(',')
-      .map((item) => item.trim())
-      .filter(Boolean),
-  );
 }
