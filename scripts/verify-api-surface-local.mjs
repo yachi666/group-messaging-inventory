@@ -26,6 +26,16 @@ assertSourceContains(
   'assignedTo: z.string().min(1).optional()',
   'review task reviewer filter schema',
 );
+assertSourceContains(
+  analysisController,
+  'resolveCommandActorId(actorId, request.actorId)',
+  'command actor header override',
+);
+assertSourceContains(
+  analysisController,
+  'withSubmitterActor(request, actorId)',
+  'auto-submit actor header override',
+);
 
 const operationIds = new Set();
 for (const endpoint of manifest.endpoints) {

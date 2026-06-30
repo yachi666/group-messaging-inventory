@@ -164,10 +164,13 @@ async function verifyReviewTaskLifecycle(taskId) {
   const assignedResult = await postJsonWithStatus(
     `${baseUrl}/review-tasks/${taskId}/transition`,
     {
-      actorId: 'reviewer-local-smoke',
+      actorId: 'spoofed-reviewer-local-smoke',
       status: 'Assigned',
       assignedTo: 'reviewer-local-smoke',
       reason: 'backend smoke reviewer claim',
+    },
+    {
+      'x-actor-id': 'reviewer-local-smoke',
     },
   );
   reviewTaskResponseSchema.parse(assignedResult.body);
@@ -198,9 +201,12 @@ async function verifyReviewTaskLifecycle(taskId) {
   const inReview = await postJson(
     `${baseUrl}/review-tasks/${taskId}/transition`,
     {
-      actorId: 'reviewer-local-smoke',
+      actorId: 'spoofed-reviewer-local-smoke',
       status: 'InReview',
       reason: 'backend smoke reviewer started work',
+    },
+    {
+      'x-actor-id': 'reviewer-local-smoke',
     },
   );
   reviewTaskResponseSchema.parse(inReview);
@@ -209,9 +215,12 @@ async function verifyReviewTaskLifecycle(taskId) {
   const resolved = await postJson(
     `${baseUrl}/review-tasks/${taskId}/transition`,
     {
-      actorId: 'reviewer-local-smoke',
+      actorId: 'spoofed-reviewer-local-smoke',
       status: 'Resolved',
       reason: 'backend smoke reviewer completed task',
+    },
+    {
+      'x-actor-id': 'reviewer-local-smoke',
     },
   );
   reviewTaskResponseSchema.parse(resolved);
@@ -225,9 +234,10 @@ async function verifyReviewTaskLifecycle(taskId) {
       headers: {
         'content-type': 'application/json',
         ...defaultAuthHeaders(),
+        'x-actor-id': 'reviewer-local-smoke',
       },
       body: JSON.stringify({
-        actorId: 'reviewer-local-smoke',
+        actorId: 'spoofed-reviewer-local-smoke',
         status: 'InReview',
         reason: 'backend smoke terminal task cannot reopen',
       }),
@@ -256,6 +266,11 @@ async function verifyReviewTaskLifecycle(taskId) {
     reviewTaskEvents.some((event) => event.afterRef?.includes('Resolved')),
     true,
     'review task resolved audit event',
+  );
+  assertEqual(
+    reviewTaskEvents.every((event) => event.actorId === 'reviewer-local-smoke'),
+    true,
+    'review task audit actor comes from auth header',
   );
 }
 
@@ -519,10 +534,11 @@ async function verifyCreateAndSubmitChangeRequest() {
       sourceRunId: 'AR-LOCAL-SCAFFOLD-COMPLETE',
       targetUseCaseId: 'UC-BACKEND-SMOKE-CREATE-SUBMIT',
       reason: 'backend smoke create and submit mapping request',
-      submitterActorId: 'analysis-maker-local-smoke',
+      submitterActorId: 'spoofed-analysis-maker-local-smoke',
     },
     {
       'idempotency-key': `backend-local-create-submit-${Date.now()}`,
+      'x-actor-id': 'analysis-maker-local-smoke',
     },
   );
   changeRequestResponseSchema.parse(submittedChangeRequest);
@@ -552,10 +568,11 @@ async function verifyCurrentVersionChangeRequest() {
       baseRevision: 0,
       sourceRunId: 'AR-LOCAL-SCAFFOLD-COMPLETE',
       reason: 'backend smoke promote candidate version',
-      submitterActorId: 'version-maker-local-smoke',
+      submitterActorId: 'spoofed-version-maker-local-smoke',
     },
     {
       'idempotency-key': `backend-local-current-version-${Date.now()}`,
+      'x-actor-id': 'version-maker-local-smoke',
     },
   );
   changeRequestResponseSchema.parse(changeRequest);
@@ -569,6 +586,9 @@ async function verifyCurrentVersionChangeRequest() {
       actorId: 'version-checker-local-smoke',
       decision: 'Approved',
       reason: 'backend smoke current version approval',
+    },
+    {
+      'x-actor-id': 'version-checker-local-smoke',
     },
   );
   const approved = approvalResult.body;
@@ -610,7 +630,10 @@ async function verifyMakerCheckerDecisionFlow() {
   const submitChangeRequestResult = await postJsonWithStatus(
     `${baseUrl}/change-requests/${changeRequest.changeRequestId}/submit`,
     {
-      actorId: 'maker-local-smoke',
+      actorId: 'spoofed-maker-local-smoke',
+    },
+    {
+      'x-actor-id': 'maker-local-smoke',
     },
   );
   const submitted = submitChangeRequestResult.body;
@@ -640,9 +663,10 @@ async function verifyMakerCheckerDecisionFlow() {
       headers: {
         'content-type': 'application/json',
         ...defaultAuthHeaders(),
+        'x-actor-id': 'maker-local-smoke',
       },
       body: JSON.stringify({
-        actorId: 'maker-local-smoke',
+        actorId: 'spoofed-maker-local-smoke',
         decision: 'Approved',
         reason: 'backend smoke self approval should be blocked',
       }),
@@ -656,9 +680,12 @@ async function verifyMakerCheckerDecisionFlow() {
   const decisionResult = await postJsonWithStatus(
     `${baseUrl}/change-requests/${changeRequest.changeRequestId}/decision`,
     {
-      actorId: 'checker-local-smoke',
+      actorId: 'spoofed-checker-local-smoke',
       decision: 'Approved',
       reason: 'backend smoke checker approval',
+    },
+    {
+      'x-actor-id': 'checker-local-smoke',
     },
   );
   const approved = decisionResult.body;

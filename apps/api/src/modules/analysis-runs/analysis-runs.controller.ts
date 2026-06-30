@@ -88,14 +88,21 @@ export class AnalysisRunsController {
   @Post('review-tasks/:taskId/transition')
   @HttpCode(HttpStatus.OK)
   @RequiresRoles('analysis_runner', 'change_checker')
-  transitionReviewTask(@Param('taskId') taskId: string, @Body() body: unknown) {
+  transitionReviewTask(
+    @Param('taskId') taskId: string,
+    @Headers('x-actor-id') actorId: string | undefined,
+    @Body() body: unknown,
+  ) {
     const request = transitionReviewTaskSchema.parse(
       body,
     ) satisfies TransitionReviewTaskRequest;
 
     return this.analysisRuns.transitionReviewTask({
       taskId,
-      request,
+      request: {
+        ...request,
+        actorId: resolveCommandActorId(actorId, request.actorId),
+      },
     });
   }
 
@@ -126,6 +133,7 @@ export class AnalysisRunsController {
   createMappingChangeRequest(
     @Param('templateUuid') templateUuid: string,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Headers('x-actor-id') actorId: string | undefined,
     @Body() body: unknown,
   ) {
     const request = createMappingChangeRequestSchema.parse(
@@ -135,7 +143,7 @@ export class AnalysisRunsController {
     return this.analysisRuns.createMappingChangeRequest({
       templateUuid,
       idempotencyKey,
-      request,
+      request: withSubmitterActor(request, actorId),
     });
   }
 
@@ -144,6 +152,7 @@ export class AnalysisRunsController {
   createLifecycleChangeRequest(
     @Param('templateUuid') templateUuid: string,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Headers('x-actor-id') actorId: string | undefined,
     @Body() body: unknown,
   ) {
     const request = createLifecycleChangeRequestSchema.parse(
@@ -153,7 +162,7 @@ export class AnalysisRunsController {
     return this.analysisRuns.createLifecycleChangeRequest({
       templateUuid,
       idempotencyKey,
-      request,
+      request: withSubmitterActor(request, actorId),
     });
   }
 
@@ -162,6 +171,7 @@ export class AnalysisRunsController {
   createCurrentVersionChangeRequest(
     @Param('versionId') versionId: string,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
+    @Headers('x-actor-id') actorId: string | undefined,
     @Body() body: unknown,
   ) {
     const request = createCurrentVersionChangeRequestSchema.parse(
@@ -171,31 +181,66 @@ export class AnalysisRunsController {
     return this.analysisRuns.createCurrentVersionChangeRequest({
       versionId,
       idempotencyKey,
-      request,
+      request: withSubmitterActor(request, actorId),
     });
   }
 
   @Post('change-requests/:changeRequestId/submit')
   @HttpCode(HttpStatus.OK)
   @RequiresRoles('change_maker')
-  submitChangeRequest(@Param('changeRequestId') changeRequestId: string, @Body() body: unknown) {
+  submitChangeRequest(
+    @Param('changeRequestId') changeRequestId: string,
+    @Headers('x-actor-id') actorId: string | undefined,
+    @Body() body: unknown,
+  ) {
     const request = submitChangeRequestSchema.parse(body) satisfies SubmitChangeRequestRequest;
 
     return this.analysisRuns.submitChangeRequest({
       changeRequestId,
-      request,
+      request: {
+        ...request,
+        actorId: resolveCommandActorId(actorId, request.actorId),
+      },
     });
   }
 
   @Post('change-requests/:changeRequestId/decision')
   @HttpCode(HttpStatus.OK)
   @RequiresRoles('change_checker')
-  decideChangeRequest(@Param('changeRequestId') changeRequestId: string, @Body() body: unknown) {
+  decideChangeRequest(
+    @Param('changeRequestId') changeRequestId: string,
+    @Headers('x-actor-id') actorId: string | undefined,
+    @Body() body: unknown,
+  ) {
     const request = decideChangeRequestSchema.parse(body) satisfies DecideChangeRequestRequest;
 
     return this.analysisRuns.decideChangeRequest({
       changeRequestId,
-      request,
+      request: {
+        ...request,
+        actorId: resolveCommandActorId(actorId, request.actorId),
+      },
     });
   }
+}
+
+function resolveCommandActorId(headerActorId: string | undefined, bodyActorId: string) {
+  const normalizedHeaderActorId = headerActorId?.trim();
+  return normalizedHeaderActorId || bodyActorId;
+}
+
+function withSubmitterActor<
+  T extends
+    | CreateMappingChangeRequestRequest
+    | CreateLifecycleChangeRequestRequest
+    | CreateCurrentVersionChangeRequestRequest,
+>(request: T, headerActorId: string | undefined): T {
+  if (!request.submitterActorId) {
+    return request;
+  }
+
+  return {
+    ...request,
+    submitterActorId: resolveCommandActorId(headerActorId, request.submitterActorId),
+  };
 }
