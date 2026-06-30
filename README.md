@@ -197,6 +197,14 @@ npm run db:migrate
 npm run db:smoke
 ```
 
+To seed a richer Postgres-backed verification dataset for manual API/UI checks, run:
+
+```bash
+npm run seed:verification:pg
+```
+
+The seed command writes a timestamped dataset with auto-recorded, review-required, blocked, approved, pending, changes-requested, and rejected governance cases. It then verifies analysis result projections, review task queues, pending approvals, evidence packages, audit events, and latest release evidence. Override `SEED_DATASET_ID` when you need a stable dataset label for demos.
+
 The local Postgres connection string is:
 
 ```text

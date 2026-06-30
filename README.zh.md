@@ -179,6 +179,14 @@ npm run db:migrate
 npm run db:smoke
 ```
 
+如需为手工 API/UI 验证写入一批更完整的 Postgres-backed 数据，运行：
+
+```bash
+npm run seed:verification:pg
+```
+
+该 seed 命令会写入带时间戳的数据集，包含 auto-recorded、review-required、blocked、approved、pending、changes-requested 和 rejected 等治理场景，并立即验证 analysis result projection、review task queue、pending approval、evidence package、audit events 与 latest release evidence。需要稳定 demo 标签时可设置 `SEED_DATASET_ID`。
+
 本地 Postgres 连接串：
 
 ```text

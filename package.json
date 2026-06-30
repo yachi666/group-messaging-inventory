@@ -52,6 +52,7 @@
     "test:secrets": "node scripts/verify-no-secrets-local.mjs",
     "test:evals:pg": "npm run build:packages && DATABASE_URL=postgres://gmi:gmi@127.0.0.1:55432/gmi EVAL_WRITE_DATABASE=true npm run test:gate -w @gmi/evals",
     "test:harness:temporal": "npm run build:packages && npm run build:apps && node scripts/verify-harness-temporal.mjs",
+    "seed:verification:pg": "npm run build:packages && node scripts/seed-verification-data-pg.mjs",
     "test:ui": "node scripts/verify-ui.mjs",
     "test:ui:local": "node scripts/verify-ui-local.mjs"
   },

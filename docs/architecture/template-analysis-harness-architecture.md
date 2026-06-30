@@ -1295,6 +1295,7 @@ Logs and traces:
 - Route-level roles are explicit: analysis submission requires `analysis_runner`; analysis reads require `analysis_reader`, `analysis_runner`, or `auditor`; change request creation/submission requires `change_maker`; decisions and evidence packages require `change_checker` or `auditor`.
 - The audit ledger is exposed through `/audit-events`, filtered by object, source run, change request, and limit. Evidence packages use the same event shape, so review workflows and ledger export share one contract.
 - `npm run test:backend` verifies that protected routes reject both missing-role and missing-actor requests in header auth mode and that gateway mode overrides spoofed local actor headers with trusted gateway identity. `npm run test:readiness` also verifies readiness and metrics rendering locally.
+- `npm run seed:verification:pg` creates a timestamped Postgres verification dataset for manual API/UI checks, covering auto-record, review-required, blocked, approved, pending, changes-requested, rejected, evidence-package, audit-event, and latest-release-evidence paths without using production data.
 
 Alerts:
 
