@@ -29,6 +29,25 @@ assertEqual(worker.workflow.temporalAddress, 'temporal:7233', 'worker temporal a
 assertEqual(worker.workflow.temporalNamespace, 'prod', 'worker temporal namespace');
 assertEqual(worker.workflow.temporalTaskQueue, 'template-analysis-prod', 'worker task queue');
 
+const compatibleWorker = loadRuntimeConfig('worker', {
+  AI_PROVIDER: 'openai-compatible',
+  OPENAI_COMPATIBLE_API_KEY: 'test-key',
+  OPENAI_COMPATIBLE_BASE_URL: 'https://api.deepseek.com',
+  OPENAI_COMPATIBLE_MODEL: 'deepseek-v4-flash',
+  OPENAI_COMPATIBLE_PROVIDER_NAME: 'deepseek',
+  OPENAI_COMPATIBLE_EXTRA_BODY_JSON: '{"thinking":{"type":"enabled"},"reasoning_effort":"high"}',
+});
+assertEqual(
+  compatibleWorker.aiProvider.openaiCompatibleProviderName,
+  'deepseek',
+  'OpenAI-compatible provider name',
+);
+assertEqual(
+  compatibleWorker.aiProvider.openaiCompatibleExtraBody?.reasoning_effort,
+  'high',
+  'OpenAI-compatible extra body object',
+);
+
 assertConfigIssues(
   () =>
     loadRuntimeConfig('api', {
@@ -56,6 +75,39 @@ assertConfigIssues(
     }),
   ['OPENAI_COMPATIBLE_BASE_URL must be a valid URL.'],
   'openai-compatible invalid base url',
+);
+
+assertConfigIssues(
+  () =>
+    loadRuntimeConfig('worker', {
+      AI_PROVIDER: 'openai-compatible',
+      OPENAI_COMPATIBLE_API_KEY: 'test-key',
+      OPENAI_COMPATIBLE_PROVIDER_NAME: 'deepseek:prod',
+    }),
+  ['OPENAI_COMPATIBLE_PROVIDER_NAME must use only letters, numbers, dots, underscores, or hyphens.'],
+  'openai-compatible invalid provider name',
+);
+
+assertConfigIssues(
+  () =>
+    loadRuntimeConfig('worker', {
+      AI_PROVIDER: 'openai-compatible',
+      OPENAI_COMPATIBLE_API_KEY: 'test-key',
+      OPENAI_COMPATIBLE_EXTRA_BODY_JSON: '{"thinking":',
+    }),
+  ['OPENAI_COMPATIBLE_EXTRA_BODY_JSON must be valid JSON.'],
+  'openai-compatible invalid extra body json',
+);
+
+assertConfigIssues(
+  () =>
+    loadRuntimeConfig('worker', {
+      AI_PROVIDER: 'openai-compatible',
+      OPENAI_COMPATIBLE_API_KEY: 'test-key',
+      OPENAI_COMPATIBLE_EXTRA_BODY_JSON: '["thinking"]',
+    }),
+  ['OPENAI_COMPATIBLE_EXTRA_BODY_JSON must be a JSON object.'],
+  'openai-compatible non-object extra body json',
 );
 
 assertConfigIssues(

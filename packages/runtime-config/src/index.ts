@@ -19,6 +19,7 @@ export type RuntimeConfig = {
     openaiCompatibleBaseUrl?: string;
     openaiCompatibleModel?: string;
     openaiCompatibleProviderName?: string;
+    openaiCompatibleExtraBody?: Record<string, unknown>;
     openaiCompatibleTimeoutMs?: number;
     openaiCompatibleMaxRetries?: number;
     openaiCompatibleRetryBackoffMs?: number;
@@ -87,6 +88,11 @@ export function loadRuntimeConfig(
       issues,
       'http://127.0.0.1:4001/v1',
     );
+    readOptionalSafeToken(
+      env.OPENAI_COMPATIBLE_PROVIDER_NAME,
+      'OPENAI_COMPATIBLE_PROVIDER_NAME',
+      issues,
+    );
   }
 
   const openaiCompatibleTimeoutMs = readOptionalPositiveInteger(
@@ -106,6 +112,11 @@ export function loadRuntimeConfig(
     'OPENAI_COMPATIBLE_RETRY_BACKOFF_MS',
     issues,
     250,
+  );
+  const openaiCompatibleExtraBody = readOptionalJsonObject(
+    env.OPENAI_COMPATIBLE_EXTRA_BODY_JSON,
+    'OPENAI_COMPATIBLE_EXTRA_BODY_JSON',
+    issues,
   );
 
   if (env.DATABASE_URL) {
@@ -137,6 +148,7 @@ export function loadRuntimeConfig(
         trimToUndefined(env.OPENAI_COMPATIBLE_BASE_URL) ?? 'http://127.0.0.1:4001/v1',
       openaiCompatibleModel: trimToUndefined(env.OPENAI_COMPATIBLE_MODEL) ?? 'local-model',
       openaiCompatibleProviderName: trimToUndefined(env.OPENAI_COMPATIBLE_PROVIDER_NAME),
+      openaiCompatibleExtraBody,
       openaiCompatibleTimeoutMs,
       openaiCompatibleMaxRetries,
       openaiCompatibleRetryBackoffMs,
@@ -243,6 +255,44 @@ function readOptionalUrl(
   } catch {
     issues.push(`${name} must be a valid URL.`);
   }
+}
+
+function readOptionalSafeToken(value: string | undefined, name: string, issues: string[]) {
+  const trimmed = trimToUndefined(value);
+
+  if (!trimmed) {
+    return;
+  }
+
+  if (!/^[A-Za-z0-9._-]{1,64}$/.test(trimmed)) {
+    issues.push(`${name} must use only letters, numbers, dots, underscores, or hyphens.`);
+  }
+}
+
+function readOptionalJsonObject(
+  value: string | undefined,
+  name: string,
+  issues: string[],
+) {
+  const trimmed = trimToUndefined(value);
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    issues.push(`${name} must be valid JSON.`);
+    return undefined;
+  }
+
+  issues.push(`${name} must be a JSON object.`);
+  return undefined;
 }
 
 function trimToUndefined(value: string | undefined) {

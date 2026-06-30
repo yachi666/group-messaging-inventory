@@ -119,7 +119,7 @@ OPENAI_COMPATIBLE_RETRY_BACKOFF_MS=250
 npm run dev:worker
 ```
 
-OpenAI-compatible adapter 会对 HTTP 408、429、5xx 和网络错误做有界重试与可配置指数 backoff；不可重试的 4xx 会快速失败并返回稳定的 `provider_error:*` 消息。`npm run test:ai-adapter` 会在本地校验 retry、backoff、provider-specific request fields、结构化输出解析，以及 `deterministic_only` 不调用 provider 的行为。
+OpenAI-compatible adapter 会对 HTTP 408、429、5xx 和网络错误做有界重试与可配置指数 backoff；不可重试的 4xx 会快速失败并返回稳定的 `provider_error:*` 消息。启动配置会拒绝非法 provider name，并要求 `OPENAI_COMPATIBLE_EXTRA_BODY_JSON` 必须是 JSON object，这样 provider metadata 保持低基数，provider-specific options 配错会在第一个 workflow task 前失败。`npm run test:ai-adapter` 会在本地校验 retry、backoff、provider-specific request fields、结构化输出解析，以及 `deterministic_only` 不调用 provider 的行为。
 
 业务 Harness 仍然负责 workflow 状态、policy routing、持久化和 review gates。Provider SDK 与兼容 API 只封装在 `@gmi/ai-adapters` 后面，用于模型编排、结构化输出、guardrails 和 tracing。
 Worker analysis activity 会输出单行 JSON 事件，包含 `event=ai_analysis_activity`、run/template/version id、provider、model、prompt version、status 和 duration。该日志不会记录原始模板内容、masked prompt 或模型输出。

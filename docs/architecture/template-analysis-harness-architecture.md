@@ -1449,6 +1449,7 @@ Current repository status:
 - OpenAI output is constrained by `aiTemplateAnalysisOutputSchema` and an output guardrail before returning to the business harness.
 - OpenAI-compatible output is parsed as JSON and constrained by the same `aiTemplateAnalysisOutputSchema` before returning to the business harness.
 - OpenAI-compatible provider-specific request fields can be supplied through `OPENAI_COMPATIBLE_EXTRA_BODY_JSON`; this keeps DeepSeek-style `thinking` and `reasoning_effort` options out of business code.
+- Runtime configuration validates `OPENAI_COMPATIBLE_PROVIDER_NAME` as a low-cardinality token and validates `OPENAI_COMPATIBLE_EXTRA_BODY_JSON` as a JSON object before API or worker startup completes.
 - OpenAI-compatible calls use `OPENAI_COMPATIBLE_TIMEOUT_MS` so worker activities do not hang indefinitely on provider/network stalls.
 - OpenAI-compatible calls use `OPENAI_COMPATIBLE_MAX_RETRIES` and `OPENAI_COMPATIBLE_RETRY_BACKOFF_MS` for bounded retries with exponential backoff on transient HTTP 408, 429, 5xx, and network failures; non-retryable 4xx errors fail fast with a stable `provider_error:*` message.
 - `npm run test:ai-adapter` verifies OpenAI-compatible retry, backoff, provider-specific request fields, structured output parsing, and deterministic-only no-provider behavior without calling an external model.
