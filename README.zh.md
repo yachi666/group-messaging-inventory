@@ -133,6 +133,8 @@ curl -H 'x-actor-id: analyst-local' \
 
 受保护的分析与治理路由必须同时带 `x-actor-id` 和以下角色之一：`analysis_runner`、`analysis_reader`、`change_maker`、`change_checker` 或 `auditor`。`/health` 与 `/ready` 保持公开。只有隔离本地调试时才建议设置 `API_AUTH_MODE=disabled`。
 
+Web client 的本地 actor context 统一收敛在 `apps/web/src/lib/governanceActor.ts`。本地测试时可用 `VITE_GOVERNANCE_ACTOR_ID`、`VITE_GOVERNANCE_ACTOR_DISPLAY_NAME` 和 `VITE_GOVERNANCE_ROLES` 覆盖，从而让 API auth header、My Tasks reviewer 筛选和 audit actor ID 保持一致。
+
 不可变治理账本通过以下接口暴露：
 
 ```bash

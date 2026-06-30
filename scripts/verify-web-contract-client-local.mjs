@@ -34,6 +34,10 @@ const apiClient = await readFile(
   path.join(repoRoot, 'apps/web/src/lib/apiClient.ts'),
   'utf8',
 );
+const governanceActor = await readFile(
+  path.join(repoRoot, 'apps/web/src/lib/governanceActor.ts'),
+  'utf8',
+);
 
 const dependencies = {
   ...webPackageJson.dependencies,
@@ -159,7 +163,7 @@ for (const expectedApiPath of [
 for (const expectedSource of [
   'fetchReviewTasksForTab(activeReviewQueueTab, controller.signal)',
   "fetchReviewTasksByStatuses(['Assigned', 'InReview', 'PendingApproval'], {",
-  'assignedTo: currentReviewActorId',
+  'assignedTo: currentGovernanceActor.actorId',
   "fetchReviewTasksByStatuses(['Resolved', 'Dismissed'], signal)",
   'filterFallbackQueueItems(activeReviewQueueTab)',
   'await transitionReviewTask({',
@@ -206,6 +210,25 @@ for (const expected of ['VITE_API_BASE_URL', 'x-gmi-roles', 'x-actor-id']) {
   if (!apiClient.includes(expected)) {
     throw new Error(`apiClient.ts must centralize ${expected}.`);
   }
+}
+
+for (const expected of [
+  'getGovernanceActor',
+  'VITE_GOVERNANCE_ACTOR_ID',
+  'VITE_GOVERNANCE_ACTOR_DISPLAY_NAME',
+  'VITE_GOVERNANCE_ROLES',
+]) {
+  if (!governanceActor.includes(expected)) {
+    throw new Error(`governanceActor.ts must centralize ${expected}.`);
+  }
+}
+
+if (!apiClient.includes('getGovernanceActor()')) {
+  throw new Error('apiClient.ts must source actor headers from governanceActor.ts.');
+}
+
+if (reviewQueuePage.includes("const currentReviewActorId = 'web-local-user'")) {
+  throw new Error('ReviewQueuePage.tsx must not hard-code reviewer actor identity.');
 }
 
 console.log('Web contract client local smoke passed.');

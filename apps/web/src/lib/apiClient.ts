@@ -1,9 +1,6 @@
-export type GovernanceRole =
-  | 'analysis_runner'
-  | 'analysis_reader'
-  | 'change_maker'
-  | 'change_checker'
-  | 'auditor';
+import { getGovernanceActor, type GovernanceRole } from './governanceActor';
+
+export type { GovernanceRole };
 
 type ApiFetchOptions = Omit<RequestInit, 'headers'> & {
   headers?: HeadersInit;
@@ -11,7 +8,6 @@ type ApiFetchOptions = Omit<RequestInit, 'headers'> & {
 };
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? '';
-const defaultActorId = 'web-local-user';
 
 export function apiUrl(path: string) {
   return `${apiBaseUrl}${path.startsWith('/') ? path : `/${path}`}`;
@@ -28,9 +24,12 @@ export function apiFetch(path: string, options: ApiFetchOptions = {}) {
     headers.set('content-type', 'application/json');
   }
 
-  if (options.roles?.length) {
-    headers.set('x-actor-id', defaultActorId);
-    headers.set('x-gmi-roles', options.roles.join(','));
+  const actor = getGovernanceActor();
+  const roles = options.roles ?? actor.defaultRoles;
+
+  if (roles.length) {
+    headers.set('x-actor-id', actor.actorId);
+    headers.set('x-gmi-roles', roles.join(','));
   }
 
   return fetch(apiUrl(path), {

@@ -151,6 +151,8 @@ curl -H 'x-actor-id: analyst-local' \
 
 Protected analysis and governance routes require both `x-actor-id` and one of these roles: `analysis_runner`, `analysis_reader`, `change_maker`, `change_checker`, or `auditor`. Health and readiness remain public. Set `API_AUTH_MODE=disabled` only for isolated local debugging.
 
+The web client centralizes its local actor context in `apps/web/src/lib/governanceActor.ts`. Override `VITE_GOVERNANCE_ACTOR_ID`, `VITE_GOVERNANCE_ACTOR_DISPLAY_NAME`, and `VITE_GOVERNANCE_ROLES` to align API auth headers, My Tasks reviewer filtering, and audit actor IDs during local testing.
+
 The immutable governance ledger is exposed through:
 
 ```bash

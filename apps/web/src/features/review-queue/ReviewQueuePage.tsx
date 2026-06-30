@@ -16,6 +16,7 @@ import {
 import { governanceReviews, governanceTemplates, governanceUseCases } from '../../data/governanceMock';
 import { CandidateSplitModal } from '../governance/GovernancePages';
 import { useI18n } from '../../i18n/LanguageProvider';
+import { getGovernanceActor } from '../../lib/governanceActor';
 import {
   decideChangeRequest,
   fetchChangeRequestEvidencePackage,
@@ -86,7 +87,7 @@ const extractionSteps = [
   { title: 'Classification', facts: [['Type', 'Servicing'], ['Sub-class', 'Repayment Management'], ['Market', 'Hong Kong']], state: 'In progress' },
 ] as const;
 
-const currentReviewActorId = 'web-local-user';
+const currentGovernanceActor = getGovernanceActor();
 
 export function ReviewQueuePage() {
   const { locale } = useI18n();
@@ -183,9 +184,9 @@ export function ReviewQueuePage() {
     try {
       const updatedTask = await transitionReviewTask({
         taskId: selected.taskId,
-        actorId: currentReviewActorId,
+        actorId: currentGovernanceActor.actorId,
         status,
-        assignedTo: status === 'Assigned' || status === 'InReview' ? currentReviewActorId : undefined,
+        assignedTo: status === 'Assigned' || status === 'InReview' ? currentGovernanceActor.actorId : undefined,
         reason,
       });
       const updatedItem = toQueueItem(updatedTask);
@@ -335,7 +336,7 @@ function toReviewQueueTab(tab: string): ReviewTaskQueueTab | null {
 function fetchReviewTasksForTab(tab: ReviewTaskQueueTab | null, signal?: AbortSignal) {
   if (tab === 'My Tasks') {
     return fetchReviewTasksByStatuses(['Assigned', 'InReview', 'PendingApproval'], {
-      assignedTo: currentReviewActorId,
+      assignedTo: currentGovernanceActor.actorId,
       signal,
     });
   }
@@ -456,8 +457,10 @@ function GovernanceApprovalWorkbench({ activeTab, onTabChange }: { activeTab: st
   const [evidencePackage, setEvidencePackage] =
     useState<ChangeRequestEvidencePackage | null>(null);
   const selected = approvals.find((review) => review.id === selectedId) ?? approvals[0];
-  const currentActor = 'Priya Desai';
-  const selfApprovalBlocked = selected?.maker === currentActor;
+  const currentActorId = currentGovernanceActor.actorId;
+  const currentActorDisplayName = currentGovernanceActor.displayName;
+  const selfApprovalBlocked =
+    selected?.maker === currentActorId || selected?.maker === currentActorDisplayName;
 
   function loadPendingApprovals() {
     const controller = new AbortController();
@@ -520,7 +523,7 @@ function GovernanceApprovalWorkbench({ activeTab, onTabChange }: { activeTab: st
     try {
       await decideChangeRequest({
         changeRequestId: selected.id,
-        actorId: currentActor,
+        actorId: currentActorId,
         decision: apiDecision,
         reason: comment.trim() || `Governance ${decision.toLowerCase()}`,
       });
