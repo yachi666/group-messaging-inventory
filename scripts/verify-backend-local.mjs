@@ -152,12 +152,43 @@ try {
   assertIncludes(latestEvaluation.release.evidenceHash, 'sha256:', 'latest eval hash');
 
   await verifyWorkerActivities();
+  await verifyPublicAnalysisRunErrorMapping();
 
   console.log(
     `Backend local smoke passed. runId=${submitResponse.runId}, results=${resultsResponse.results.length}`,
   );
 } finally {
   api.kill('SIGINT');
+}
+
+async function verifyPublicAnalysisRunErrorMapping() {
+  const { toPublicAnalysisRunError } = await import(
+    '../apps/api/dist/modules/analysis-runs/analysis-runs.service.js'
+  );
+
+  const providerError = toPublicAnalysisRunError({
+    code: 'provider_error',
+    message: 'provider_error:deepseek:network:fetch failed with socket details',
+    retryable: true,
+  });
+  assertEqual(providerError.code, 'provider_error', 'public provider error code');
+  assertEqual(
+    providerError.message,
+    'provider_error:deepseek:network',
+    'public provider error message redaction',
+  );
+  assertEqual(providerError.retryable, true, 'public provider error retryable');
+
+  const schemaError = toPublicAnalysisRunError({
+    code: 'schema_validation_failed',
+    message: 'schema_validation_failed: raw validation issue details',
+    retryable: false,
+  });
+  assertEqual(
+    schemaError.message,
+    'schema_validation_failed',
+    'public schema error message redaction',
+  );
 }
 
 async function verifyReviewTaskLifecycle(taskId) {

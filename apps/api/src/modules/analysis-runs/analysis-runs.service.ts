@@ -330,7 +330,7 @@ function toResponseOutput(output: AiTemplateAnalysisOutput): AnalysisRunResponse
   };
 }
 
-function toPublicAnalysisRunError(
+export function toPublicAnalysisRunError(
   error: NonNullable<AnalysisRunResponse['errors']>[number],
 ): NonNullable<AnalysisRunResponse['errors']>[number] {
   return {
