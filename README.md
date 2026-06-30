@@ -206,6 +206,14 @@ npm run seed:verification:pg
 
 The seed command writes a timestamped dataset with nine reusable verification cases: auto-recorded, review-required, blocked, enhanced-review, candidate-version-drift, approved, pending, changes-requested, and rejected governance paths. It then verifies analysis result projections, review task queues, pending approvals, evidence packages, audit events, and latest release evidence. Override `SEED_DATASET_ID` when you need a stable dataset label for demos.
 
+To generate a fresh dataset and verify that the NestJS API can read it through real HTTP endpoints, run this after `npm run infra:up`:
+
+```bash
+npm run test:seed-verification-api:pg
+```
+
+This API-level gate starts the API against local Postgres, checks the nine seeded analysis results, the in-review task, the pending approval, the approved change request evidence package, and the persisted latest release evaluation.
+
 To validate the seed dataset shape without Postgres, run:
 
 ```bash
