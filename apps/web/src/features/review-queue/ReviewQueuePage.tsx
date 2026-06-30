@@ -86,6 +86,8 @@ const extractionSteps = [
   { title: 'Classification', facts: [['Type', 'Servicing'], ['Sub-class', 'Repayment Management'], ['Market', 'Hong Kong']], state: 'In progress' },
 ] as const;
 
+const currentReviewActorId = 'web-local-user';
+
 export function ReviewQueuePage() {
   const { locale } = useI18n();
   const zh = locale === 'zh-CN';
@@ -181,9 +183,9 @@ export function ReviewQueuePage() {
     try {
       const updatedTask = await transitionReviewTask({
         taskId: selected.taskId,
-        actorId: 'web-local-user',
+        actorId: currentReviewActorId,
         status,
-        assignedTo: status === 'Assigned' || status === 'InReview' ? 'web-local-user' : undefined,
+        assignedTo: status === 'Assigned' || status === 'InReview' ? currentReviewActorId : undefined,
         reason,
       });
       const updatedItem = toQueueItem(updatedTask);
@@ -332,7 +334,10 @@ function toReviewQueueTab(tab: string): ReviewTaskQueueTab | null {
 
 function fetchReviewTasksForTab(tab: ReviewTaskQueueTab | null, signal?: AbortSignal) {
   if (tab === 'My Tasks') {
-    return fetchReviewTasksByStatuses(['Assigned', 'InReview', 'PendingApproval'], signal);
+    return fetchReviewTasksByStatuses(['Assigned', 'InReview', 'PendingApproval'], {
+      assignedTo: currentReviewActorId,
+      signal,
+    });
   }
 
   if (tab === 'Completed') {

@@ -33,15 +33,33 @@ export async function fetchOpenReviewTasks(
 
 export async function fetchReviewTasksByStatuses(
   statuses: ReadonlyArray<ReviewTaskListStatus>,
+  options: {
+    assignedTo?: string;
+    signal?: AbortSignal;
+  },
+): Promise<ReadonlyArray<ReviewTask>>;
+export async function fetchReviewTasksByStatuses(
+  statuses: ReadonlyArray<ReviewTaskListStatus>,
   signal?: AbortSignal,
+): Promise<ReadonlyArray<ReviewTask>>;
+export async function fetchReviewTasksByStatuses(
+  statuses: ReadonlyArray<ReviewTaskListStatus>,
+  input?: AbortSignal | {
+    assignedTo?: string;
+    signal?: AbortSignal;
+  },
 ): Promise<ReadonlyArray<ReviewTask>> {
+  const options = input instanceof AbortSignal ? { signal: input } : input ?? {};
   const taskGroups = await Promise.all(
     statuses.map(async (status) => {
+      const assignedToQuery = options.assignedTo
+        ? `&assignedTo=${encodeURIComponent(options.assignedTo)}`
+        : '';
       const response = await apiFetch(
-        `/review-tasks?status=${encodeURIComponent(status)}&objectType=template&limit=100`,
+        `/review-tasks?status=${encodeURIComponent(status)}&objectType=template${assignedToQuery}&limit=100`,
         {
           roles: ['analysis_reader'],
-          signal,
+          signal: options.signal,
         },
       );
 

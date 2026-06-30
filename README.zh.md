@@ -142,7 +142,7 @@ curl -H 'x-actor-id: auditor-local' \
 ```
 
 `/audit-events` 支持按 `objectType`、`objectId`、`sourceRunId`、`changeRequestId` 和 `limit` 筛选。
-`/review-tasks` 暴露 analysis review task，并支持按 `status`、`objectType`、`objectId`、`sourceRunId` 和 `limit` 筛选，让需要人工复核的分析结果可以从工作台追踪到 reviewer queue。
+`/review-tasks` 暴露 analysis review task，并支持按 `status`、`objectType`、`objectId`、`sourceRunId`、`assignedTo` 和 `limit` 筛选，让需要人工复核的分析结果可以从工作台追踪到 reviewer queue。
 `POST /review-tasks/{taskId}/transition` 支持 reviewer 认领、开始处理、升级待批、完成或关闭 review task，并写入 actor attribution 与 audit event。
 Review Queue 的 Discovery、My Tasks、Completed 标签会按状态读取该 API 中的 template review task，并可对 API-backed task 执行认领、开始处理、完成操作；API 不可用时回退到本地队列数据。
 

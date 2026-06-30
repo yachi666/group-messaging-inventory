@@ -120,8 +120,12 @@ if (!reviewTaskApi.includes('fetchReviewTasksByStatuses')) {
   throw new Error('reviewTaskApi.ts must expose status-filtered review task loading.');
 }
 
-if (!reviewTaskApi.includes('/review-tasks?status=${encodeURIComponent(status)}&objectType=template&limit=100')) {
+if (!reviewTaskApi.includes('/review-tasks?status=${encodeURIComponent(status)}&objectType=template${assignedToQuery}&limit=100')) {
   throw new Error('reviewTaskApi.ts must call the filtered review task API.');
+}
+
+if (!reviewTaskApi.includes('&assignedTo=${encodeURIComponent(options.assignedTo)}')) {
+  throw new Error('reviewTaskApi.ts must support reviewer-filtered task queues.');
 }
 
 if (reviewTaskApi.includes('as ReviewTask')) {
@@ -154,7 +158,8 @@ for (const expectedApiPath of [
 
 for (const expectedSource of [
   'fetchReviewTasksForTab(activeReviewQueueTab, controller.signal)',
-  "fetchReviewTasksByStatuses(['Assigned', 'InReview', 'PendingApproval'], signal)",
+  "fetchReviewTasksByStatuses(['Assigned', 'InReview', 'PendingApproval'], {",
+  'assignedTo: currentReviewActorId',
   "fetchReviewTasksByStatuses(['Resolved', 'Dismissed'], signal)",
   'filterFallbackQueueItems(activeReviewQueueTab)',
   'await transitionReviewTask({',

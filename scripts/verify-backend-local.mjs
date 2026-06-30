@@ -179,6 +179,22 @@ async function verifyReviewTaskLifecycle(taskId) {
     'review task assigned actor',
   );
 
+  const assignedQueue = await getJson(
+    `${baseUrl}/review-tasks?status=Assigned&assignedTo=reviewer-local-smoke`,
+  );
+  reviewTasksResponseSchema.parse(assignedQueue);
+  if (!assignedQueue.reviewTasks.some((task) => task.taskId === taskId)) {
+    throw new Error('assigned review task was missing from reviewer-filtered queue');
+  }
+
+  const otherReviewerQueue = await getJson(
+    `${baseUrl}/review-tasks?status=Assigned&assignedTo=other-reviewer-local-smoke`,
+  );
+  reviewTasksResponseSchema.parse(otherReviewerQueue);
+  if (otherReviewerQueue.reviewTasks.some((task) => task.taskId === taskId)) {
+    throw new Error('assigned review task leaked into another reviewer queue');
+  }
+
   const inReview = await postJson(
     `${baseUrl}/review-tasks/${taskId}/transition`,
     {

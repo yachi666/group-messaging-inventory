@@ -879,6 +879,10 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
       query = query.where('source_run_id', '=', command.sourceRunId);
     }
 
+    if (command.assignedTo) {
+      query = query.where('assigned_to', '=', command.assignedTo);
+    }
+
     const rows = await query.execute();
 
     return rows.map(mapReviewTask);

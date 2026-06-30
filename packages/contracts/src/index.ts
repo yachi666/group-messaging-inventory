@@ -212,6 +212,7 @@ export const listReviewTasksQuerySchema = z.object({
   objectType: z.string().min(1).optional(),
   objectId: z.string().min(1).optional(),
   sourceRunId: z.string().min(1).optional(),
+  assignedTo: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(100),
 });
 

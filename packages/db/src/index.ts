@@ -319,6 +319,7 @@ export type ListReviewTasksRecord = {
   objectType?: string;
   objectId?: string;
   sourceRunId?: string;
+  assignedTo?: string;
   limit?: number;
 };
 
@@ -990,6 +991,7 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
       .filter((task) => !command.objectType || task.objectType === command.objectType)
       .filter((task) => !command.objectId || task.objectId === command.objectId)
       .filter((task) => !command.sourceRunId || task.sourceRunId === command.sourceRunId)
+      .filter((task) => !command.assignedTo || task.assignedTo === command.assignedTo)
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
       .slice(0, command.limit ?? 100);
   }

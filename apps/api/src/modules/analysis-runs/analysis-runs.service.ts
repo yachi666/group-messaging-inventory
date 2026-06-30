@@ -152,6 +152,7 @@ export class AnalysisRunsService {
       objectType: query.objectType,
       objectId: query.objectId,
       sourceRunId: query.sourceRunId,
+      assignedTo: query.assignedTo,
       limit: query.limit,
     });
 

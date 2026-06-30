@@ -21,6 +21,11 @@ assertSourceContains(
   "kind: z.enum(['postgres', 'replay_fallback'])",
   'latest evaluation source provenance schema',
 );
+assertSourceContains(
+  contracts,
+  'assignedTo: z.string().min(1).optional()',
+  'review task reviewer filter schema',
+);
 
 const operationIds = new Set();
 for (const endpoint of manifest.endpoints) {
