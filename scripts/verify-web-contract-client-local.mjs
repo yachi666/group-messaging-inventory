@@ -75,6 +75,7 @@ for (const expectedSource of [
   'data-testid="analysis-run-reanalysis"',
   'data-testid="analysis-run-status"',
   'data-testid="analysis-policy-decision"',
+  'formatAnalysisRunError(run.errors)',
   'submitTemplateReanalysisRun({',
   'fetchAnalysisRun(submittedRun.runId)',
   'submitForApproval: true',

@@ -129,6 +129,18 @@ function isTerminalAnalysisRunStatus(status: AnalysisRunStatus) {
   return terminalRunStatuses.some((terminalStatus) => terminalStatus === status);
 }
 
+function formatAnalysisRunError(
+  errors: ReadonlyArray<{ code: string; message: string; retryable: boolean }> | undefined,
+) {
+  const [error] = errors ?? [];
+
+  if (!error) {
+    return undefined;
+  }
+
+  return `${error.code} · ${error.retryable ? 'retryable' : 'not retryable'} · ${error.message}`;
+}
+
 function getScoreWidth(score: number) {
   return `${Math.max(0, Math.min(100, score))}%`;
 }
@@ -316,6 +328,7 @@ export function AiTemplateAnalysisPage() {
           versionId: run.versionId,
           pollUrl: currentRun?.pollUrl ?? submittedRun.pollUrl,
           workflowStarted: currentRun?.workflowStarted ?? submittedRun.workflow.started,
+          error: formatAnalysisRunError(run.errors),
         }));
         await sleep(1200);
         run = await fetchAnalysisRun(submittedRun.runId);
@@ -327,6 +340,7 @@ export function AiTemplateAnalysisPage() {
         versionId: run.versionId,
         pollUrl: currentRun?.pollUrl ?? submittedRun.pollUrl,
         workflowStarted: currentRun?.workflowStarted ?? submittedRun.workflow.started,
+        error: formatAnalysisRunError(run.errors),
       }));
 
       if (run.output) {

@@ -305,7 +305,7 @@ npm run infra:up
 npm run test:harness:temporal:provider-failure
 ```
 
-该 smoke 会把 OpenAI-compatible adapter 指向不可用的本地 provider endpoint，然后验证 API 返回带受控 `errors` 摘要的 `Failed` run，且 Postgres 中存在结构化 `errors_json` 与 `analysis_run_failed` audit event。
+该 smoke 会把 OpenAI-compatible adapter 指向不可用的本地 provider endpoint，然后验证 API 返回带受控 `errors` 摘要的 `Failed` run，且 Postgres 中存在结构化 `errors_json` 与 `analysis_run_failed` audit event。AI Template Analysis 工作台会消费这份摘要，在 re-analysis run 失败时让 reviewer 看到失败类别，而不需要 raw provider payload 或直接查库。
 
 在 Postgres-backed 模式下，analysis run 会按照存储状态保持为 `Queued`、`Running`、`Failed` 或 `Succeeded`。只有 worker 写入 `analysis_outputs` 之后，API response 才会包含 `output` 和 policy routing。如果 provider analysis 最终失败，worker 会先写入 failed run、结构化 error metadata 和 audit event，再保留 Temporal retry/failure 语义。
 
