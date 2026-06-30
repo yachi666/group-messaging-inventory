@@ -23,6 +23,7 @@ import type {
   DecideChangeRequestRecord,
   Database,
   ChangeRequestEvidencePackageRecord,
+  ListAnalysisResultsRecord,
   ListAuditEventsRecord,
   ListChangeRequestsRecord,
   ListReviewTasksRecord,
@@ -511,7 +512,9 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
     };
   }
 
-  async listAnalysisResults(): Promise<AiTemplateAnalysisProjection[]> {
+  async listAnalysisResults(
+    command: ListAnalysisResultsRecord = {},
+  ): Promise<AiTemplateAnalysisProjection[]> {
     const rows = await this.db
       .selectFrom('analysis_runs as ar')
       .innerJoin('template_versions as tv', 'tv.version_id', 'ar.version_id')
@@ -537,7 +540,7 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
         'rt.priority as review_task_priority',
       ])
       .orderBy('ar.created_at', 'desc')
-      .limit(50)
+      .limit(command.limit ?? 100)
       .execute();
 
     return rows.map((row) => {
@@ -849,7 +852,7 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
       .selectFrom('change_requests')
       .selectAll()
       .orderBy('created_at', 'desc')
-      .limit(100);
+      .limit(command.limit ?? 100);
 
     if (command.status) {
       query = query.where('status', '=', command.status);

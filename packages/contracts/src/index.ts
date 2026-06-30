@@ -190,6 +190,7 @@ export const decideChangeRequestSchema = z.object({
 
 export const listChangeRequestsQuerySchema = z.object({
   status: changeRequestStatusSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(200).default(100),
 });
 
 export const changeRequestsResponseSchema = z.object({
@@ -322,6 +323,10 @@ export const aiTemplateAnalysisResultSchema = z.object({
 
 export const aiTemplateAnalysisResultsResponseSchema = z.object({
   results: z.array(aiTemplateAnalysisResultSchema),
+});
+
+export const listAnalysisResultsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(200).default(100),
 });
 
 export const analysisEvaluationMetricsSchema = z.object({
@@ -489,6 +494,7 @@ export type AiTemplateAnalysisResultResponse = z.infer<
 export type AiTemplateAnalysisResultsResponse = z.infer<
   typeof aiTemplateAnalysisResultsResponseSchema
 >;
+export type ListAnalysisResultsQuery = z.infer<typeof listAnalysisResultsQuerySchema>;
 export type LatestAnalysisEvaluationResponse = z.infer<
   typeof latestAnalysisEvaluationResponseSchema
 >;

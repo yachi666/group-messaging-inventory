@@ -68,6 +68,7 @@
       "path": "/templates/analysis-results",
       "status": 200,
       "roles": ["analysis_reader", "analysis_runner", "auditor"],
+      "request": "listAnalysisResultsQuerySchema",
       "response": "aiTemplateAnalysisResultsResponseSchema"
     },
     {

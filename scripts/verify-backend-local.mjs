@@ -122,6 +122,15 @@ try {
   if (!Array.isArray(resultsResponse.results) || resultsResponse.results.length === 0) {
     throw new Error('analysis results projection was empty');
   }
+  const limitedResultsResponse = await getJson(
+    `${baseUrl}/templates/analysis-results?limit=1`,
+  );
+  aiTemplateAnalysisResultsResponseSchema.parse(limitedResultsResponse);
+  assertEqual(
+    limitedResultsResponse.results.length,
+    1,
+    'analysis results limit query',
+  );
   assertEqual(
     typeof resultsResponse.results[0].templateUuid,
     'string',
@@ -622,6 +631,15 @@ async function verifyCreateAndSubmitChangeRequest() {
 
   const pendingQueue = await getJson(`${baseUrl}/change-requests?status=PendingApproval`);
   changeRequestsResponseSchema.parse(pendingQueue);
+  const limitedPendingQueue = await getJson(
+    `${baseUrl}/change-requests?status=PendingApproval&limit=1`,
+  );
+  changeRequestsResponseSchema.parse(limitedPendingQueue);
+  assertEqual(
+    limitedPendingQueue.changeRequests.length,
+    1,
+    'change requests limit query',
+  );
   if (
     !pendingQueue.changeRequests.some(
       (item) => item.changeRequestId === submittedChangeRequest.changeRequestId,

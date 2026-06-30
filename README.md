@@ -174,6 +174,8 @@ curl -H 'x-actor-id: auditor-local' \
   'http://127.0.0.1:4000/audit-events?changeRequestId=CR-...'
 ```
 
+`/templates/analysis-results` accepts `limit` so workbench projections stay bounded.
+`/change-requests` supports `status` and `limit` filters for maker-checker queues.
 `/audit-events` supports filtering by `objectType`, `objectId`, `sourceRunId`, `changeRequestId`, and `limit`.
 `/review-tasks` exposes analysis review tasks with `status`, `objectType`, `objectId`, `sourceRunId`, `assignedTo`, and `limit` filters so review-required analysis results can be traced from the workbench into a reviewer queue.
 `GET /analysis-runs/{runId}/evidence-package` exports a single-run evidence package with the public run response and related audit events. Successful and failed provider runs use the same contract; failed packages expose public error summaries without raw provider details.

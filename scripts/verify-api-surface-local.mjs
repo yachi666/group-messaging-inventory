@@ -135,6 +135,7 @@ assertEndpoint('listAnalysisResults', analysisController, {
   decorator: "@Get('templates/analysis-results')",
   roles: ['analysis_reader', 'analysis_runner', 'auditor'],
   status: 200,
+  requestSchema: 'listAnalysisResultsQuerySchema',
 });
 assertEndpoint('listReviewTasks', analysisController, {
   decorator: "@Get('review-tasks')",

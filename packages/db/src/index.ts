@@ -305,6 +305,11 @@ export type DecideChangeRequestRecord = {
 
 export type ListChangeRequestsRecord = {
   status?: ChangeRequestStatus;
+  limit?: number;
+};
+
+export type ListAnalysisResultsRecord = {
+  limit?: number;
 };
 
 export type ReviewTaskRecord = {
@@ -599,7 +604,9 @@ export type AnalysisRunEvidencePackageRecord = {
 export type AnalysisRunRepository = {
   enqueueRun(command: SubmitAnalysisRunRecord): Promise<QueuedAnalysisRunRecord>;
   getRun(runId: string): Promise<CompletedAnalysisRunRecord | null>;
-  listAnalysisResults(): Promise<AiTemplateAnalysisProjection[]>;
+  listAnalysisResults(
+    command?: ListAnalysisResultsRecord,
+  ): Promise<AiTemplateAnalysisProjection[]>;
   recordAnalysisResult(
     command: RecordAnalysisResultRecord,
   ): Promise<RecordedAnalysisResultRecord>;
@@ -755,7 +762,9 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
     };
   }
 
-  async listAnalysisResults(): Promise<AiTemplateAnalysisProjection[]> {
+  async listAnalysisResults(
+    command: ListAnalysisResultsRecord = {},
+  ): Promise<AiTemplateAnalysisProjection[]> {
     const completedProjections = Array.from(this.completedRuns.values())
       .filter(hasCompletedOutput)
       .map((run) => ({
@@ -794,10 +803,10 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
     }));
 
     if (completedProjections.length > 0) {
-      return completedProjections;
+      return completedProjections.slice(0, command.limit ?? 100);
     }
 
-    return [
+    const fallbackProjections: AiTemplateAnalysisProjection[] = [
       {
         id: 'ATA-LOCAL-001',
         templateUuid: 'tpluuid_local_scaffold',
@@ -831,6 +840,8 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
         explanation: [...localAnalysisOutput.businessExplanation],
       },
     ];
+
+    return fallbackProjections.slice(0, command.limit ?? 100);
   }
 
   async recordAnalysisResult(
@@ -1013,7 +1024,8 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
     return Array.from(this.changeRequests.values())
       .filter((changeRequest) => !command.status || changeRequest.status === command.status)
       .map(toChangeRequestRecord)
-      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .slice(0, command.limit ?? 100);
   }
 
   async listReviewTasks(command: ListReviewTasksRecord = {}): Promise<ReviewTaskRecord[]> {

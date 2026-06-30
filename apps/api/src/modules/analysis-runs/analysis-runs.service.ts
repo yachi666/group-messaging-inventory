@@ -15,6 +15,7 @@ import type {
   CreateMappingChangeRequestRequest,
   DecideChangeRequestRequest,
   ListAuditEventsQuery,
+  ListAnalysisResultsQuery,
   ListChangeRequestsQuery,
   ListReviewTasksQuery,
   ReviewTasksResponse,
@@ -146,8 +147,12 @@ export class AnalysisRunsService {
     };
   }
 
-  async listAnalysisResults(): Promise<AiTemplateAnalysisResultsResponse> {
-    const results = await this.repository.listAnalysisResults();
+  async listAnalysisResults(
+    query: ListAnalysisResultsQuery,
+  ): Promise<AiTemplateAnalysisResultsResponse> {
+    const results = await this.repository.listAnalysisResults({
+      limit: query.limit,
+    });
 
     return {
       results: results.map((result): AiTemplateAnalysisResultResponse => ({
@@ -262,6 +267,7 @@ export class AnalysisRunsService {
   async listChangeRequests(query: ListChangeRequestsQuery): Promise<ChangeRequestsResponse> {
     const changeRequests = await this.repository.listChangeRequests({
       status: query.status,
+      limit: query.limit,
     });
 
     return {

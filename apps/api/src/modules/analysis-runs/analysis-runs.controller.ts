@@ -16,6 +16,7 @@ import {
   createMappingChangeRequestSchema,
   decideChangeRequestSchema,
   listAuditEventsQuerySchema,
+  listAnalysisResultsQuerySchema,
   listChangeRequestsQuerySchema,
   listReviewTasksQuerySchema,
   submitAnalysisRunSchema,
@@ -26,6 +27,7 @@ import {
   type CreateMappingChangeRequestRequest,
   type DecideChangeRequestRequest,
   type ListAuditEventsQuery,
+  type ListAnalysisResultsQuery,
   type ListChangeRequestsQuery,
   type ListReviewTasksQuery,
   type SubmitAnalysisRunRequest,
@@ -79,8 +81,11 @@ export class AnalysisRunsController {
 
   @Get('templates/analysis-results')
   @RequiresRoles('analysis_reader', 'analysis_runner', 'auditor')
-  listAnalysisResults() {
-    return this.analysisRuns.listAnalysisResults();
+  listAnalysisResults(@Query() query: unknown) {
+    const request =
+      listAnalysisResultsQuerySchema.parse(query) satisfies ListAnalysisResultsQuery;
+
+    return this.analysisRuns.listAnalysisResults(request);
   }
 
   @Get('review-tasks')
