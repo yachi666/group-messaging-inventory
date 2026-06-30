@@ -1,6 +1,7 @@
 import {
   createPipelineReleaseEvidence,
   runGoldenTemplateEvaluation,
+  verificationSeedCases,
 } from '@gmi/evals';
 import {
   createPostgresDatabase,
@@ -35,8 +36,10 @@ try {
     result.versionId.includes(datasetId),
   );
 
-  if (seededResults.length < 5) {
-    throw new Error(`Expected at least 5 seeded analysis results, got ${seededResults.length}.`);
+  if (seededResults.length < verificationSeedCases.length) {
+    throw new Error(
+      `Expected at least ${verificationSeedCases.length} seeded analysis results, got ${seededResults.length}.`,
+    );
   }
 
   const pendingChangeRequests = await repository.listChangeRequests({
@@ -100,55 +103,13 @@ try {
 }
 
 async function seedAnalysisRuns() {
-  const autoRecorded = await seedRun({
-    slug: 'payment-reminder-auto',
-    policyDecision: 'auto_record',
-    confidence: 96,
-    qualityScore: 94,
-    candidateUseCaseId: 'UC-PAYMENT-REMINDER',
-    anomalies: [],
-    reason: 'Seed auto-recorded servicing payment reminder',
-  });
-
-  const reviewRequired = await seedRun({
-    slug: 'otp-low-confidence-review',
-    policyDecision: 'review_required',
-    confidence: 68,
-    qualityScore: 76,
-    candidateUseCaseId: 'UC-AUTHENTICATION',
-    anomalies: ['low_confidence_candidate_match'],
-    reason: 'Seed review-required OTP low confidence match',
-  });
-
-  const blocked = await seedRun({
-    slug: 'pii-blocked',
-    policyDecision: 'blocked',
-    confidence: 40,
-    qualityScore: 45,
-    candidateUseCaseId: 'UC-UNKNOWN',
-    anomalies: ['pii_masking_required_before_provider'],
-    reason: 'Seed blocked PII masking review case',
-  });
-
-  const approvalCandidate = await seedRun({
-    slug: 'candidate-mapping-approval',
-    policyDecision: 'review_required',
-    confidence: 87,
-    qualityScore: 90,
-    candidateUseCaseId: 'UC-CARD-REPAYMENT',
-    anomalies: ['candidate_mapping_requires_checker'],
-    reason: 'Seed candidate mapping approval package',
-  });
-
-  const lifecycleCandidate = await seedRun({
-    slug: 'retired-but-live',
-    policyDecision: 'review_required',
-    confidence: 82,
-    qualityScore: 84,
-    candidateUseCaseId: 'UC-RETENTION',
-    anomalies: ['retired_but_live_traffic'],
-    reason: 'Seed retired-but-live lifecycle approval package',
-  });
+  const autoRecorded = await seedRun(getSeedCase('payment-reminder-auto'));
+  const reviewRequired = await seedRun(getSeedCase('otp-low-confidence-review'));
+  const blocked = await seedRun(getSeedCase('pii-blocked'));
+  const approvalCandidate = await seedRun(getSeedCase('candidate-mapping-approval'));
+  const lifecycleCandidate = await seedRun(getSeedCase('retired-but-live'));
+  const regulatoryEnhancedReview = await seedRun(getSeedCase('regulatory-enhanced-review'));
+  const candidateVersionDrift = await seedRun(getSeedCase('candidate-version-drift'));
 
   return {
     autoRecorded,
@@ -156,38 +117,30 @@ async function seedAnalysisRuns() {
     blocked,
     approvalCandidate,
     lifecycleCandidate,
+    regulatoryEnhancedReview,
+    candidateVersionDrift,
   };
 }
 
-async function seedRun({
-  slug,
-  policyDecision,
-  confidence,
-  qualityScore,
-  candidateUseCaseId,
-  anomalies,
-  reason,
-}) {
+async function seedRun(seedCase) {
+  const { slug } = seedCase;
   const versionId = `tv-${datasetId}-${slug}`;
   const queued = await repository.enqueueRun({
     versionId,
     triggerType: 'manual_reanalysis',
-    effort: policyDecision === 'blocked' ? 'enhanced_review' : 'normal',
-    reason,
+    effort: seedCase.effort,
+    reason: seedCase.reason,
     idempotencyKey: `${datasetId}-${slug}-run`,
   });
 
   const recorded = await repository.recordAnalysisResult({
     runId: queued.runId,
-    output: createAnalysisOutput({
-      slug,
-      confidence,
-      qualityScore,
-      candidateUseCaseId,
-      anomalies,
-    }),
-    policyDecision,
-    policyReasons: anomalies.length > 0 ? anomalies : ['seed_verified_output'],
+    output: withSeedTrace(seedCase.output, slug),
+    policyDecision: seedCase.expectedPolicyDecision,
+    policyReasons:
+      seedCase.output.anomalies.length > 0
+        ? seedCase.output.anomalies
+        : ['seed_verified_output'],
     modelProvider: 'replay',
     modelName: 'seed-verification-fixtures',
     promptVersion: `template-analysis-agent@seed-${datasetId}`,
@@ -261,15 +214,7 @@ async function seedChangeRequests(runs) {
     actorId: 'seed-maker',
   });
 
-  const changesRequestedRun = await seedRun({
-    slug: 'classification-conflict-changes',
-    policyDecision: 'review_required',
-    confidence: 74,
-    qualityScore: 81,
-    candidateUseCaseId: 'UC-CLASSIFICATION-REVIEW',
-    anomalies: ['classification_conflict'],
-    reason: 'Seed changes-requested approval package',
-  });
+  const changesRequestedRun = await seedRun(getSeedCase('classification-conflict-changes'));
   const changesDraft = await repository.createMappingChangeRequest({
     templateUuid: changesRequestedRun.templateUuid,
     baseRevision: 0,
@@ -289,15 +234,7 @@ async function seedChangeRequests(runs) {
     reason: 'Seed checker requested more evidence',
   });
 
-  const rejectedRun = await seedRun({
-    slug: 'marketing-rejected',
-    policyDecision: 'review_required',
-    confidence: 79,
-    qualityScore: 80,
-    candidateUseCaseId: 'UC-MARKETING-CAMPAIGN',
-    anomalies: ['missing_marketing_consent_evidence'],
-    reason: 'Seed rejected approval package',
-  });
+  const rejectedRun = await seedRun(getSeedCase('marketing-rejected'));
   const rejectedDraft = await repository.createMappingChangeRequest({
     templateUuid: rejectedRun.templateUuid,
     baseRevision: 0,
@@ -367,45 +304,22 @@ async function seedReleaseEvidence() {
   return recordPipelineReleaseEvidence(db, releaseEvidence);
 }
 
-function createAnalysisOutput({
-  slug,
-  confidence,
-  qualityScore,
-  candidateUseCaseId,
-  anomalies,
-}) {
+function getSeedCase(slug) {
+  const seedCase = verificationSeedCases.find((candidate) => candidate.slug === slug);
+
+  if (!seedCase) {
+    throw new Error(`Missing verification seed case: ${slug}`);
+  }
+
+  return seedCase;
+}
+
+function withSeedTrace(output, slug) {
   return {
-    extractedPattern: `Seed ${slug} message for {customer} with {date}.`,
-    placeholders: [
-      {
-        token: '{customer}',
-        type: 'name',
-        confidence: 91,
-      },
-      {
-        token: '{date}',
-        type: 'date',
-        confidence: 93,
-      },
+    ...output,
+    technicalEvidence: [
+      ...output.technicalEvidence,
+      `seed-verification-data-pg:${datasetId}:${slug}`,
     ],
-    aiMessageType: slug.includes('otp') ? 'OTP' : 'Transaction',
-    governanceClassificationSuggestion: slug.includes('marketing')
-      ? 'Marketing'
-      : slug.includes('pii')
-        ? 'Regulatory'
-        : 'Servicing',
-    overallConfidence: confidence,
-    qualityScore,
-    candidateMatches: [
-      {
-        useCaseId: candidateUseCaseId,
-        name: `Seed ${candidateUseCaseId}`,
-        similarity: Math.max(50, confidence - 3),
-        reason: `Seeded candidate match for ${slug}.`,
-      },
-    ],
-    anomalies,
-    businessExplanation: [`Seeded verification case ${slug}.`],
-    technicalEvidence: [`seed-verification-data-pg:${datasetId}:${slug}`],
   };
 }

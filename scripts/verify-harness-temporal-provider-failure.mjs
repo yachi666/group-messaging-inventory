@@ -6,6 +6,7 @@ import {
   createPostgresPool,
   migratePostgresDatabase,
 } from '@gmi/db';
+import { auditEventsResponseSchema } from '@gmi/contracts';
 
 const databaseUrl =
   process.env.DATABASE_URL ?? 'postgres://gmi:gmi@127.0.0.1:55432/gmi';
@@ -111,6 +112,20 @@ try {
   const evidence = await readFailureEvidence(submitResponse.runId);
   assertEqual(evidence.analysisOutputs, 0, 'analysis_outputs count');
   assertEqual(evidence.failedAuditEvents, 1, 'analysis_run_failed audit_events count');
+
+  const auditEvents = await getJson(
+    `${baseUrl}/audit-events?sourceRunId=${encodeURIComponent(submitResponse.runId)}`,
+    governanceHeaders,
+  );
+  auditEventsResponseSchema.parse(auditEvents);
+  const failedAuditEvent = auditEvents.auditEvents.find(
+    (event) => event.action === 'analysis_run_failed',
+  );
+  if (!failedAuditEvent) {
+    throw new Error('analysis_run_failed audit event was not exposed through the API.');
+  }
+  assertEqual(failedAuditEvent.objectId, submitResponse.runId, 'API audit event object id');
+  assertEqual(failedAuditEvent.afterRef, 'provider_error', 'API audit event failure code');
 
   if (evidence.errors.length !== 1) {
     throw new Error(`Expected one persisted error, got ${JSON.stringify(evidence.errors)}.`);

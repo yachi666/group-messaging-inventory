@@ -558,6 +558,8 @@ Current repository status:
 - `packages/evals` implements a first golden dataset gate for template analysis.
 - `npm run test:evals` runs schema validation, classification accuracy, policy routing accuracy, placeholder recall checks, and a minimum case-count gate.
 - The initial suite uses replayed outputs for deterministic CI-style coverage across servicing, marketing, regulatory, candidate drift, low-confidence review, PII masking block, and classification-conflict review paths.
+- `packages/evals` also exports `verificationSeedCases`, a reusable nine-case dataset for manual API/UI verification. It covers auto-record, low-confidence review, PII block, enhanced review, candidate-version drift, maker-checker approval, pending lifecycle change, changes-requested, and rejected marketing mapping paths.
+- `npm run test:verification-seed-cases:local` validates that the seed cases satisfy the analysis output schema, expected classification, policy routing, coverage, and uniqueness requirements without requiring Postgres or Temporal.
 - `packages/policy` includes a first deterministic `maskTemplateContent` pass for common email, phone, HK/CN/SG/India phone, account, grouped card-number, IBAN, HKID, Singapore NRIC/FIN, India PAN, and name patterns.
 - `packages/policy/fixtures/pii-masking-fixtures.json` stores the first local masking trap and false-positive fixture set, including regional identifier traps and regional-looking business IDs that should remain visible.
 - `npm run test:pii:local` verifies that raw PII trap strings are replaced before worker analysis reaches an AI adapter and protects false positives for OTPs, dates, template IDs, batch IDs, campaign IDs, regional-looking SKUs, rules, tickets, and experiment IDs.
@@ -1295,7 +1297,7 @@ Logs and traces:
 - Route-level roles are explicit: analysis submission requires `analysis_runner`; analysis reads require `analysis_reader`, `analysis_runner`, or `auditor`; change request creation/submission requires `change_maker`; decisions and evidence packages require `change_checker` or `auditor`.
 - The audit ledger is exposed through `/audit-events`, filtered by object, source run, change request, and limit. Evidence packages use the same event shape, so review workflows and ledger export share one contract.
 - `npm run test:backend` verifies that protected routes reject both missing-role and missing-actor requests in header auth mode and that gateway mode overrides spoofed local actor headers with trusted gateway identity. `npm run test:readiness` also verifies readiness and metrics rendering locally.
-- `npm run seed:verification:pg` creates a timestamped Postgres verification dataset for manual API/UI checks, covering auto-record, review-required, blocked, approved, pending, changes-requested, rejected, evidence-package, audit-event, and latest-release-evidence paths without using production data.
+- `npm run seed:verification:pg` creates a timestamped Postgres verification dataset for manual API/UI checks from `verificationSeedCases`, covering auto-record, review-required, blocked, enhanced-review, candidate-version-drift, approved, pending, changes-requested, rejected, evidence-package, audit-event, and latest-release-evidence paths without using production data.
 
 Alerts:
 
@@ -1454,7 +1456,7 @@ Current repository status:
 - OpenAI-compatible calls use `OPENAI_COMPATIBLE_MAX_RETRIES` and `OPENAI_COMPATIBLE_RETRY_BACKOFF_MS` for bounded retries with exponential backoff on transient HTTP 408, 429, 5xx, and network failures; non-retryable 4xx errors fail fast with a stable `provider_error:*` message.
 - `npm run test:ai-adapter` verifies OpenAI-compatible retry, backoff, provider-specific request fields, structured output parsing, and deterministic-only no-provider behavior without calling an external model.
 - When analysis fails after provider retries, the Temporal workflow calls failure persistence before rethrowing so Temporal retains retry/failure semantics while Postgres-backed runs are marked `Failed` with `errors_json` and an audit event.
-- `npm run test:harness:temporal:provider-failure` verifies the API -> Temporal -> worker -> Postgres failure path with an unavailable OpenAI-compatible provider endpoint, asserting API `Failed` status with a public `errors` summary, structured `errors_json`, zero analysis outputs, and an `analysis_run_failed` audit event. The AI Template Analysis workbench displays that public summary for failed re-analysis runs, while detailed provider evidence remains in Postgres for audit/debug workflows.
+- `npm run test:harness:temporal:provider-failure` verifies the API -> Temporal -> worker -> Postgres failure path with an unavailable OpenAI-compatible provider endpoint, asserting API `Failed` status with a public `errors` summary, `/audit-events` readback for the `analysis_run_failed` ledger entry, structured `errors_json`, and zero analysis outputs. The AI Template Analysis workbench displays that public summary for failed re-analysis runs, while detailed provider evidence remains in Postgres for audit/debug workflows.
 - DeepSeek can be configured as `AI_PROVIDER=openai-compatible` with `OPENAI_COMPATIBLE_BASE_URL=https://api.deepseek.com` and `OPENAI_COMPATIBLE_MODEL=deepseek-v4-flash`.
 - A native Anthropic adapter remains a planned provider-specific adapter when direct Claude SDK features are needed.
 
@@ -1593,7 +1595,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented worker failure persistence activity and repository support for marking failed analysis runs with structured error metadata.
 - Implemented shared `@gmi/runtime-config` startup validation for API and worker configuration.
 - Implemented and verified `npm run test:harness:temporal` for the full API -> Temporal -> worker -> Postgres analysis evidence loop with local header authorization and persisted analysis output, review task, and audit event checks.
-- Implemented `npm run test:harness:temporal:provider-failure` for provider failure evidence, covering API failed-run readback with controlled `errors`, Postgres `errors_json`, zero-output invariant, and `analysis_run_failed` audit ledger evidence.
+- Implemented `npm run test:harness:temporal:provider-failure` for provider failure evidence, covering API failed-run readback with controlled `errors`, `/audit-events` ledger readback, Postgres `errors_json`, and the zero-output invariant.
 - Implemented `npm run test:no-infra` plus GitHub Actions CI for no-infrastructure typecheck, secret scan, backend smoke, readiness probes, runtime lifecycle checks, API surface checks, PII gate, replay and provider-adapter eval gates, release mapping gates, web contract checks, workflow verification, deploy config checks, build, bundle budget, and local UI verification.
 - Implemented contract-backed backend smoke parsing for key API success and error responses via `packages/contracts`.
 - Next: add reviewer-labeled production PII/false-positive samples once data handling approvals are available.

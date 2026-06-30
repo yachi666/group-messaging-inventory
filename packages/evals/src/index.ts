@@ -8,6 +8,8 @@ import type {
 } from '@gmi/domain';
 import { evaluateAnalysisPolicy, type PolicyDecision } from '@gmi/policy';
 
+export { verificationSeedCases, type VerificationSeedCase } from './verificationSeedCases.js';
+
 export type GoldenTemplateCase = {
   id: string;
   templateUuid: string;

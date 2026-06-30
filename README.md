@@ -203,7 +203,13 @@ To seed a richer Postgres-backed verification dataset for manual API/UI checks, 
 npm run seed:verification:pg
 ```
 
-The seed command writes a timestamped dataset with auto-recorded, review-required, blocked, approved, pending, changes-requested, and rejected governance cases. It then verifies analysis result projections, review task queues, pending approvals, evidence packages, audit events, and latest release evidence. Override `SEED_DATASET_ID` when you need a stable dataset label for demos.
+The seed command writes a timestamped dataset with nine reusable verification cases: auto-recorded, review-required, blocked, enhanced-review, candidate-version-drift, approved, pending, changes-requested, and rejected governance paths. It then verifies analysis result projections, review task queues, pending approvals, evidence packages, audit events, and latest release evidence. Override `SEED_DATASET_ID` when you need a stable dataset label for demos.
+
+To validate the seed dataset shape without Postgres, run:
+
+```bash
+npm run test:verification-seed-cases:local
+```
 
 The local Postgres connection string is:
 
@@ -247,7 +253,7 @@ Before opening a pull request or publishing a release, run:
 npm run test:no-infra
 ```
 
-This runs type checks, secret scan, backend smoke, readiness and metrics smoke, PII masking gate, golden replay evals, provider-adapter evals without external model calls, release evidence gates, CI workflow verification, and build. The same no-infrastructure gate set is wired into `.github/workflows/ci.yml` for pull requests and pushes to `main` or `codex/**` branches.
+This runs type checks, secret scan, backend smoke, readiness and metrics smoke, PII masking gate, golden replay evals, verification seed-case validation, provider-adapter evals without external model calls, release evidence gates, CI workflow verification, and build. The same no-infrastructure gate set is wired into `.github/workflows/ci.yml` for pull requests and pushes to `main` or `codex/**` branches.
 
 The repository also includes a Playwright-based UI verification script:
 
@@ -399,7 +405,7 @@ npm run infra:up
 npm run test:harness:temporal:provider-failure
 ```
 
-This smoke points the OpenAI-compatible adapter at an unavailable local provider endpoint, then verifies the API exposes a `Failed` run with a public `errors` summary and Postgres contains structured `errors_json` plus an `analysis_run_failed` audit event. The AI Template Analysis workbench consumes that summary when a re-analysis run fails, so reviewers see the failure class without raw provider payloads or direct database access; detailed provider evidence remains in Postgres for audit/debug workflows.
+This smoke points the OpenAI-compatible adapter at an unavailable local provider endpoint, then verifies the API exposes a `Failed` run with a public `errors` summary, `/audit-events` exposes the `analysis_run_failed` ledger entry, and Postgres contains structured `errors_json`. The AI Template Analysis workbench consumes that summary when a re-analysis run fails, so reviewers see the failure class without raw provider payloads or direct database access; detailed provider evidence remains in Postgres for audit/debug workflows.
 
 In Postgres-backed mode, analysis runs remain `Queued`, `Running`, `Failed`, or `Succeeded` according to the stored run state. API responses include `output` and policy routing only after the worker records `analysis_outputs`. If provider analysis ultimately fails, the worker records a failed run with structured error metadata and an audit event before preserving Temporal retry/failure semantics.
 
