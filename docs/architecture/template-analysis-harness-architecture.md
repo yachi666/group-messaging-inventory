@@ -1001,6 +1001,7 @@ GET /api/change-requests/{changeRequestId}/evidence-package
 Command API requirements:
 
 - Accept `Idempotency-Key` on all create commands.
+- Reject malformed idempotency keys at the API boundary with `invalid_idempotency_key`; accepted keys are 1-128 characters and use only letters, numbers, `.`, `_`, `:`, or `-`.
 - Return `202 Accepted` for asynchronous analysis jobs.
 - Return `201 Created` for synchronous Change Request creation.
 - Return `409 Conflict` for stale `base_revision` or an existing open Change Request.

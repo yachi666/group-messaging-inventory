@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -55,7 +56,7 @@ export class AnalysisRunsController {
     const request = submitAnalysisRunSchema.parse(body) satisfies SubmitAnalysisRunRequest;
     return this.analysisRuns.submitRun({
       versionId,
-      idempotencyKey,
+      idempotencyKey: normalizeIdempotencyKey(idempotencyKey),
       request,
     });
   }
@@ -153,7 +154,7 @@ export class AnalysisRunsController {
 
     return this.analysisRuns.createMappingChangeRequest({
       templateUuid,
-      idempotencyKey,
+      idempotencyKey: normalizeIdempotencyKey(idempotencyKey),
       request: withSubmitterActor(request, actorId),
     });
   }
@@ -172,7 +173,7 @@ export class AnalysisRunsController {
 
     return this.analysisRuns.createLifecycleChangeRequest({
       templateUuid,
-      idempotencyKey,
+      idempotencyKey: normalizeIdempotencyKey(idempotencyKey),
       request: withSubmitterActor(request, actorId),
     });
   }
@@ -191,7 +192,7 @@ export class AnalysisRunsController {
 
     return this.analysisRuns.createCurrentVersionChangeRequest({
       versionId,
-      idempotencyKey,
+      idempotencyKey: normalizeIdempotencyKey(idempotencyKey),
       request: withSubmitterActor(request, actorId),
     });
   }
@@ -238,6 +239,27 @@ export class AnalysisRunsController {
 function resolveCommandActorId(headerActorId: string | undefined, bodyActorId?: string) {
   const normalizedHeaderActorId = headerActorId?.trim();
   return normalizedHeaderActorId || bodyActorId || 'anonymous';
+}
+
+function normalizeIdempotencyKey(headerValue: string | undefined) {
+  if (headerValue === undefined) {
+    return undefined;
+  }
+
+  const normalized = headerValue.trim();
+
+  if (!/^[A-Za-z0-9._:-]{1,128}$/.test(normalized)) {
+    throw new BadRequestException({
+      code: 'invalid_idempotency_key',
+      message:
+        'Idempotency-Key must be 1-128 characters using letters, numbers, dot, underscore, colon, or hyphen.',
+      details: {
+        header: 'idempotency-key',
+      },
+    });
+  }
+
+  return normalized;
 }
 
 function withSubmitterActor<

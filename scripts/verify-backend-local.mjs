@@ -53,6 +53,7 @@ try {
   await verifyReadiness();
 
   await verifyStandardValidationError();
+  await verifyInvalidIdempotencyKey();
   await verifyRbacRequired();
 
   const submitResult = await postJsonWithStatus(
@@ -382,6 +383,40 @@ async function verifyStandardValidationError() {
     response.headers.get('x-request-id'),
     requestId,
     'validation response request id header',
+  );
+}
+
+async function verifyInvalidIdempotencyKey() {
+  const response = await fetch(
+    `${baseUrl}/template-versions/tv-invalid-idempotency-smoke/analysis-runs`,
+    {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...defaultAuthHeaders(),
+        'idempotency-key': 'invalid key with spaces',
+      },
+      body: JSON.stringify({
+        triggerType: 'manual_reanalysis',
+        reason: 'backend local invalid idempotency key smoke',
+        effort: 'normal',
+        requestedOutputs: [],
+      }),
+    },
+  );
+  const body = await response.json();
+  standardErrorSchema.parse(body);
+
+  assertEqual(response.status, 400, 'invalid idempotency key status');
+  assertEqual(
+    body.error?.code,
+    'invalid_idempotency_key',
+    'invalid idempotency key error code',
+  );
+  assertEqual(
+    body.error?.details?.header,
+    'idempotency-key',
+    'invalid idempotency key header detail',
   );
 }
 
