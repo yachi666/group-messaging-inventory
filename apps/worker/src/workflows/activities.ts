@@ -28,16 +28,40 @@ export type RunTemplateAnalysisActivityInput = {
 export async function runTemplateAnalysisActivity(
   input: RunTemplateAnalysisActivityInput,
 ): Promise<AiTemplateAnalysisOutput> {
+  const startedAt = performance.now();
   const adapter = createAiAnalysisAdapterFromEnv(process.env);
+  const providerMetadata = getAiProviderRuntimeMetadata(process.env);
   const maskedContent = resolveMaskedContent(input);
 
-  return adapter.analyzeTemplate({
-    templateUuid: input.templateUuid,
-    versionId: input.versionId,
-    maskedContent,
-    approvedContext: [],
-    effort: input.effort,
-  });
+  try {
+    const output = await adapter.analyzeTemplate({
+      templateUuid: input.templateUuid,
+      versionId: input.versionId,
+      maskedContent,
+      approvedContext: [],
+      effort: input.effort,
+    });
+
+    logAnalysisActivityEvent({
+      input,
+      providerMetadata,
+      startedAt,
+      status: 'succeeded',
+    });
+
+    return output;
+  } catch (error) {
+    logAnalysisActivityEvent({
+      input,
+      providerMetadata,
+      startedAt,
+      status: 'failed',
+      errorCode: toActivityErrorCode(error),
+      retryable: isRetryableActivityError(error),
+    });
+
+    throw error;
+  }
 }
 
 export type RouteAnalysisResultActivityInput = {
@@ -205,4 +229,62 @@ function resolveMaskedContent(input: RunTemplateAnalysisActivityInput) {
   }
 
   return input.maskedContent ?? 'Local scaffold masked content with no provider configured.';
+}
+
+function logAnalysisActivityEvent({
+  input,
+  providerMetadata,
+  startedAt,
+  status,
+  errorCode,
+  retryable,
+}: {
+  input: RunTemplateAnalysisActivityInput;
+  providerMetadata: ReturnType<typeof getAiProviderRuntimeMetadata>;
+  startedAt: number;
+  status: 'succeeded' | 'failed';
+  errorCode?: 'provider_error' | 'schema_validation_failed' | 'unknown_error';
+  retryable?: boolean;
+}) {
+  console.log(
+    JSON.stringify({
+      event: 'ai_analysis_activity',
+      status,
+      runId: input.runId ?? null,
+      templateUuid: input.templateUuid,
+      versionId: input.versionId,
+      effort: input.effort,
+      provider: providerMetadata.provider,
+      modelName: providerMetadata.modelName,
+      promptVersion: providerMetadata.promptVersion,
+      durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+      ...(errorCode ? { errorCode } : {}),
+      ...(retryable !== undefined ? { retryable } : {}),
+    }),
+  );
+}
+
+function toActivityErrorCode(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (message.includes('provider_error:')) {
+    return 'provider_error';
+  }
+
+  if (message.includes('schema')) {
+    return 'schema_validation_failed';
+  }
+
+  return 'unknown_error';
+}
+
+function isRetryableActivityError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return (
+    message.includes(':http_408:') ||
+    message.includes(':http_429:') ||
+    /:http_5\d\d:/.test(message) ||
+    message.includes(':network:')
+  );
 }

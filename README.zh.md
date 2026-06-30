@@ -122,6 +122,7 @@ npm run dev:worker
 OpenAI-compatible adapter 会对 HTTP 408、429、5xx 和网络错误做有界重试与可配置指数 backoff；不可重试的 4xx 会快速失败并返回稳定的 `provider_error:*` 消息。`npm run test:ai-adapter` 会在本地校验 retry、backoff、provider-specific request fields、结构化输出解析，以及 `deterministic_only` 不调用 provider 的行为。
 
 业务 Harness 仍然负责 workflow 状态、policy routing、持久化和 review gates。Provider SDK 与兼容 API 只封装在 `@gmi/ai-adapters` 后面，用于模型编排、结构化输出、guardrails 和 tracing。
+Worker analysis activity 会输出单行 JSON 事件，包含 `event=ai_analysis_activity`、run/template/version id、provider、model、prompt version、status 和 duration。该日志不会记录原始模板内容、masked prompt 或模型输出。
 
 本地治理 API 授权先使用轻量 header 模式，后续可替换为 SSO 或 API Gateway 注入的身份上下文：
 

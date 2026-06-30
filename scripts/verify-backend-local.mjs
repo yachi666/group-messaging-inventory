@@ -794,16 +794,34 @@ async function verifyWorkerActivities() {
     'worker failure missing database reason',
   );
 
-  const maskedOutput = await activities.runTemplateAnalysisActivity({
-    templateUuid: 'tpl-worker-pii-mask-smoke',
-    versionId: 'tv-worker-pii-mask-smoke-v1',
-    effort: 'normal',
-    rawContent:
-      'Hi Jane Doe, email jane.doe@example.com or call +1 415-555-0134 about account 123456789012.',
+  const workerActivityLogs = await captureConsoleLogs(async () => {
+    const maskedOutput = await activities.runTemplateAnalysisActivity({
+      runId: 'AR-WORKER-LOG-SMOKE',
+      templateUuid: 'tpl-worker-pii-mask-smoke',
+      versionId: 'tv-worker-pii-mask-smoke-v1',
+      effort: 'normal',
+      rawContent:
+        'Hi Jane Doe, email jane.doe@example.com or call +1 415-555-0134 about account 123456789012.',
+    });
+    assertIncludes(maskedOutput.extractedPattern, '{{email}}', 'worker masked email');
+    assertDoesNotInclude(maskedOutput.extractedPattern, 'jane.doe@example.com', 'worker raw email');
+    assertDoesNotInclude(maskedOutput.extractedPattern, '123456789012', 'worker raw account');
   });
-  assertIncludes(maskedOutput.extractedPattern, '{{email}}', 'worker masked email');
-  assertDoesNotInclude(maskedOutput.extractedPattern, 'jane.doe@example.com', 'worker raw email');
-  assertDoesNotInclude(maskedOutput.extractedPattern, '123456789012', 'worker raw account');
+
+  const activityLog = workerActivityLogs
+    .map(parseJsonLog)
+    .find((entry) => entry?.event === 'ai_analysis_activity');
+  if (!activityLog) {
+    throw new Error('worker analysis activity structured log was missing');
+  }
+  assertEqual(activityLog.status, 'succeeded', 'worker activity log status');
+  assertEqual(activityLog.runId, 'AR-WORKER-LOG-SMOKE', 'worker activity log run id');
+  assertEqual(activityLog.templateUuid, 'tpl-worker-pii-mask-smoke', 'worker activity log template uuid');
+  assertEqual(activityLog.provider, 'noop', 'worker activity log provider');
+  assertEqual(activityLog.modelName, 'noop-local', 'worker activity log model');
+  assertEqual(typeof activityLog.durationMs, 'number', 'worker activity log duration');
+  assertDoesNotInclude(workerActivityLogs.join('\n'), 'jane.doe@example.com', 'worker activity log raw email');
+  assertDoesNotInclude(workerActivityLogs.join('\n'), '123456789012', 'worker activity log raw account');
 }
 
 async function verifyOpenAICompatibleAdapter() {
@@ -1089,6 +1107,30 @@ function assertIncludes(value, expected, label) {
 function assertDoesNotInclude(value, forbidden, label) {
   if (value.includes(forbidden)) {
     throw new Error(`${label}: expected ${JSON.stringify(value)} not to include ${forbidden}`);
+  }
+}
+
+async function captureConsoleLogs(fn) {
+  const originalLog = console.log;
+  const logs = [];
+  console.log = (...args) => {
+    logs.push(args.map(String).join(' '));
+  };
+
+  try {
+    await fn();
+  } finally {
+    console.log = originalLog;
+  }
+
+  return logs;
+}
+
+function parseJsonLog(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
   }
 }
 
