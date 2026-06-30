@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { aiMessageTypeSchema } from '@gmi/contracts';
 import type {
   AnalysisRunResponse,
+  AnalysisRunEvidencePackage,
   AuditEventsResponse,
   AiTemplateAnalysisResultResponse,
   AiTemplateAnalysisResultsResponse,
@@ -302,6 +303,32 @@ export class AnalysisRunsService {
       ...packageMetadata,
       sourceRun: {
         ...sourceRunMetadata,
+        ...(output ? { output: toResponseOutput(output) } : {}),
+      },
+    };
+  }
+
+  async getAnalysisRunEvidencePackage(
+    runId: string,
+  ): Promise<AnalysisRunEvidencePackage> {
+    const evidencePackage = await this.repository.getAnalysisRunEvidencePackage(runId);
+
+    if (!evidencePackage) {
+      throw new NotFoundException(
+        `Analysis run evidence package ${runId} was not found.`,
+      );
+    }
+
+    const { sourceRun, ...packageMetadata } = evidencePackage;
+    const { errors, output, ...sourceRunMetadata } = sourceRun;
+
+    return {
+      ...packageMetadata,
+      sourceRun: {
+        ...sourceRunMetadata,
+        ...(errors && errors.length > 0
+          ? { errors: errors.map(toPublicAnalysisRunError) }
+          : {}),
         ...(output ? { output: toResponseOutput(output) } : {}),
       },
     };

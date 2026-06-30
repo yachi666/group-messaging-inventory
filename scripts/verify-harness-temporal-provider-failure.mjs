@@ -6,7 +6,10 @@ import {
   createPostgresPool,
   migratePostgresDatabase,
 } from '@gmi/db';
-import { auditEventsResponseSchema } from '@gmi/contracts';
+import {
+  analysisRunEvidencePackageSchema,
+  auditEventsResponseSchema,
+} from '@gmi/contracts';
 
 const databaseUrl =
   process.env.DATABASE_URL ?? 'postgres://gmi:gmi@127.0.0.1:55432/gmi';
@@ -126,6 +129,26 @@ try {
   }
   assertEqual(failedAuditEvent.objectId, submitResponse.runId, 'API audit event object id');
   assertEqual(failedAuditEvent.afterRef, 'provider_error', 'API audit event failure code');
+
+  const evidencePackage = analysisRunEvidencePackageSchema.parse(
+    await getJson(
+      `${baseUrl}/analysis-runs/${encodeURIComponent(submitResponse.runId)}/evidence-package`,
+      governanceHeaders,
+    ),
+  );
+  assertEqual(
+    evidencePackage.sourceRun.runId,
+    submitResponse.runId,
+    'failed analysis evidence package source run id',
+  );
+  assertEqual(
+    evidencePackage.sourceRun.errors?.[0]?.message,
+    'provider_error:provider-failure-smoke:network',
+    'failed analysis evidence package public error message',
+  );
+  if (!evidencePackage.auditEvents.some((event) => event.action === 'analysis_run_failed')) {
+    throw new Error('failed analysis evidence package must include failure audit event.');
+  }
 
   if (evidence.errors.length !== 1) {
     throw new Error(`Expected one persisted error, got ${JSON.stringify(evidence.errors)}.`);

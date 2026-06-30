@@ -64,6 +64,12 @@ export class AnalysisRunsController {
     return this.analysisRuns.getRun(runId);
   }
 
+  @Get('analysis-runs/:runId/evidence-package')
+  @RequiresRoles('analysis_reader', 'auditor')
+  getAnalysisRunEvidencePackage(@Param('runId') runId: string) {
+    return this.analysisRuns.getAnalysisRunEvidencePackage(runId);
+  }
+
   @Post('analysis-runs/:runId/confirm')
   @HttpCode(HttpStatus.OK)
   @RequiresRoles('analysis_reader', 'analysis_runner')

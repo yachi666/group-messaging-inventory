@@ -2,6 +2,9 @@ import { spawn } from 'node:child_process';
 import process from 'node:process';
 import { sql } from 'kysely';
 import {
+  analysisRunEvidencePackageSchema,
+} from '@gmi/contracts';
+import {
   createPostgresDatabase,
   createPostgresPool,
   migratePostgresDatabase,
@@ -96,6 +99,21 @@ try {
   assertEqual(evidence.analysisOutputs, 1, 'analysis_outputs count');
   assertEqual(evidence.reviewTasks, 1, 'review_tasks count');
   assertEqual(evidence.auditEvents, 1, 'audit_events count');
+
+  const evidencePackage = analysisRunEvidencePackageSchema.parse(
+    await getJson(
+      `${baseUrl}/analysis-runs/${encodeURIComponent(submitResponse.runId)}/evidence-package`,
+      governanceHeaders,
+    ),
+  );
+  assertEqual(
+    evidencePackage.sourceRun.runId,
+    submitResponse.runId,
+    'analysis run evidence package source run id',
+  );
+  if (!evidencePackage.auditEvents.some((event) => event.action === 'analysis_result_recorded')) {
+    throw new Error('analysis run evidence package must include analysis_result_recorded audit event.');
+  }
 
   console.log(
     JSON.stringify(

@@ -13,6 +13,7 @@ import type {
 import { RepositoryError } from './index.js';
 import type {
   AnalysisRunRepository,
+  AnalysisRunEvidencePackageRecord,
   AiTemplateAnalysisProjection,
   ConfirmAnalysisRunRecord,
   CompletedAnalysisRunRecord,
@@ -989,6 +990,33 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
       exportedAt: new Date().toISOString(),
       changeRequest: mapChangeRequest(changeRequest),
       proposedPatch: asRecord(changeRequest.proposed_patch_json),
+      sourceRun,
+      auditEvents: auditRows.map((row) => ({
+        ...mapAuditEvent(row),
+      })),
+    };
+  }
+
+  async getAnalysisRunEvidencePackage(
+    runId: string,
+  ): Promise<AnalysisRunEvidencePackageRecord | null> {
+    const sourceRun = await this.getRun(runId);
+
+    if (!sourceRun) {
+      return null;
+    }
+
+    const auditRows = await this.db
+      .selectFrom('audit_events')
+      .selectAll()
+      .where('source_run_id', '=', runId)
+      .orderBy('created_at', 'asc')
+      .limit(200)
+      .execute();
+
+    return {
+      packageId: `AEP-${runId}`,
+      exportedAt: new Date().toISOString(),
       sourceRun,
       auditEvents: auditRows.map((row) => ({
         ...mapAuditEvent(row),

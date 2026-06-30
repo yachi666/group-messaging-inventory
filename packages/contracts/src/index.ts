@@ -273,6 +273,13 @@ export const changeRequestEvidencePackageSchema = z.object({
   auditEvents: z.array(auditEvidenceEventSchema),
 });
 
+export const analysisRunEvidencePackageSchema = z.object({
+  packageId: z.string().min(1),
+  exportedAt: z.string().datetime(),
+  sourceRun: analysisRunResponseSchema,
+  auditEvents: z.array(auditEvidenceEventSchema),
+});
+
 export const confirmAnalysisRunResponseSchema = z.object({
   runId: z.string().min(1),
   reviewStatus: z.literal('reviewed'),
@@ -472,6 +479,7 @@ export type AuditEventsResponse = z.infer<typeof auditEventsResponseSchema>;
 export type ChangeRequestEvidencePackage = z.infer<
   typeof changeRequestEvidencePackageSchema
 >;
+export type AnalysisRunEvidencePackage = z.infer<typeof analysisRunEvidencePackageSchema>;
 export type ConfirmAnalysisRunResponse = z.infer<
   typeof confirmAnalysisRunResponseSchema
 >;

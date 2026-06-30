@@ -158,6 +158,7 @@ curl -H 'x-actor-id: auditor-local' \
 
 `/audit-events` 支持按 `objectType`、`objectId`、`sourceRunId`、`changeRequestId` 和 `limit` 筛选。
 `/review-tasks` 暴露 analysis review task，并支持按 `status`、`objectType`、`objectId`、`sourceRunId`、`assignedTo` 和 `limit` 筛选，让需要人工复核的分析结果可以从工作台追踪到 reviewer queue。
+`GET /analysis-runs/{runId}/evidence-package` 导出单次 analysis run 的 evidence package，包含 public run response 与相关 audit events。成功 run 与 provider 失败 run 使用同一 contract；失败包只暴露 public error summary，不暴露 raw provider details。
 `POST /review-tasks/{taskId}/transition` 支持 reviewer 认领、开始处理、升级待批、完成或关闭 review task，并写入 actor attribution 与 audit event。
 Review Queue 的 Discovery、My Tasks、Completed 标签会按状态读取该 API 中的 template review task，并可对 API-backed task 执行认领、开始处理、完成操作；API 不可用时回退到本地队列数据。
 
@@ -249,7 +250,7 @@ npm run test:ui
 npm run test:backend
 ```
 
-该 smoke test 覆盖 API validation、analysis run submission、repository domain errors、Change Request 创建、maker-checker submit/decision、禁止自审批、待审批队列 projection，以及 Change Request evidence package。
+该 smoke test 覆盖 API validation、analysis run submission、repository domain errors、Change Request 创建、maker-checker submit/decision、禁止自审批、待审批队列 projection，以及 Analysis Run / Change Request evidence package。
 
 AI Template Analysis 前端使用同一组 contract 读取结果 projection，并可以通过 `POST /template-versions/{versionId}/analysis-runs` 发起人工 re-analysis，再用返回的 run id 轮询 `GET /analysis-runs/{runId}`。Analysis result projection 会同时返回 `templateUuid` 与 `versionId`，保证 UI command 使用稳定治理身份，而不是展示标签；同时返回 `policyDecision`、`reviewTaskId` 和 `changeRequestId` 等 routing metadata，让工作台能解释结果为什么被自动记录、进入人工复核或被阻断。
 

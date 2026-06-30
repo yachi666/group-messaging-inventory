@@ -589,6 +589,13 @@ export type ChangeRequestEvidencePackageRecord = {
   auditEvents: AuditEvidenceEventRecord[];
 };
 
+export type AnalysisRunEvidencePackageRecord = {
+  packageId: string;
+  exportedAt: string;
+  sourceRun: CompletedAnalysisRunRecord;
+  auditEvents: AuditEvidenceEventRecord[];
+};
+
 export type AnalysisRunRepository = {
   enqueueRun(command: SubmitAnalysisRunRecord): Promise<QueuedAnalysisRunRecord>;
   getRun(runId: string): Promise<CompletedAnalysisRunRecord | null>;
@@ -613,6 +620,9 @@ export type AnalysisRunRepository = {
   listReviewTasks(command?: ListReviewTasksRecord): Promise<ReviewTaskRecord[]>;
   transitionReviewTask(command: TransitionReviewTaskRecord): Promise<ReviewTaskRecord>;
   listAuditEvents(command?: ListAuditEventsRecord): Promise<AuditEvidenceEventRecord[]>;
+  getAnalysisRunEvidencePackage(
+    runId: string,
+  ): Promise<AnalysisRunEvidencePackageRecord | null>;
   getChangeRequestEvidencePackage(
     changeRequestId: string,
   ): Promise<ChangeRequestEvidencePackageRecord | null>;
@@ -867,6 +877,19 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
       output: command.output,
     });
 
+    this.auditEvents.push({
+      auditEventId,
+      actorId: null,
+      action: 'analysis_result_recorded',
+      objectType: 'analysis_run',
+      objectId: command.runId,
+      sourceRunId: command.runId,
+      changeRequestId: null,
+      beforeRef: null,
+      afterRef: command.policyDecision,
+      createdAt: completedAt,
+    });
+
     return {
       runId: command.runId,
       status: 'Succeeded',
@@ -914,6 +937,19 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
   }
 
   async confirmRun(runId: string): Promise<ConfirmAnalysisRunRecord> {
+    this.auditEvents.push({
+      auditEventId: `AUD-${runId}-CONFIRMED-${this.auditEvents.length + 1}`,
+      actorId: null,
+      action: 'analysis_run_confirmed',
+      objectType: 'analysis_run',
+      objectId: runId,
+      sourceRunId: runId,
+      changeRequestId: null,
+      beforeRef: null,
+      afterRef: 'reviewed',
+      createdAt: new Date().toISOString(),
+    });
+
     return {
       runId,
       reviewStatus: 'reviewed',
@@ -1070,6 +1106,28 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
       exportedAt: new Date().toISOString(),
       changeRequest: record,
       proposedPatch: { ...changeRequest.proposedPatch },
+      sourceRun,
+      auditEvents,
+    };
+  }
+
+  async getAnalysisRunEvidencePackage(
+    runId: string,
+  ): Promise<AnalysisRunEvidencePackageRecord | null> {
+    const sourceRun = await this.getRun(runId);
+
+    if (!sourceRun) {
+      return null;
+    }
+
+    const auditEvents = await this.listAuditEvents({
+      sourceRunId: runId,
+      limit: 200,
+    });
+
+    return {
+      packageId: `AEP-${runId}`,
+      exportedAt: new Date().toISOString(),
       sourceRun,
       auditEvents,
     };

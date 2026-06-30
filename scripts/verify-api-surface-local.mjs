@@ -13,7 +13,7 @@ const governanceAuthContext = read('apps/api/src/auth/governance-auth-context.ts
 const governanceAuthGuard = read('apps/api/src/auth/governance-auth.guard.ts');
 const contracts = read('packages/contracts/src/index.ts');
 
-const expectedEndpointCount = 19;
+const expectedEndpointCount = 20;
 
 assertEqual(manifest.service, 'group-messaging-inventory-api', 'manifest service');
 assertEqual(manifest.basePath, '/', 'manifest basePath');
@@ -120,6 +120,11 @@ assertEndpoint('getAnalysisRun', analysisController, {
   roles: ['analysis_reader', 'analysis_runner', 'auditor'],
   status: 200,
   responseFields: ['runId', 'status', 'errors', 'output', 'routing'],
+});
+assertEndpoint('getAnalysisRunEvidencePackage', analysisController, {
+  decorator: "@Get('analysis-runs/:runId/evidence-package')",
+  roles: ['analysis_reader', 'auditor'],
+  status: 200,
 });
 assertEndpoint('confirmAnalysisRun', analysisController, {
   decorator: "@Post('analysis-runs/:runId/confirm')",

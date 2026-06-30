@@ -176,6 +176,7 @@ curl -H 'x-actor-id: auditor-local' \
 
 `/audit-events` supports filtering by `objectType`, `objectId`, `sourceRunId`, `changeRequestId`, and `limit`.
 `/review-tasks` exposes analysis review tasks with `status`, `objectType`, `objectId`, `sourceRunId`, `assignedTo`, and `limit` filters so review-required analysis results can be traced from the workbench into a reviewer queue.
+`GET /analysis-runs/{runId}/evidence-package` exports a single-run evidence package with the public run response and related audit events. Successful and failed provider runs use the same contract; failed packages expose public error summaries without raw provider details.
 `POST /review-tasks/{taskId}/transition` lets reviewers claim, start, escalate, resolve, or dismiss review tasks with actor attribution and audit events.
 The Review Queue Discovery, My Tasks, and Completed tabs load status-filtered template review tasks from this API. API-backed tasks can be claimed, started, and resolved from the queue, with local fallback data when the API is unavailable.
 
@@ -267,7 +268,7 @@ For local backend contract verification without Postgres or Temporal, run:
 npm run test:backend
 ```
 
-This smoke test covers API validation, analysis run submission, repository domain errors, Change Request creation, maker-checker submission/decision, self-approval blocking, pending approval queue projection, Change Request evidence packages, and the local latest-evaluation query surface. Key success and error responses are parsed through the shared Zod response contracts in `packages/contracts`.
+This smoke test covers API validation, analysis run submission, repository domain errors, Change Request creation, maker-checker submission/decision, self-approval blocking, pending approval queue projection, Analysis Run and Change Request evidence packages, and the local latest-evaluation query surface. Key success and error responses are parsed through the shared Zod response contracts in `packages/contracts`.
 
 The AI Template Analysis frontend uses the same contracts for result projections and can submit a manual re-analysis through `POST /template-versions/{versionId}/analysis-runs`, then poll `GET /analysis-runs/{runId}` with the returned run id. Analysis result projections include both `templateUuid` and `versionId` so UI commands use stable governance identities instead of display labels. They also carry routing metadata (`policyDecision`, `reviewTaskId`, and `changeRequestId`) so the workbench can show why a result is auto-recorded, review-required, or blocked.
 

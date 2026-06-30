@@ -47,6 +47,14 @@
       "responseFields": ["runId", "status", "errors", "output", "routing"]
     },
     {
+      "operationId": "getAnalysisRunEvidencePackage",
+      "method": "GET",
+      "path": "/analysis-runs/{runId}/evidence-package",
+      "status": 200,
+      "roles": ["analysis_reader", "auditor"],
+      "response": "analysisRunEvidencePackageSchema"
+    },
+    {
       "operationId": "confirmAnalysisRun",
       "method": "POST",
       "path": "/analysis-runs/{runId}/confirm",

@@ -5,6 +5,7 @@ import {
   getAiProviderRuntimeMetadata,
 } from '@gmi/ai-adapters';
 import {
+  analysisRunEvidencePackageSchema,
   aiTemplateAnalysisResultsResponseSchema,
   analysisRunResponseSchema,
   changeRequestEvidencePackageSchema,
@@ -91,6 +92,23 @@ try {
   confirmAnalysisRunResponseSchema.parse(confirmResult.body);
   assertEqual(confirmResult.status, 200, 'confirm status code');
   assertEqual(confirmResult.body.reviewStatus, 'reviewed', 'confirm review status');
+
+  const runEvidencePackage = await getJson(
+    `${baseUrl}/analysis-runs/${submitResponse.runId}/evidence-package`,
+  );
+  analysisRunEvidencePackageSchema.parse(runEvidencePackage);
+  assertEqual(
+    runEvidencePackage.sourceRun.runId,
+    submitResponse.runId,
+    'analysis run evidence source run id',
+  );
+  if (
+    !runEvidencePackage.auditEvents.some(
+      (event) => event.action === 'analysis_run_confirmed',
+    )
+  ) {
+    throw new Error('analysis run evidence package must include confirmation audit event');
+  }
 
   await verifyBaseRevisionConflict(submitResponse.runId);
   await verifyAnalysisRunTerminalGuard(submitResponse.runId);
