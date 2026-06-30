@@ -298,7 +298,16 @@ npm run test:harness:temporal
 
 这条 smoke 使用本地 header 授权模式，在隔离的 Temporal task queue 上启动 API 和 worker，提交 analysis run，等待 worker 完成，并验证已持久化的 `analysis_outputs`、`review_tasks` 和 `audit_events`。
 
-在 Postgres-backed 模式下，analysis run 会按照存储状态保持为 `Queued`、`Running`、`Failed` 或 `Succeeded`。只有 worker 写入 `analysis_outputs` 之后，API response 才会包含 `output` 和 policy routing。
+验证同一链路下的 provider 失败持久化证据：
+
+```bash
+npm run infra:up
+npm run test:harness:temporal:provider-failure
+```
+
+该 smoke 会把 OpenAI-compatible adapter 指向不可用的本地 provider endpoint，然后验证 API 返回 `Failed` run，且 Postgres 中存在结构化 `errors_json` 与 `analysis_run_failed` audit event。
+
+在 Postgres-backed 模式下，analysis run 会按照存储状态保持为 `Queued`、`Running`、`Failed` 或 `Succeeded`。只有 worker 写入 `analysis_outputs` 之后，API response 才会包含 `output` 和 policy routing。如果 provider analysis 最终失败，worker 会先写入 failed run、结构化 error metadata 和 audit event，再保留 Temporal retry/failure 语义。
 
 `GET /analysis-evaluations/latest` 在配置 `DATABASE_URL` 时读取持久化的 `analysis_evaluations` 与 `pipeline_releases`；未配置数据库时回退到本地 replay gate。响应包含 `source.kind`、`source.persisted` 和 `source.generatedAt`，让发布看板能够区分 Postgres-backed evidence 与本地 replay fallback 数据。
 

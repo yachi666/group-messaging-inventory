@@ -1,4 +1,4 @@
-import { proxyActivities } from '@temporalio/workflow';
+import { proxyActivities, rootCause } from '@temporalio/workflow';
 import type * as activities from './activities.js';
 
 const {
@@ -54,7 +54,7 @@ export async function analyzeTemplateVersionWorkflow(
 }
 
 function toPersistableWorkflowError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = rootCause(error) ?? (error instanceof Error ? error.message : String(error));
 
   if (message.includes('provider_error:')) {
     return {
