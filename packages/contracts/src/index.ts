@@ -91,6 +91,15 @@ export const analysisRunResponseSchema = z.object({
   startedAt: z.string().datetime().optional(),
   completedAt: z.string().datetime().optional(),
   traceRef: z.string().min(1).optional(),
+  errors: z
+    .array(
+      z.object({
+        code: z.string().min(1),
+        message: z.string().min(1),
+        retryable: z.boolean(),
+      }),
+    )
+    .optional(),
   output: aiTemplateAnalysisOutputSchema.optional(),
   routing: z
     .object({

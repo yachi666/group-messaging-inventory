@@ -99,6 +99,9 @@ try {
   if (failedRun.output) {
     throw new Error(`Run ${submitResponse.runId} failed but unexpectedly exposed output.`);
   }
+  assertEqual(failedRun.errors?.length, 1, 'API failed run error count');
+  assertEqual(failedRun.errors[0].code, 'provider_error', 'API failed run error code');
+  assertEqual(failedRun.errors[0].retryable, true, 'API failed run retryable flag');
 
   const evidence = await readFailureEvidence(submitResponse.runId);
   assertEqual(evidence.analysisOutputs, 0, 'analysis_outputs count');

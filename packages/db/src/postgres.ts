@@ -490,6 +490,8 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
       .where('run_id', '=', runId)
       .executeTakeFirst();
 
+    const errors = mapAnalysisRunErrors(run.errors_json);
+
     return {
       runId,
       status: run.status,
@@ -503,6 +505,7 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
       ...(run.started_at ? { startedAt: toIsoString(run.started_at) } : {}),
       ...(run.completed_at ? { completedAt: toIsoString(run.completed_at) } : {}),
       ...(run.trace_ref ? { traceRef: run.trace_ref } : {}),
+      ...(errors.length > 0 ? { errors } : {}),
       ...(output ? { output: mapAnalysisOutput(output) } : {}),
     };
   }
@@ -1551,6 +1554,16 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function asString(value: unknown): string {
   return typeof value === 'string' ? value : '';
+}
+
+function mapAnalysisRunErrors(value: unknown) {
+  return asArray<Record<string, unknown>>(value)
+    .map((item) => ({
+      code: asString(item.code),
+      message: asString(item.message),
+      retryable: item.retryable === true,
+    }))
+    .filter((item) => item.code && item.message);
 }
 
 function asTemplateLifecycleStatus(value: unknown): TemplateLifecycleStatus {

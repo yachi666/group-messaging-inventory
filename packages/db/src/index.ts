@@ -234,7 +234,14 @@ export type CompletedAnalysisRunRecord = {
   startedAt?: string;
   completedAt?: string;
   traceRef?: string;
+  errors?: AnalysisRunErrorSummary[];
   output?: AiTemplateAnalysisOutput;
+};
+
+export type AnalysisRunErrorSummary = {
+  code: string;
+  message: string;
+  retryable: boolean;
 };
 
 export type CreateMappingChangeRequestRecord = {
@@ -889,6 +896,13 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
       startedAt: queuedRun?.createdAt ?? completedAt,
       completedAt,
       traceRef: `trace_${command.runId}`,
+      errors: [
+        {
+          code: command.errorCode,
+          message: command.errorMessage,
+          retryable: command.retryable,
+        },
+      ],
     });
 
     return {

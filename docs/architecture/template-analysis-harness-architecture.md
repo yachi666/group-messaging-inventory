@@ -1454,7 +1454,7 @@ Current repository status:
 - OpenAI-compatible calls use `OPENAI_COMPATIBLE_MAX_RETRIES` and `OPENAI_COMPATIBLE_RETRY_BACKOFF_MS` for bounded retries with exponential backoff on transient HTTP 408, 429, 5xx, and network failures; non-retryable 4xx errors fail fast with a stable `provider_error:*` message.
 - `npm run test:ai-adapter` verifies OpenAI-compatible retry, backoff, provider-specific request fields, structured output parsing, and deterministic-only no-provider behavior without calling an external model.
 - When analysis fails after provider retries, the Temporal workflow calls failure persistence before rethrowing so Temporal retains retry/failure semantics while Postgres-backed runs are marked `Failed` with `errors_json` and an audit event.
-- `npm run test:harness:temporal:provider-failure` verifies the API -> Temporal -> worker -> Postgres failure path with an unavailable OpenAI-compatible provider endpoint, asserting API `Failed` status, structured `errors_json`, zero analysis outputs, and an `analysis_run_failed` audit event.
+- `npm run test:harness:temporal:provider-failure` verifies the API -> Temporal -> worker -> Postgres failure path with an unavailable OpenAI-compatible provider endpoint, asserting API `Failed` status with a controlled `errors` summary, structured `errors_json`, zero analysis outputs, and an `analysis_run_failed` audit event.
 - DeepSeek can be configured as `AI_PROVIDER=openai-compatible` with `OPENAI_COMPATIBLE_BASE_URL=https://api.deepseek.com` and `OPENAI_COMPATIBLE_MODEL=deepseek-v4-flash`.
 - A native Anthropic adapter remains a planned provider-specific adapter when direct Claude SDK features are needed.
 
@@ -1593,7 +1593,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented worker failure persistence activity and repository support for marking failed analysis runs with structured error metadata.
 - Implemented shared `@gmi/runtime-config` startup validation for API and worker configuration.
 - Implemented and verified `npm run test:harness:temporal` for the full API -> Temporal -> worker -> Postgres analysis evidence loop with local header authorization and persisted analysis output, review task, and audit event checks.
-- Implemented `npm run test:harness:temporal:provider-failure` for provider failure evidence, covering API failed-run readback, Postgres `errors_json`, zero-output invariant, and `analysis_run_failed` audit ledger evidence.
+- Implemented `npm run test:harness:temporal:provider-failure` for provider failure evidence, covering API failed-run readback with controlled `errors`, Postgres `errors_json`, zero-output invariant, and `analysis_run_failed` audit ledger evidence.
 - Implemented `npm run test:no-infra` plus GitHub Actions CI for no-infrastructure typecheck, secret scan, backend smoke, readiness probes, runtime lifecycle checks, API surface checks, PII gate, replay and provider-adapter eval gates, release mapping gates, web contract checks, workflow verification, deploy config checks, build, bundle budget, and local UI verification.
 - Implemented contract-backed backend smoke parsing for key API success and error responses via `packages/contracts`.
 - Next: add reviewer-labeled production PII/false-positive samples once data handling approvals are available.
