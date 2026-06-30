@@ -9,6 +9,11 @@ import type {
 import { evaluateAnalysisPolicy, type PolicyDecision } from '@gmi/policy';
 
 export { verificationSeedCases, type VerificationSeedCase } from './verificationSeedCases.js';
+export {
+  evaluateReleaseReadiness,
+  type ReleaseReadinessOptions,
+  type ReleaseReadinessResult,
+} from './releaseReadiness.js';
 
 export type GoldenTemplateCase = {
   id: string;

@@ -235,7 +235,7 @@ npm run preview
 npm run test:no-infra
 ```
 
-该命令会执行类型检查、secret scan、后台 smoke、readiness 与 metrics smoke、PII masking、golden replay evals、verification seed-case validation、无需外部模型调用的 provider-adapter evals、release evidence、CI workflow、部署配置、构建、前端 bundle 和本地 UI 验证。
+该命令会执行类型检查、secret scan、后台 smoke、readiness 与 metrics smoke、PII masking、golden replay evals、verification seed-case validation、无需外部模型调用的 provider-adapter evals、release evidence 与 release-readiness gate、CI workflow、部署配置、构建、前端 bundle 和本地 UI 验证。
 
 仓库还包含基于 Playwright 的 UI 验证脚本：
 
@@ -267,6 +267,14 @@ npm run test:pii:local
 
 该 smoke 会读取 `packages/policy/fixtures/pii-masking-fixtures.json`，验证 email、phone、account、name、HK/CN/SG/India phone、card、HKID、Singapore NRIC/FIN、India PAN 与 IBAN 会在进入 AI adapter 前被替换为 placeholder；同时保护 OTP、日期、template ID、batch ID、campaign ID、区域化 SKU/rule/ticket/experiment ID 等 false positives。
 
+验证面向部署/发布前检查的 latest release evidence readiness：
+
+```bash
+npm run test:release-readiness:local
+```
+
+readiness check 要求 evaluation verdict 为 `pass`、release status 为 `ReadyForPromotion`、`promotionAllowed=true`、存在稳定 `sha256:` evidence hash、没有 failed cases、metrics 达到 thresholds，并可选地精确绑定 pipeline/prompt/provider/model/ruleset/dataset 版本。本地 smoke 会证明通过证据可放行，而失败、未持久化、版本不匹配的证据会被拦截。
+
 将通过的 evaluation report 写入 Postgres evidence：
 
 ```bash
@@ -287,6 +295,14 @@ npm run test:evals:release-persistence:pg
 npm run infra:up
 npm run test:evals:release-api:pg
 ```
+
+在部署或 promotion 前对真实 API 运行同一套 readiness check：
+
+```bash
+npm run check:release-readiness
+```
+
+默认会调用 `http://127.0.0.1:4000/analysis-evaluations/latest` 并要求 release evidence 已持久化。可通过 `RELEASE_READINESS_URL`、`RELEASE_READINESS_PIPELINE_VERSION`、`RELEASE_READINESS_PROMPT_VERSION`、`RELEASE_READINESS_MODEL_PROVIDER`、`RELEASE_READINESS_MODEL_NAME`、`RELEASE_READINESS_RULESET_VERSION`、`RELEASE_READINESS_DATASET_VERSION` 和 `RELEASE_READINESS_MIN_CASE_COUNT` 将检查绑定到指定候选版本。
 
 验证后台持久化链路：
 

@@ -253,7 +253,7 @@ Before opening a pull request or publishing a release, run:
 npm run test:no-infra
 ```
 
-This runs type checks, secret scan, backend smoke, readiness and metrics smoke, PII masking gate, golden replay evals, verification seed-case validation, provider-adapter evals without external model calls, release evidence gates, CI workflow verification, and build. The same no-infrastructure gate set is wired into `.github/workflows/ci.yml` for pull requests and pushes to `main` or `codex/**` branches.
+This runs type checks, secret scan, backend smoke, readiness and metrics smoke, PII masking gate, golden replay evals, verification seed-case validation, provider-adapter evals without external model calls, release evidence and release-readiness gates, CI workflow verification, and build. The same no-infrastructure gate set is wired into `.github/workflows/ci.yml` for pull requests and pushes to `main` or `codex/**` branches.
 
 The repository also includes a Playwright-based UI verification script:
 
@@ -306,6 +306,14 @@ To verify the local release gate evidence object that blocks failed evaluations 
 ```bash
 npm run test:evals:release:local
 ```
+
+To verify deployment-style readiness checks for the latest release evidence, run:
+
+```bash
+npm run test:release-readiness:local
+```
+
+The readiness check requires a passing evaluation, `ReadyForPromotion`, `promotionAllowed=true`, a stable `sha256:` evidence hash, no failed cases, metrics above thresholds, and optionally exact pipeline/prompt/provider/model/ruleset/dataset versions. The local smoke proves passing evidence is accepted while failed, unpersisted, and version-mismatched evidence is blocked.
 
 The eval CLI can also emit release evidence with:
 
@@ -381,6 +389,14 @@ To verify the API-owned release evidence ingestion path, including hash rejectio
 npm run infra:up
 npm run test:evals:release-api:pg
 ```
+
+To run the same readiness check against a live API before deployment or promotion, use:
+
+```bash
+npm run check:release-readiness
+```
+
+By default this calls `http://127.0.0.1:4000/analysis-evaluations/latest` and requires persisted release evidence. Configure `RELEASE_READINESS_URL`, `RELEASE_READINESS_PIPELINE_VERSION`, `RELEASE_READINESS_PROMPT_VERSION`, `RELEASE_READINESS_MODEL_PROVIDER`, `RELEASE_READINESS_MODEL_NAME`, `RELEASE_READINESS_RULESET_VERSION`, `RELEASE_READINESS_DATASET_VERSION`, and `RELEASE_READINESS_MIN_CASE_COUNT` to bind the check to a specific candidate.
 
 For backend persistence verification, run:
 

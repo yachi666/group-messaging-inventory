@@ -567,6 +567,9 @@ Current repository status:
 - `EVAL_MODE=provider` routes the CLI through the configured AI provider adapter, while `npm run test:evals:provider:local` verifies the provider-eval path without calling an external model.
 - `createPipelineReleaseEvidence` binds a passing or failing evaluation report to pipeline, prompt, provider, model, and ruleset versions.
 - `npm run test:evals:release:local` verifies that failed evaluations block promotion and passing evaluations produce `ReadyForPromotion` evidence.
+- `evaluateReleaseReadiness` turns the latest evaluation/release response into a deployment-style readiness decision. It requires passing evaluation evidence, `ReadyForPromotion`, `promotionAllowed=true`, a stable `sha256:` evidence hash, no failed cases, metrics above thresholds, and optional exact pipeline/prompt/provider/model/ruleset/dataset version matches.
+- `npm run test:release-readiness:local` verifies that release readiness accepts valid promotion evidence and blocks failed, unpersisted, or version-mismatched evidence without requiring Postgres or Temporal.
+- `npm run check:release-readiness` calls a live `/analysis-evaluations/latest` endpoint and can be wired into deployment or human promotion workflows with `RELEASE_READINESS_*` expected-version variables.
 - `EVAL_RELEASE_EVIDENCE_PATH` writes the release evidence JSON artifact for CI/CD or human approval handoff.
 - `npm run test:evals:release-artifact:local` verifies the artifact-writing path without Postgres.
 - Release evidence includes a stable `sha256:` `evidenceHash`, and local smokes verify that the artifact can be recomputed and checked after writing.
@@ -1596,7 +1599,8 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented shared `@gmi/runtime-config` startup validation for API and worker configuration.
 - Implemented and verified `npm run test:harness:temporal` for the full API -> Temporal -> worker -> Postgres analysis evidence loop with local header authorization and persisted analysis output, review task, and audit event checks.
 - Implemented `npm run test:harness:temporal:provider-failure` for provider failure evidence, covering API failed-run readback with controlled `errors`, `/audit-events` ledger readback, Postgres `errors_json`, and the zero-output invariant.
-- Implemented `npm run test:no-infra` plus GitHub Actions CI for no-infrastructure typecheck, secret scan, backend smoke, readiness probes, runtime lifecycle checks, API surface checks, PII gate, replay and provider-adapter eval gates, release mapping gates, web contract checks, workflow verification, deploy config checks, build, bundle budget, and local UI verification.
+- Implemented `npm run test:release-readiness:local` and `npm run check:release-readiness` so persisted release evidence can be enforced by CI/CD or promotion workflows, not only displayed in dashboards.
+- Implemented `npm run test:no-infra` plus GitHub Actions CI for no-infrastructure typecheck, secret scan, backend smoke, readiness probes, runtime lifecycle checks, API surface checks, PII gate, replay and provider-adapter eval gates, release mapping/readiness gates, web contract checks, workflow verification, deploy config checks, build, bundle budget, and local UI verification.
 - Implemented contract-backed backend smoke parsing for key API success and error responses via `packages/contracts`.
 - Next: add reviewer-labeled production PII/false-positive samples once data handling approvals are available.
 
