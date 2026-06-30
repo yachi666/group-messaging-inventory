@@ -39,6 +39,16 @@ assertSourceContains(
   'optional backwards-compatible command actor schema',
 );
 assertSourceContains(
+  contracts,
+  'errors: z',
+  'analysis run failure summary schema',
+);
+assertSourceContains(
+  contracts,
+  'retryable: z.boolean()',
+  'analysis run retryable failure schema',
+);
+assertSourceContains(
   analysisController,
   'resolveCommandActorId(actorId, request.actorId)',
   'command actor header override',
@@ -109,6 +119,7 @@ assertEndpoint('getAnalysisRun', analysisController, {
   decorator: "@Get('analysis-runs/:runId')",
   roles: ['analysis_reader', 'analysis_runner', 'auditor'],
   status: 200,
+  responseFields: ['runId', 'status', 'errors', 'output', 'routing'],
 });
 assertEndpoint('confirmAnalysisRun', analysisController, {
   decorator: "@Post('analysis-runs/:runId/confirm')",
@@ -225,6 +236,14 @@ function assertEndpoint(operationId, source, expected) {
 
   if (expected.requestSchema) {
     assertSourceContains(source, `${expected.requestSchema}.parse`, `${operationId} request parser`);
+  }
+
+  if (expected.responseFields) {
+    assertEqual(
+      JSON.stringify(endpoint.responseFields),
+      JSON.stringify(expected.responseFields),
+      `${operationId} manifest response fields`,
+    );
   }
 }
 

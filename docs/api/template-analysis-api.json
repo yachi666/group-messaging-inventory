@@ -43,7 +43,8 @@
       "path": "/analysis-runs/{runId}",
       "status": 200,
       "roles": ["analysis_reader", "analysis_runner", "auditor"],
-      "response": "analysisRunResponseSchema"
+      "response": "analysisRunResponseSchema",
+      "responseFields": ["runId", "status", "errors", "output", "routing"]
     },
     {
       "operationId": "confirmAnalysisRun",
