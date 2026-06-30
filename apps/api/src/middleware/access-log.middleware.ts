@@ -1,4 +1,5 @@
 import { resolveGovernanceAuthContext } from '../auth/governance-auth-context.js';
+import { httpMetricsRegistry } from '../modules/metrics.service.js';
 
 type RequestWithRequestId = {
   headers?: Record<string, string | string[] | undefined>;
@@ -23,6 +24,13 @@ export function accessLogMiddleware(
   response.on('finish', () => {
     const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
     const authContext = resolveGovernanceAuthContext(request.headers);
+    const statusCode = response.statusCode ?? 0;
+
+    httpMetricsRegistry.record({
+      method: request.method ?? 'UNKNOWN',
+      statusCode,
+      durationMs,
+    });
 
     console.log(
       JSON.stringify({
@@ -32,7 +40,7 @@ export function accessLogMiddleware(
         roleCount: authContext.roles.size,
         method: request.method ?? 'UNKNOWN',
         path: request.originalUrl ?? request.url ?? 'unknown',
-        statusCode: response.statusCode ?? 0,
+        statusCode,
         durationMs,
       }),
     );

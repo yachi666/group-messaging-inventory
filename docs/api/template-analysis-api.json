@@ -20,6 +20,14 @@
       "response": "readinessResponseSchema"
     },
     {
+      "operationId": "getMetrics",
+      "method": "GET",
+      "path": "/metrics",
+      "status": 200,
+      "roles": [],
+      "response": "prometheusText"
+    },
+    {
       "operationId": "submitAnalysisRun",
       "method": "POST",
       "path": "/template-versions/{versionId}/analysis-runs",

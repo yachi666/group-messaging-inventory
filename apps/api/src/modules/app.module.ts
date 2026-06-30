@@ -5,12 +5,14 @@ import { AnalysisEvaluationsModule } from './analysis-evaluations/analysis-evalu
 import { AnalysisRunsModule } from './analysis-runs/analysis-runs.module.js';
 import { HealthController } from './health.controller.js';
 import { HealthService } from './health.service.js';
+import { MetricsService } from './metrics.service.js';
 
 @Module({
   imports: [AnalysisRunsModule, AnalysisEvaluationsModule],
   controllers: [HealthController],
   providers: [
     HealthService,
+    MetricsService,
     {
       provide: APP_GUARD,
       useClass: GovernanceAuthGuard,

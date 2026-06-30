@@ -89,6 +89,7 @@ npm run dev:worker
 
 - `GET /health` 是 API liveness check。
 - `GET /ready` 返回 API、Postgres、Temporal workflow driver 与 AI provider 配置的组件化 readiness。当启用 `DATABASE_URL` 或 `ANALYSIS_WORKFLOW_DRIVER=temporal` 时，readiness 会执行轻量依赖探测，而不只是检查环境变量是否存在。
+- `GET /metrics` 暴露 Prometheus 风格的 API request counter 与 duration sum，用于本地部署可观测性。标签刻意保持低基数，目前只有 `method` 与 `status_class`，避免 template id、run id 或 change request id 泄漏到 metric series。
 - API access log 是单行 JSON，包含 `event=http_request`、`requestId`、`actorId`、`roleCount`、method、path、status code 和 duration，方便审计与排障。
 - API 与 worker 启动时会通过 `@gmi/runtime-config` 做共享运行配置校验，provider、Temporal、端口、timeout 或数据库 URL 配错时会尽早失败并返回可操作错误。
 - 已实现的 API surface 记录在 `docs/api/template-analysis-api.json`，并由 `npm run test:api-surface` 校验。
@@ -219,7 +220,7 @@ npm run preview
 npm run test:no-infra
 ```
 
-该命令会执行类型检查、secret scan、后台 smoke、PII masking、golden evals、release evidence、CI workflow、部署配置、构建、前端 bundle 和本地 UI 验证。
+该命令会执行类型检查、secret scan、后台 smoke、readiness 与 metrics smoke、PII masking、golden evals、release evidence、CI workflow、部署配置、构建、前端 bundle 和本地 UI 验证。
 
 仓库还包含基于 Playwright 的 UI 验证脚本：
 
