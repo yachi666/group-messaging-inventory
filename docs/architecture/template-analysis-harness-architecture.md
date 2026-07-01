@@ -591,6 +591,7 @@ Current repository status:
 - Review Queue Discovery, My Tasks, and Completed tabs read status-filtered template review tasks from `/review-tasks`; My Tasks also sends `assignedTo` for the current reviewer. The queue calls the transition API for claim/start/resolve actions and falls back to local queue data when the API is unavailable.
 - `npm run test:no-infra` is the local and CI entrypoint for the no-infrastructure harness gate set, including both replay-mode golden evaluation and injected provider-adapter evaluation without external model calls.
 - `.github/workflows/ci.yml` runs `npm run test:no-infra` on pull requests and pushes, and `npm run test:ci-workflow` verifies that the workflow and package script continue to include the required gates.
+- `npm run test:release-preflight:local` is the Docker-backed release-candidate gate. It starts local Postgres and Temporal, applies migrations, runs repository and seeded API checks, persists evaluation/release evidence through Postgres and the API, and exercises both successful and provider-failure API -> Temporal -> worker -> Postgres evidence loops. `.github/workflows/release-preflight.yml` exposes the same gate as a manual workflow, and `npm run test:ci-workflow` verifies that this preflight entrypoint keeps the required infrastructure-backed checks.
 - The next expansion should add reviewer-labeled production samples to the masking fixture set once data handling approvals are available.
 
 ## 7. Data Model
@@ -1610,6 +1611,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented `npm run test:harness:temporal:provider-failure` for provider failure evidence, covering API failed-run readback with controlled `errors`, `/audit-events` ledger readback, Postgres `errors_json`, and the zero-output invariant.
 - Implemented `npm run test:release-readiness:local` and `npm run check:release-readiness` so persisted release evidence can be enforced by CI/CD or promotion workflows, not only displayed in dashboards.
 - Implemented `npm run test:no-infra` plus GitHub Actions CI for no-infrastructure typecheck, secret scan, backend smoke, readiness probes, runtime lifecycle checks, API surface checks, PII gate, replay and provider-adapter eval gates, release mapping/readiness gates, web contract checks, workflow verification, deploy config checks, build, bundle budget, and local UI verification.
+- Implemented `npm run test:release-preflight:local` plus a manual GitHub Actions release-preflight workflow for Docker-backed Postgres, Temporal, release evidence API, seed verification, and success/failure Temporal harness checks before promotion.
 - Implemented contract-backed backend smoke parsing for key API success and error responses via `packages/contracts`.
 - Next: add reviewer-labeled production PII/false-positive samples once data handling approvals are available.
 

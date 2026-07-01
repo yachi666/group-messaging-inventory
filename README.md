@@ -264,13 +264,21 @@ npm run preview
 
 ## ✅ Verification
 
-Before opening a pull request or publishing a release, run:
+Before opening a pull request, run:
 
 ```bash
 npm run test:no-infra
 ```
 
 This runs type checks, secret scan, backend smoke, readiness and metrics smoke, PII masking gate, golden replay evals, verification seed-case validation, provider-adapter evals without external model calls, release evidence and release-readiness gates, CI workflow verification, and build. The same no-infrastructure gate set is wired into `.github/workflows/ci.yml` for pull requests and pushes to `main` or `codex/**` branches.
+
+Before publishing or promoting a release candidate, run the Docker-backed preflight gate:
+
+```bash
+npm run test:release-preflight:local
+```
+
+This starts local Postgres and Temporal, applies migrations, runs the Postgres repository smoke, verifies seeded API data, persists evaluation and release evidence through Postgres and the API, and exercises both successful and provider-failure API -> Temporal -> worker -> Postgres evidence loops. The same command is available as a manual GitHub Actions workflow in `.github/workflows/release-preflight.yml`.
 
 The repository also includes a Playwright-based UI verification script:
 
