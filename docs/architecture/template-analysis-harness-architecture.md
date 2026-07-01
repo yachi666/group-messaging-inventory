@@ -1549,6 +1549,7 @@ The current local Docker Compose profile follows that shape:
 - `gmi-worker` consumes the same Temporal task queue and writes analysis evidence through the shared repository layer. Its runtime image uses Debian slim rather than Alpine so the Temporal TypeScript native bridge has the expected glibc-compatible runtime.
 - `gmi-web` serves the Vite production bundle through nginx on port 5080.
 - `npm run test:deploy:compose` builds and starts the app profile, verifies the migration job, API readiness, web bundle serving, and a real containerized API -> worker -> Temporal -> Postgres analysis run.
+- The compose app-profile smoke test uses configurable host ports (`GMI_API_PORT`, `GMI_WEB_PORT`) and automatically selects free local ports when unset, so release preflight is not blocked by an already-running developer API on port 4000.
 
 Long-running runtimes must also own connection lifecycle. The API should enable Nest shutdown hooks so injected Postgres-backed repositories close their Kysely pools. The worker should handle `SIGINT` and `SIGTERM`, request Temporal worker shutdown, close the Temporal native connection, and release its lazily created Postgres repository.
 

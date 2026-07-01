@@ -308,6 +308,8 @@ Other useful gates:
 
 The GitHub CI workflow runs `npm run test:no-infra` on pull requests and pushes to `main` or `codex/**`. The release preflight workflow is available as a manual GitHub Actions dispatch.
 
+The compose app-profile smoke test automatically chooses free host ports for API and web when `GMI_API_PORT`, `GMI_WEB_PORT`, `COMPOSE_APP_API_URL`, and `COMPOSE_APP_WEB_URL` are not set. Set those variables only when you need stable ports for manual inspection.
+
 ## Evaluation and Release Evidence
 
 Run deterministic golden dataset evaluation:

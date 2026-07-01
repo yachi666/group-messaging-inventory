@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
 import {
   analysisRunEvidencePackageSchema,
   analysisRunResponseSchema,
@@ -6,8 +7,14 @@ import {
   submitAnalysisRunResponseSchema,
 } from '@gmi/contracts';
 
-const apiBaseUrl = process.env.COMPOSE_APP_API_URL ?? 'http://127.0.0.1:4000';
-const webBaseUrl = process.env.COMPOSE_APP_WEB_URL ?? 'http://127.0.0.1:5080';
+const requestedApiPort =
+  process.env.GMI_API_PORT ?? parseUrlPort(process.env.COMPOSE_APP_API_URL);
+const requestedWebPort =
+  process.env.GMI_WEB_PORT ?? parseUrlPort(process.env.COMPOSE_APP_WEB_URL);
+const composeApiPort = requestedApiPort ?? String(await findOpenPort());
+const composeWebPort = requestedWebPort ?? String(await findOpenPort());
+const apiBaseUrl = process.env.COMPOSE_APP_API_URL ?? `http://127.0.0.1:${composeApiPort}`;
+const webBaseUrl = process.env.COMPOSE_APP_WEB_URL ?? `http://127.0.0.1:${composeWebPort}`;
 const timeoutMs = Number(process.env.COMPOSE_APP_SMOKE_TIMEOUT_MS ?? 180_000);
 const commandTimeoutMs = Number(process.env.COMPOSE_APP_COMMAND_TIMEOUT_MS ?? 600_000);
 const governanceHeaders = {
@@ -16,6 +23,9 @@ const governanceHeaders = {
 };
 
 try {
+  console.log(
+    `Compose app smoke using API ${apiBaseUrl} and web ${webBaseUrl}.`,
+  );
   await runCommandWithRetry('docker', ['pull', 'node:24-alpine']);
   await runCommandWithRetry('docker', ['pull', 'node:24-bookworm-slim']);
   await runCommandWithRetry('docker', ['pull', 'nginx:1.27-alpine']);
@@ -222,6 +232,8 @@ function runCommand(command, args) {
       env: {
         ...process.env,
         COMPOSE_PARALLEL_LIMIT: process.env.COMPOSE_PARALLEL_LIMIT ?? '1',
+        GMI_API_PORT: composeApiPort,
+        GMI_WEB_PORT: composeWebPort,
       },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -288,6 +300,35 @@ function isRetryableDockerBuildError(error) {
     message.includes('DeadlineExceeded') ||
     message.includes('transport: Error while dialing')
   );
+}
+
+function parseUrlPort(value) {
+  if (!value) {
+    return undefined;
+  }
+
+  const url = new URL(value);
+  return url.port || (url.protocol === 'https:' ? '443' : '80');
+}
+
+function findOpenPort() {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+
+    server.unref();
+    server.on('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      server.close(() => {
+        if (address && typeof address === 'object') {
+          resolve(address.port);
+          return;
+        }
+
+        reject(new Error('Could not allocate a local port for compose smoke.'));
+      });
+    });
+  });
 }
 
 function assertEqual(actual, expected, label) {

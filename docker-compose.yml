@@ -97,7 +97,7 @@ services:
       AI_PROVIDER_READINESS_MODE: config
       API_AUTH_MODE: header
     ports:
-      - '4000:4000'
+      - '${GMI_API_PORT:-4000}:4000'
     healthcheck:
       test:
         [
@@ -143,7 +143,7 @@ services:
       gmi-api:
         condition: service_healthy
     ports:
-      - '5080:80'
+      - '${GMI_WEB_PORT:-5080}:80'
 
 volumes:
   gmi_postgres_data:

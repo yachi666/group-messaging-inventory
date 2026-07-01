@@ -81,7 +81,8 @@ for (const expected of [
   'API_AUTH_MODE: header',
   'AI_PROVIDER_READINESS_MODE: config',
   'VITE_API_BASE_URL: http://127.0.0.1:4000',
-  "'5080:80'"
+  "'${GMI_API_PORT:-4000}:4000'",
+  "'${GMI_WEB_PORT:-5080}:80'"
 ]) {
   assert(compose.includes(expected), `docker-compose.yml missing ${expected}`);
 }
