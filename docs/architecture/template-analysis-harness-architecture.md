@@ -1617,6 +1617,8 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented `npm run test:release-preflight:local` plus a manual GitHub Actions release-preflight workflow for Docker-backed Postgres, Temporal, release evidence API, seed verification, and success/failure Temporal harness checks before promotion.
 - Implemented `npm run test:deploy:compose` for containerized app-profile verification across `gmi-db-migrate`, `gmi-api`, `gmi-worker`, and `gmi-web`.
 - Implemented contract-backed backend smoke parsing for key API success and error responses via `packages/contracts`.
+- Replaced fabricated Governance detail analysis/diff placeholders with API-projected object facts, audit-event summaries, and fixture-backed frontend verification that blocks static run/revision evidence from reappearing.
+- Reworked visible frontend verification for Review Queue floating AI controls and Template detail traffic visualization so layout regressions are caught by UI smoke tests.
 - Next: add reviewer-labeled production PII/false-positive samples once data handling approvals are available.
 
 ## 16. Key Open Questions

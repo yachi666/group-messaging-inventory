@@ -17,7 +17,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 import type { GovernanceTemplate, GovernanceUseCase } from '../../domain/governance';
-import type { GovernanceEvent } from '../../domain/inventory';
+import type { CoveragePoint, GovernanceEvent } from '../../domain/inventory';
 import { useI18n } from '../../i18n/LanguageProvider';
 import { useProductInventory, type ProductInventory } from '../inventory/productInventoryApi';
 
@@ -82,7 +82,7 @@ export function UseCasesPage({ initialId, onNavigate }: { initialId?: string; on
   </div>;
 }
 
-function UseCaseDetail({ coverageFlow, governanceEvents, governanceTemplates, governanceUseCases, useCase, onBack, onNavigate }: { coverageFlow: Array<{ month: string; matched: number; unknown: number }>; governanceEvents: GovernanceEvent[]; governanceTemplates: GovernanceTemplate[]; governanceUseCases: GovernanceUseCase[]; useCase: GovernanceUseCase; onBack: () => void; onNavigate: Navigate }) {
+function UseCaseDetail({ coverageFlow, governanceEvents, governanceTemplates, governanceUseCases, useCase, onBack, onNavigate }: { coverageFlow: CoveragePoint[]; governanceEvents: GovernanceEvent[]; governanceTemplates: GovernanceTemplate[]; governanceUseCases: GovernanceUseCase[]; useCase: GovernanceUseCase; onBack: () => void; onNavigate: Navigate }) {
   const [tab, setTab] = useState('Overview'); const [editing, setEditing] = useState(false); const [splitting, setSplitting] = useState(false); const [merging, setMerging] = useState(false); const [notice, setNotice] = useState('');
   const templates = governanceTemplates.filter((item) => useCase.templateIds.includes(item.uuid));
   const candidate = useCase.lifecycle === 'Candidate';
@@ -91,8 +91,8 @@ function UseCaseDetail({ coverageFlow, governanceEvents, governanceTemplates, go
   </ObjectHeader><DetailTabs tabs={['Overview', 'Templates & Traffic', 'AI Analysis', 'Governance', 'Activity']} active={tab} setActive={setTab} />
     {tab === 'Overview' && <div className="g-detail-grid"><Panel title="Business definition" kicker="Effective record"><DefinitionRows rows={[['Name', useCase.name], ['Description', useCase.description], ['Classification', useCase.classification], ['Markets', useCase.markets.join(', ')], ['Use Case ID', useCase.id]]} /></Panel><Panel title="Ownership" kicker="Named accountable teams"><DefinitionRows rows={[['Message owner', useCase.messageOwner], ['Integrating system owner', useCase.integratingOwner], ['Approval', useCase.approval], ['Evidence', `${useCase.evidenceCount} references`]]} /></Panel><Panel title="Governance summary" kicker={useCase.pendingChanges ? 'Approved record remains effective' : 'No open change request'}><div className="g-governance-score"><ShieldCheckIcon /><strong>{useCase.governanceIssues.length ? 'Needs attention' : 'Complete'}</strong><span>{useCase.governanceIssues.length ? useCase.governanceIssues.join(' · ') : 'Owner, classification and evidence complete'}</span></div></Panel><Panel title="Operational summary" kicker="API projection"><div className="g-mini-metrics"><Metric label="Monthly volume" value={number.format(useCase.monthlyVolume)} /><Metric label="Templates" value={String(templates.length)} /><Metric label="AI confidence" value={`${useCase.confidence}%`} /><Metric label="Last activity" value={useCase.lastActivity} /></div></Panel></div>}
     {tab === 'Templates & Traffic' && <div className="g-detail-stack"><Panel title={`Templates (${templates.length})`} kicker="Current version and approved mapping"><TemplateMiniTable templates={templates} onOpen={(id) => onNavigate('templates', id)} /></Panel><Panel title="Volume trend" kicker="API coverage projection"><div className="g-bars g-bars-short">{coverageFlow.map((point) => { const total = point.matched + point.unknown; const height = total === 0 ? 0 : Math.max(8, Math.round((point.matched / total) * 100)); return <div key={point.month}><i style={{ height: `${height}%` }} /><span>{point.month}</span></div>; })}</div></Panel></div>}
-    {tab === 'AI Analysis' && <AnalysisPanel confidence={useCase.confidence} />}
-    {tab === 'Governance' && <GovernanceDiff pending={useCase.pendingChanges ?? 0} maker="Alex Morgan" checker="Priya Desai" />}
+    {tab === 'AI Analysis' && <AnalysisPanel channel={useCase.channels.join(', ')} classification={useCase.classification} confidence={useCase.confidence} evidenceCount={useCase.evidenceCount} events={governanceEvents} market={useCase.markets.join(', ')} objectId={useCase.id} owner={useCase.messageOwner} subject={useCase.name} variables={Array.from(new Set(templates.flatMap((item) => item.variables)))} />}
+    {tab === 'Governance' && <GovernanceDiff checker="Governance Pool" effectiveRows={[['Object ID', useCase.id], ['Approval', useCase.approval], ['Lifecycle', useCase.lifecycle], ['Evidence', `${useCase.evidenceCount} references`], ['Last activity', useCase.lastActivity]]} maker={useCase.messageOwner} pendingRows={useCase.pendingChanges ? [['Approval', useCase.approval, 'Pending reviewer decision', `${useCase.pendingChanges} API-projected change${useCase.pendingChanges === 1 ? '' : 's'}`]] : []} />}
     {tab === 'Activity' && <ActivityTimeline events={governanceEvents} object={useCase.name} objectId={useCase.id} />}
     {editing && <EditDrawer title={candidate ? 'Edit candidate' : 'Propose changes'} initialName={useCase.name} onClose={() => setEditing(false)} onSave={() => { setEditing(false); setNotice(candidate ? 'Candidate draft saved' : 'Change request draft saved — approved values unchanged'); }} />}{splitting && <CandidateSplitModal useCase={useCase} templates={templates} onClose={() => setSplitting(false)} onSubmit={() => { setSplitting(false); setNotice('Split approval package submitted as one governed change'); }} />}{merging && <MergeModal governanceUseCases={governanceUseCases} source={useCase} onClose={() => setMerging(false)} onSubmit={() => { setMerging(false); setNotice('Merge change request submitted — source history retained'); }} />}{notice && <Toast message={notice} onDone={() => setNotice('')} />}
   </div>;
@@ -114,13 +114,88 @@ export function TemplatesPage({ initialId, onNavigate }: { initialId?: string; o
   </div>;
 }
 
-function TemplateDetail({ coverageFlow, governanceEvents, governanceUseCases, template, onBack, onNavigate }: { coverageFlow: Array<{ month: string; matched: number; unknown: number }>; governanceEvents: GovernanceEvent[]; governanceUseCases: GovernanceUseCase[]; template: GovernanceTemplate; onBack: () => void; onNavigate: Navigate }) {
+function TemplateDetail({ coverageFlow, governanceEvents, governanceUseCases, template, onBack, onNavigate }: { coverageFlow: CoveragePoint[]; governanceEvents: GovernanceEvent[]; governanceUseCases: GovernanceUseCase[]; template: GovernanceTemplate; onBack: () => void; onNavigate: Navigate }) {
   const [tab, setTab] = useState('Overview'); const [notice, setNotice] = useState(''); const [mapping, setMapping] = useState(false); const parent = governanceUseCases.find((item) => item.id === template.parentUseCaseId);
   return <div className="g-page g-detail-page"><ObjectHeader onBack={onBack} badge="TP" title={template.templateId} subtitle={`${template.platform} · ${template.tenant} · ${template.uuid}`} statuses={[template.mapping, template.lifecycle, template.approval]}><button className="g-button" onClick={() => setNotice('New analysis run queued')}><ArrowPathIcon />Request re-analysis</button><button className="g-button g-button-primary" onClick={() => setMapping(true)}>Review mapping</button></ObjectHeader><DetailTabs tabs={['Overview', 'Versions & Content', 'Traffic', 'AI Analysis', 'Governance', 'Activity']} active={tab} setActive={setTab} />
     {tab === 'Overview' && <div className="g-detail-grid"><Panel title="Template identity" kicker="Stable technical identity"><DefinitionRows rows={[['Internal UUID', template.uuid], ['Composite identity', `${template.platform} / ${template.tenant} / ${template.templateId}`], ['Channel', template.channel], ['Market', template.market], ['Sender identity', template.sender]]} /></Panel><Panel title="Mapping" kicker="Classification inherited from parent"><DefinitionRows rows={[['Parent Use Case', parent?.name ?? 'Unassigned'], ['Mapping state', template.mapping], ['Confidence', `${template.confidence}%`], ['Approval', template.approval], ['Last seen', template.lastSeen]]} />{parent && <button className="g-text-link" onClick={() => onNavigate('use-cases', parent.id)}>View parent Use Case →</button>}</Panel><Panel title="Production activity" kicker="API projection"><div className="g-mini-metrics"><Metric label="Volume" value={number.format(template.monthlyVolume)} /><Metric label="AI confidence" value={`${template.confidence}%`} /><Metric label="Last seen" value={template.lastSeen} /><Metric label="Lifecycle" value={template.lifecycle} /></div></Panel></div>}
     {tab === 'Versions & Content' && <div className="g-detail-stack"><Panel title="Version timeline" kicker="Candidate never overwrites Current"><div className="g-version-line"><div className="g-version-current"><span>Current</span><strong>{template.currentVersion}</strong><small>Last seen {template.lastSeen}</small></div>{template.candidateVersion && <><i /><div className="g-version-candidate"><span>Candidate</span><strong>{template.candidateVersion}</strong><small>{template.approval}</small></div></>}</div></Panel><Panel title="Masked content" kicker="Restricted production values removed"><pre className="g-code">{template.maskedContent}</pre><div className="g-variable-list">{template.variables.map((variable) => <span key={variable}>{`{{${variable}}}`}</span>)}</div></Panel></div>}
-    {tab === 'Traffic' && <Panel title="Traffic & delivery" kicker="API coverage projection"><div className="g-bars g-bars-tall">{coverageFlow.map((point) => { const total = point.matched + point.unknown; const height = total === 0 ? 0 : Math.max(8, Math.round((point.matched / total) * 100)); return <div key={point.month}><i style={{ height: `${height}%` }} /><span>{point.month}</span></div>; })}</div></Panel>}
-    {tab === 'AI Analysis' && <AnalysisPanel confidence={template.confidence} />}{tab === 'Governance' && <GovernanceDiff pending={template.approval === 'Approved' ? 0 : 1} maker={parent?.messageOwner ?? template.sender} checker="Governance Pool" />}{tab === 'Activity' && <ActivityTimeline events={governanceEvents} object={template.templateId} objectId={template.uuid} />}{mapping && <MappingDrawer governanceUseCases={governanceUseCases} template={template} onClose={() => setMapping(false)} onSubmit={(message) => { setMapping(false); setNotice(message); }} />}{notice && <Toast message={notice} onDone={() => setNotice('')} />}</div>;
+    {tab === 'Traffic' && <TemplateTrafficPanel coverageFlow={coverageFlow} template={template} />}
+    {tab === 'AI Analysis' && <AnalysisPanel channel={template.channel} classification={parent?.classification ?? 'Unassigned'} confidence={template.confidence} evidenceCount={parent?.evidenceCount ?? 0} events={governanceEvents} market={template.market} objectId={template.uuid} owner={parent?.messageOwner ?? template.sender} subject={template.templateId} variables={template.variables} />}{tab === 'Governance' && <GovernanceDiff checker="Governance Pool" effectiveRows={[['Template UUID', template.uuid], ['Approval', template.approval], ['Mapping', template.mapping], ['Lifecycle', template.lifecycle], ['Last seen', template.lastSeen]]} maker={parent?.messageOwner ?? template.sender} pendingRows={template.approval === 'Approved' && template.mapping !== 'Mapping Change Pending' ? [] : [['Mapping', template.mapping, template.parentUseCaseId ? `Parent ${template.parentUseCaseId}` : 'Unassigned review', 'Current API projection requires governance attention']]} />}{tab === 'Activity' && <ActivityTimeline events={governanceEvents} object={template.templateId} objectId={template.uuid} />}{mapping && <MappingDrawer governanceUseCases={governanceUseCases} template={template} onClose={() => setMapping(false)} onSubmit={(message) => { setMapping(false); setNotice(message); }} />}{notice && <Toast message={notice} onDone={() => setNotice('')} />}</div>;
+}
+
+function TemplateTrafficPanel({ coverageFlow, template }: { coverageFlow: CoveragePoint[]; template: GovernanceTemplate }) {
+  const traffic = buildTemplateTraffic(coverageFlow, template.monthlyVolume);
+  const maxVolume = Math.max(...traffic.map((point) => point.total), 1);
+  const latest = traffic.at(-1);
+  const previous = traffic.at(-2);
+  const totalProjected = traffic.reduce((sum, point) => sum + point.total, 0);
+  const matchedProjected = traffic.reduce((sum, point) => sum + point.matched, 0);
+  const unknownProjected = traffic.reduce((sum, point) => sum + point.unknown, 0);
+  const matchedRate = totalProjected === 0 ? 0 : matchedProjected / totalProjected * 100;
+  const latestDelta = latest && previous && previous.total > 0 ? (latest.total - previous.total) / previous.total * 100 : 0;
+
+  return (
+    <Panel title="Traffic & delivery" kicker="Template-level projection from live coverage flow">
+      <div className="template-traffic-panel">
+        <div className="template-traffic-summary" aria-label="Template traffic summary">
+          <div><span>Monthly volume</span><strong>{number.format(template.monthlyVolume)}</strong><small>{template.channel} in {template.market}</small></div>
+          <div><span>Latest month</span><strong>{latest ? number.format(latest.total) : '0'}</strong><small>{latest?.month ?? 'No flow point'}</small></div>
+          <div><span>Matched rate</span><strong>{matchedRate.toFixed(1)}%</strong><small>{number.format(matchedProjected)} matched</small></div>
+          <div><span>Unknown traffic</span><strong>{number.format(unknownProjected)}</strong><small>{unknownProjected > 0 ? 'Review required' : 'No unknown traffic'}</small></div>
+        </div>
+
+        <div className="template-traffic-chart" role="img" aria-label={`Monthly traffic projection for ${template.templateId}`}>
+          <div className="template-traffic-scale">
+            <span>{number.format(maxVolume)}</span>
+            <span>{number.format(maxVolume / 2)}</span>
+            <span>0</span>
+          </div>
+          <div className="template-traffic-bars">
+            {traffic.map((point, index) => {
+              const height = point.total === 0 ? 0 : Math.max(8, point.total / maxVolume * 100);
+              const matchedHeight = point.total === 0 ? 0 : point.matched / point.total * 100;
+              const unknownHeight = point.total === 0 ? 0 : point.unknown / point.total * 100;
+              const isLatest = index === traffic.length - 1;
+
+              return (
+                <div className={isLatest ? 'template-traffic-month is-latest' : 'template-traffic-month'} key={point.month} title={`${point.month}: ${number.format(point.total)} total, ${number.format(point.matched)} matched, ${number.format(point.unknown)} unknown`}>
+                  <div className="template-traffic-bar-shell" style={{ height: `${height}%` }}>
+                    {point.unknown > 0 ? <i className="template-traffic-segment template-traffic-unknown" style={{ height: `${unknownHeight}%` }} /> : null}
+                    <i className="template-traffic-segment template-traffic-matched" style={{ height: `${matchedHeight}%` }} />
+                  </div>
+                  <span>{point.month}</span>
+                  <strong>{number.format(point.total)}</strong>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="template-traffic-footer">
+          <div className="template-traffic-legend"><span><i className="template-traffic-matched" />Matched</span><span><i className="template-traffic-unknown" />Unknown</span></div>
+          <p>{latest ? `${latest.month} ${latestDelta >= 0 ? '+' : ''}${latestDelta.toFixed(1)}% vs previous month` : 'No coverage flow available for this template.'}</p>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function buildTemplateTraffic(coverageFlow: CoveragePoint[], monthlyVolume: number) {
+  const sourceTotal = coverageFlow.reduce((sum, point) => sum + point.matched + point.unknown, 0);
+
+  return coverageFlow.map((point) => {
+    const pointTotal = point.matched + point.unknown;
+    const total = sourceTotal === 0 ? 0 : Math.round(monthlyVolume * pointTotal / sourceTotal);
+    const unknown = pointTotal === 0 ? 0 : Math.round(total * point.unknown / pointTotal);
+    const matched = Math.max(0, total - unknown);
+
+    return {
+      matched,
+      month: point.month,
+      total,
+      unknown,
+    };
+  });
 }
 
 export function AdministrationPage() {
@@ -400,8 +475,53 @@ function Confidence({ value }: { value: number }) { return <span className={`g-c
 function EmptyState({ title }: { title: string }) { return <div className="g-empty"><DocumentTextIcon /><strong>{title}</strong><span>Try clearing filters or changing the saved view.</span></div>; }
 function DefinitionRows({ rows }: { rows: string[][] }) { return <dl className="g-definition">{rows.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>; }
 function TemplateMiniTable({ templates, onOpen }: { templates: GovernanceTemplate[]; onOpen: (id: string) => void }) { return <table className="g-data-table"><thead><tr><th>Template</th><th>Current version</th><th>Platform / Tenant</th><th>Channel / Market</th><th>Volume</th><th>Mapping</th></tr></thead><tbody>{templates.map((item) => <tr key={item.uuid} onClick={() => onOpen(item.uuid)}><td><strong>{item.templateId}</strong></td><td>{item.currentVersion}{item.candidateVersion && <small>{item.candidateVersion}</small>}</td><td><strong>{item.platform}</strong><small>{item.tenant}</small></td><td><strong>{item.channel}</strong><small>{item.market}</small></td><td>{number.format(item.monthlyVolume)}</td><td><Status value={item.mapping} /></td></tr>)}</tbody></table>; }
-function AnalysisPanel({ confidence }: { confidence: number }) { const [technical, setTechnical] = useState(false); return <div className="g-analysis-layout"><Panel title="Business summary" kicker="AI-assisted, reviewer-controlled"><div className="g-ai-summary"><SparklesIcon /><div><strong>{confidence}% overall confidence</strong><p>Message pattern, sender lineage and production behavior indicate a servicing use case. Human decisions remain authoritative.</p><div><Tag value="Servicing" /><Tag value="Repayment Management" /><Tag value="Hong Kong" /></div></div></div></Panel><Panel title="Extraction flow" kicker="Latest immutable analysis run"><ol className="g-analysis-flow">{['Ingestion', 'Normalization', 'Template detection', 'Variable extraction', 'Use Case matching', 'Classification'].map((step, index) => <li key={step}><span>{index + 1}</span><div><strong>{step}</strong><small>{index === 5 ? 'In progress' : 'Completed'}</small></div></li>)}</ol><button className="g-text-link" onClick={() => setTechnical(!technical)}>{technical ? 'Hide' : 'Show'} technical details <ChevronDownIcon /></button>{technical && <pre className="g-code">{`run_id: RUN-88104\nmodel: gmi-2.3\nruleset: r42\ncluster: CL-2841\nfingerprint: sha256:91be...44af\nduration_ms: 8421`}</pre>}</Panel><Panel title="Field confidence" kicker="Suggestion strength"><div className="g-field-confidence">{[['Use Case match', confidence], ['Classification', 94], ['Market', 99], ['Owner', 61], ['Variables', 96]].map(([label, score]) => <div key={label}><span>{label}</span><b><i style={{ width: `${score}%` }} /></b><strong>{score}%</strong></div>)}</div></Panel></div>; }
-function GovernanceDiff({ pending, maker, checker }: { pending: number; maker: string; checker: string }) { return <div className="g-detail-stack"><Panel title="Effective record" kicker="Approved values remain active"><DefinitionRows rows={[['Revision', 'rev-18'], ['Status', 'Approved'], ['Effective since', 'Jun 01, 2026'], ['Evidence', '5 documents · 2 production samples']]} /></Panel>{pending ? <Panel title={`Proposed changes (${pending})`} kicker="Pending values are not yet effective"><div className="g-diff-table"><div><span>Field</span><span>Effective</span><span>Proposed</span><span>Reason</span></div><div><strong>Name</strong><span>Card repayment reminder</span><span>Card repayment reminder (HK)</span><span>Clarify market specificity</span></div><div><strong>Owner</strong><span>Unassigned</span><span>Alex Morgan</span><span>Confirmed business owner</span></div></div><div className="g-approval-meta"><span>Maker <strong>{maker}</strong></span><span>Checker <strong>{checker}</strong></span><span>Self-approval <strong>Blocked</strong></span></div></Panel> : <Panel title="No pending changes" kicker="The approved record is current"><div className="g-governance-score"><CheckCircleIcon /><strong>Governance current</strong><span>No draft or pending change request exists.</span></div></Panel>}</div>; }
+type AnalysisPanelProps = {
+  channel: string;
+  classification: string;
+  confidence: number;
+  evidenceCount: number;
+  events: GovernanceEvent[];
+  market: string;
+  objectId: string;
+  owner: string;
+  subject: string;
+  variables: string[];
+};
+
+function AnalysisPanel({ channel, classification, confidence, evidenceCount, events, market, objectId, owner, subject, variables }: AnalysisPanelProps) {
+  const [technical, setTechnical] = useState(false);
+  const matchingEvents = events.filter((event) => event.target === objectId || event.scope.includes(objectId));
+  const latestEvent = matchingEvents[0];
+  const hasClassification = classification !== 'Unassigned';
+  const fieldConfidence: Array<[string, number]> = [
+    ['Use Case match', confidence],
+    ['Classification', hasClassification ? confidence : 40],
+    ['Market', market ? 99 : 40],
+    ['Owner', owner === 'Unassigned' ? 35 : 85],
+    ['Variables', variables.length ? Math.min(99, 72 + variables.length * 4) : 40],
+  ];
+  const extractionSteps: Array<[string, string]> = [
+    ['Ingestion', 'Completed'],
+    ['Normalization', 'Completed'],
+    ['Template detection', 'Completed'],
+    ['Variable extraction', variables.length ? 'Completed' : 'Review'],
+    ['Use Case matching', confidence >= 80 ? 'Completed' : 'Review'],
+    ['Classification', hasClassification ? 'Completed' : 'Review'],
+  ];
+
+  return <div className="g-analysis-layout"><Panel title="Business summary" kicker="AI-assisted, reviewer-controlled"><div className="g-ai-summary"><SparklesIcon /><div><strong>{confidence}% overall confidence</strong><p>{subject} is projected from live product inventory as {classification} for {market || 'unscoped market'} over {channel}. Human decisions remain authoritative.</p><div><Tag value={classification} /><Tag value={owner} /><Tag value={`${evidenceCount} evidence refs`} /></div></div></div></Panel><Panel title="Extraction flow" kicker="Current API projection"><ol className="g-analysis-flow">{extractionSteps.map(([step, state], index) => <li key={step}><span>{index + 1}</span><div><strong>{step}</strong><small>{state}</small></div></li>)}</ol><button className="g-text-link" onClick={() => setTechnical(!technical)}>{technical ? 'Hide' : 'Show'} technical details <ChevronDownIcon /></button>{technical && <pre className="g-code">{`object_id: ${objectId}\nsource: product-inventory API projection\nlatest_event: ${latestEvent?.id ?? 'none'}\nlatest_actor: ${latestEvent?.actor ?? 'none'}\nlatest_timestamp: ${latestEvent?.timestamp ?? 'none'}\nevidence_references: ${evidenceCount}\nvariables: ${variables.length ? variables.join(', ') : 'none'}`}</pre>}</Panel><Panel title="Field confidence" kicker="Suggestion strength"><div className="g-field-confidence">{fieldConfidence.map(([label, score]) => <div key={label}><span>{label}</span><b><i style={{ width: `${score}%` }} /></b><strong>{score}%</strong></div>)}</div></Panel></div>;
+}
+
+type GovernanceDiffProps = {
+  checker: string;
+  effectiveRows: string[][];
+  maker: string;
+  pendingRows: Array<[string, string, string, string]>;
+};
+
+function GovernanceDiff({ checker, effectiveRows, maker, pendingRows }: GovernanceDiffProps) {
+  return <div className="g-detail-stack"><Panel title="Effective record" kicker="Approved values remain active"><DefinitionRows rows={effectiveRows} /></Panel>{pendingRows.length ? <Panel title={`Proposed changes (${pendingRows.length})`} kicker="Pending values are not yet effective"><div className="g-diff-table"><div><span>Field</span><span>Effective</span><span>Proposed</span><span>Reason</span></div>{pendingRows.map(([field, effective, proposed, reason]) => <div key={field}><strong>{field}</strong><span>{effective}</span><span>{proposed}</span><span>{reason}</span></div>)}</div><div className="g-approval-meta"><span>Maker <strong>{maker}</strong></span><span>Checker <strong>{checker}</strong></span><span>Self-approval <strong>Blocked</strong></span></div></Panel> : <Panel title="No pending changes" kicker="The approved record is current"><div className="g-governance-score"><CheckCircleIcon /><strong>Governance current</strong><span>No draft or pending change request exists.</span></div></Panel>}</div>;
+}
 function ActivityTimeline({ events, object, objectId }: { events: GovernanceEvent[]; object: string; objectId: string }) {
   const matchingEvents = events.filter((event) => event.target === objectId || event.scope.includes(objectId)).slice(0, 8);
   return <Panel title="Activity" kicker="Immutable object and governance history">{matchingEvents.length ? <div className="g-activity">{matchingEvents.map((event) => <div key={event.id}><span /><small>{event.timestamp}</small><strong>{event.actor}</strong><p>{event.event} · {event.target}</p></div>)}</div> : <EmptyState title={`No API audit events found for ${object}`} />}</Panel>;

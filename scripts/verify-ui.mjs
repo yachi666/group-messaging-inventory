@@ -45,6 +45,28 @@ await page.getByRole('heading', { name: 'Review Queue' }).waitFor();
 await page.getByTestId('review-task-refresh').waitFor();
 await page.getByRole('status').getByText(/Live .*projection|Loaded .*from API|API .*tasks|No API review tasks|Review task API unavailable/).waitFor();
 await page.locator('.queue-row').first().waitFor();
+await page.evaluate(() => window.localStorage.removeItem('gmi-floating-ai-chat-position'));
+await page.reload({ waitUntil: 'domcontentloaded' });
+await page.getByRole('heading', { name: 'Review Queue' }).waitFor();
+await page.locator('.queue-row').first().waitFor();
+await page.waitForFunction(() => {
+  const widget = document.querySelector('.floating-chat-widget')?.getBoundingClientRect();
+  const dock = document.querySelector('.action-dock')?.getBoundingClientRect();
+  return Boolean(widget && dock && widget.bottom <= dock.top);
+});
+const chatLauncherBox = await page.getByTestId('chat-launcher').boundingBox();
+if (!chatLauncherBox) {
+  throw new Error('Ask AI launcher did not render.');
+}
+await page.mouse.move(chatLauncherBox.x + chatLauncherBox.width / 2, chatLauncherBox.y + chatLauncherBox.height / 2);
+await page.mouse.down();
+await page.mouse.move(760, 690, { steps: 10 });
+await page.mouse.up();
+await page.waitForTimeout(100);
+const movedChatLauncherBox = await page.getByTestId('chat-launcher').boundingBox();
+if (!movedChatLauncherBox || Math.abs(movedChatLauncherBox.x - chatLauncherBox.x) < 80) {
+  throw new Error('Ask AI launcher is not draggable on Review Queue.');
+}
 await page.getByRole('tab', { name: 'My Tasks' }).click();
 await page.getByRole('status').getByText(/Live .*projection|Loaded .*from API|API .*tasks|No API review tasks|Review task API unavailable/).waitFor();
 await page.getByRole('tab', { name: 'Completed' }).click();

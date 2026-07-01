@@ -1,0 +1,18 @@
+{
+  "forbiddenStaticEvidence": [
+    "RUN-88104",
+    "gmi-2.3",
+    "ruleset: r42",
+    "rev-18",
+    "Effective since",
+    "Jun 01, 2026",
+    "Card repayment reminder (HK)",
+    "Clarify market specificity",
+    "sha256:91be"
+  ],
+  "requiredLiveMarkers": [
+    "source: product-inventory API projection",
+    "effectiveRows",
+    "pendingRows"
+  ]
+}

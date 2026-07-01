@@ -1,5 +1,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 
+const governanceDetailFixture = JSON.parse(
+  readFileSync('scripts/fixtures/governance-detail-live-data.json', 'utf8'),
+);
+
 const removedMockFiles = [
   'apps/web/src/data/governanceMock.ts',
   'apps/web/src/data/mockInventory.ts',
@@ -19,8 +23,8 @@ const checks = [
   },
   {
     file: 'apps/web/src/features/governance/GovernancePages.tsx',
-    forbidden: ['../../data/governanceMock', 'fetchAuditEvents', 'fallbackAuditEvents', '[42, 48, 55, 61, 58, 67, 74, 82]'],
-    required: ['useProductInventory', 'coverageFlow'],
+    forbidden: ['../../data/governanceMock', 'fetchAuditEvents', 'fallbackAuditEvents', '[42, 48, 55, 61, 58, 67, 74, 82]', ...governanceDetailFixture.forbiddenStaticEvidence],
+    required: ['useProductInventory', 'coverageFlow', ...governanceDetailFixture.requiredLiveMarkers],
   },
   {
     file: 'apps/web/src/features/workspace/ProductWorkspace.tsx',

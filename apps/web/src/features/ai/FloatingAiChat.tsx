@@ -60,18 +60,43 @@ export function FloatingAiChat() {
 
   useEffect(() => {
     const storedPosition = readStoredLauncherPosition();
+    let animationFrame = 0;
+
+    function updateClampedPosition(position?: FloatingPosition) {
+      setLauncherPosition((currentPosition) => {
+        const clampedPosition = clampPosition(position ?? currentPosition, launcherSizeRef.current);
+
+        if (isSamePosition(currentPosition, clampedPosition)) {
+          return currentPosition;
+        }
+
+        return clampedPosition;
+      });
+    }
 
     if (storedPosition) {
-      setLauncherPosition(clampPosition(storedPosition, launcherSizeRef.current));
+      updateClampedPosition(storedPosition);
     }
 
     function handleResize() {
-      setLauncherPosition((currentPosition) => clampPosition(currentPosition, launcherSizeRef.current));
+      updateClampedPosition();
     }
 
-    window.addEventListener('resize', handleResize);
+    function schedulePositionClamp() {
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(() => updateClampedPosition());
+    }
 
-    return () => window.removeEventListener('resize', handleResize);
+    schedulePositionClamp();
+    window.addEventListener('resize', handleResize);
+    const observer = new MutationObserver(schedulePositionClamp);
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener('resize', handleResize);
+      observer.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -294,7 +319,7 @@ function getDefaultLauncherPosition(): FloatingPosition {
 
   return {
     x: window.innerWidth - launcherEstimate.width - 24,
-    y: window.innerHeight - launcherEstimate.height - 24,
+    y: window.innerHeight - launcherEstimate.height - 24 - getReservedBottomHeight(),
   };
 }
 
@@ -326,12 +351,35 @@ function clampPosition(position: FloatingPosition, size: { width: number; height
 
   return {
     x: clamp(position.x, viewportMargin, Math.max(viewportMargin, window.innerWidth - size.width - viewportMargin)),
-    y: clamp(position.y, viewportMargin, Math.max(viewportMargin, window.innerHeight - size.height - viewportMargin)),
+    y: clamp(
+      position.y,
+      viewportMargin,
+      Math.max(viewportMargin, window.innerHeight - size.height - viewportMargin - getReservedBottomHeight()),
+    ),
   };
+}
+
+function getReservedBottomHeight() {
+  if (typeof document === 'undefined') {
+    return 0;
+  }
+
+  const actionDock = document.querySelector('.review-workbench .action-dock');
+  const actionDockBox = actionDock?.getBoundingClientRect();
+
+  if (!actionDockBox || actionDockBox.bottom < window.innerHeight - 2) {
+    return 0;
+  }
+
+  return actionDockBox.height;
 }
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function isSamePosition(a: FloatingPosition, b: FloatingPosition) {
+  return Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5;
 }
 
 function readStoredLauncherPosition() {
