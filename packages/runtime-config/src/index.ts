@@ -7,6 +7,11 @@ export type RuntimeConfig = {
   port?: number;
   databaseUrl?: string;
   authMode?: 'header' | 'gateway' | 'disabled';
+  apiRateLimit: {
+    enabled: boolean;
+    windowMs: number;
+    maxRequests: number;
+  };
   workflow: {
     driver: 'none' | 'temporal';
     temporalAddress?: string;
@@ -75,6 +80,24 @@ export function loadRuntimeConfig(
     issues,
     1000,
   );
+  const apiRateLimitEnabled = readBoolean(
+    env.API_RATE_LIMIT_ENABLED,
+    'API_RATE_LIMIT_ENABLED',
+    issues,
+    false,
+  );
+  const apiRateLimitWindowMs = readOptionalPositiveInteger(
+    env.API_RATE_LIMIT_WINDOW_MS,
+    'API_RATE_LIMIT_WINDOW_MS',
+    issues,
+    60_000,
+  );
+  const apiRateLimitMaxRequests = readOptionalPositiveInteger(
+    env.API_RATE_LIMIT_MAX_REQUESTS,
+    'API_RATE_LIMIT_MAX_REQUESTS',
+    issues,
+    120,
+  );
 
   if (workflowDriver === 'temporal') {
     readRequired(env.TEMPORAL_ADDRESS, 'TEMPORAL_ADDRESS', issues);
@@ -140,6 +163,11 @@ export function loadRuntimeConfig(
     port,
     databaseUrl: trimToUndefined(env.DATABASE_URL),
     authMode,
+    apiRateLimit: {
+      enabled: apiRateLimitEnabled,
+      windowMs: apiRateLimitWindowMs,
+      maxRequests: apiRateLimitMaxRequests,
+    },
     workflow: {
       driver: workflowDriver,
       temporalAddress:
@@ -164,6 +192,30 @@ export function loadRuntimeConfig(
     },
     readinessTimeoutMs,
   };
+}
+
+function readBoolean(
+  value: string | undefined,
+  name: string,
+  issues: string[],
+  defaultValue: boolean,
+) {
+  const trimmed = trimToUndefined(value);
+
+  if (!trimmed) {
+    return defaultValue;
+  }
+
+  if (trimmed === 'true') {
+    return true;
+  }
+
+  if (trimmed === 'false') {
+    return false;
+  }
+
+  issues.push(`${name} must be true or false.`);
+  return defaultValue;
 }
 
 function readRequired(value: string | undefined, name: string, issues: string[]) {

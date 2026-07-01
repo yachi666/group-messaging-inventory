@@ -79,6 +79,7 @@ for (const expected of [
   'ANALYSIS_WORKFLOW_DRIVER: temporal',
   'TEMPORAL_ADDRESS: temporal:7233',
   'API_AUTH_MODE: header',
+  'API_RATE_LIMIT_ENABLED: ${API_RATE_LIMIT_ENABLED:-false}',
   'AI_PROVIDER_READINESS_MODE: config',
   'VITE_API_BASE_URL: http://127.0.0.1:4000',
   "'${GMI_API_PORT:-4000}:4000'",

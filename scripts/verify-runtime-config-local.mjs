@@ -4,6 +4,9 @@ const defaultApi = loadRuntimeConfig('api', {});
 assertEqual(defaultApi.mode, 'api', 'default API mode');
 assertEqual(defaultApi.port, 4000, 'default API port');
 assertEqual(defaultApi.authMode, 'header', 'default auth mode');
+assertEqual(defaultApi.apiRateLimit.enabled, false, 'default API rate limit disabled');
+assertEqual(defaultApi.apiRateLimit.windowMs, 60000, 'default API rate limit window');
+assertEqual(defaultApi.apiRateLimit.maxRequests, 120, 'default API rate limit max requests');
 assertEqual(defaultApi.workflow.driver, 'none', 'default workflow driver');
 assertEqual(defaultApi.workflow.temporalAddress, '127.0.0.1:7233', 'default temporal address');
 assertEqual(defaultApi.aiProvider.provider, 'noop', 'default AI provider');
@@ -17,8 +20,14 @@ assertEqual(defaultApi.readinessTimeoutMs, 1000, 'default readiness timeout');
 
 const gatewayApi = loadRuntimeConfig('api', {
   API_AUTH_MODE: 'gateway',
+  API_RATE_LIMIT_ENABLED: 'true',
+  API_RATE_LIMIT_WINDOW_MS: '5000',
+  API_RATE_LIMIT_MAX_REQUESTS: '25',
 });
 assertEqual(gatewayApi.authMode, 'gateway', 'gateway auth mode');
+assertEqual(gatewayApi.apiRateLimit.enabled, true, 'configured API rate limit enabled');
+assertEqual(gatewayApi.apiRateLimit.windowMs, 5000, 'configured API rate limit window');
+assertEqual(gatewayApi.apiRateLimit.maxRequests, 25, 'configured API rate limit max');
 
 const worker = loadRuntimeConfig('worker', {
   TEMPORAL_ADDRESS: 'temporal:7233',
@@ -127,6 +136,9 @@ assertConfigIssues(
       DATABASE_URL: 'not a url',
       OPENAI_COMPATIBLE_MAX_RETRIES: '-2',
       OPENAI_COMPATIBLE_RETRY_BACKOFF_MS: '-1',
+      API_RATE_LIMIT_ENABLED: 'sometimes',
+      API_RATE_LIMIT_WINDOW_MS: '0',
+      API_RATE_LIMIT_MAX_REQUESTS: '0',
     }),
   [
     'PORT must be a positive integer.',
@@ -135,6 +147,9 @@ assertConfigIssues(
     'API_AUTH_MODE must be one of: header, gateway, disabled.',
     'OPENAI_COMPATIBLE_MAX_RETRIES must be a non-negative integer.',
     'OPENAI_COMPATIBLE_RETRY_BACKOFF_MS must be a non-negative integer.',
+    'API_RATE_LIMIT_ENABLED must be true or false.',
+    'API_RATE_LIMIT_WINDOW_MS must be a positive integer.',
+    'API_RATE_LIMIT_MAX_REQUESTS must be a positive integer.',
     'DATABASE_URL must be a valid URL.',
   ],
   'invalid numeric and enum values',

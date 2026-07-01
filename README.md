@@ -153,6 +153,9 @@ Common variables:
 | `PORT` | API port | `4000` |
 | `DATABASE_URL` | Enables Postgres-backed repositories | unset, in-memory/local fallback where supported |
 | `API_AUTH_MODE` | `header`, `gateway`, or `disabled` | `header` |
+| `API_RATE_LIMIT_ENABLED` | Enables actor/IP fixed-window API rate limiting outside health/readiness/metrics endpoints | `false` |
+| `API_RATE_LIMIT_WINDOW_MS` | API rate limit fixed-window length | `60000` |
+| `API_RATE_LIMIT_MAX_REQUESTS` | API requests allowed per actor/IP per route group in the window | `120` |
 | `ANALYSIS_WORKFLOW_DRIVER` | `none` or `temporal` | `none` |
 | `TEMPORAL_ADDRESS` | Temporal service address | `127.0.0.1:7233` unless Temporal mode requires explicit config |
 | `TEMPORAL_NAMESPACE` | Temporal namespace | `default` |
@@ -295,7 +298,7 @@ Run the main no-infrastructure PR gate before opening a pull request:
 npm run test:no-infra
 ```
 
-This runs type checks, secret scan, backend smoke tests, readiness and metrics checks, model-configuration API checks, runtime configuration checks, API-surface checks, AI-adapter checks, PII masking checks, golden replay evals, release evidence checks, live frontend data checks, CI workflow checks, deploy config checks, build checks, web bundle checks, and local UI smoke checks.
+This runs type checks, secret scan, backend smoke tests, readiness and metrics checks, model-configuration API checks, API rate-limit checks, runtime configuration checks, API-surface checks, AI-adapter checks, PII masking checks, golden replay evals, release evidence checks, live frontend data checks, CI workflow checks, deploy config checks, build checks, web bundle checks, and local UI smoke checks.
 
 Other useful gates:
 
@@ -303,6 +306,7 @@ Other useful gates:
 | --- | --- |
 | `npm run test:backend` | You need a local backend smoke test without Postgres or Temporal. |
 | `npm run test:model-config` | You changed provider runtime visibility, model configuration validation, or secret redaction behavior. |
+| `npm run test:rate-limit` | You changed API rate limit configuration, middleware, or standard `rate_limited` responses. |
 | `npm run test:evals` | You changed golden fixtures, contracts, provider output shape, or policy routing. |
 | `npm run test:ai-adapter` | You changed provider adapter behavior. |
 | `npm run test:pii:local` | You changed masking rules or prompt/provider boundaries. |
@@ -312,7 +316,7 @@ Other useful gates:
 | `npm run test:harness:temporal:provider-failure` | You need to verify failed provider-run persistence and public error summaries. |
 | `npm run test:release-readiness:api:pg` | You need a live API readiness gate over persisted release evidence. |
 | `npm run test:deploy:compose` | You changed Dockerfiles, compose config, migrations, API startup, worker startup, or web serving. |
-| `npm run test:release-preflight:local` | You are preparing a release candidate and want the Docker-backed preflight suite plus model-configuration API validation. |
+| `npm run test:release-preflight:local` | You are preparing a release candidate and want the Docker-backed preflight suite plus model-configuration and rate-limit API validation. |
 
 The GitHub CI workflow runs `npm run test:no-infra` on pull requests and pushes to `main` or `codex/**`. The release preflight workflow is available as a manual GitHub Actions dispatch.
 

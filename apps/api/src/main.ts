@@ -4,6 +4,7 @@ import { loadRuntimeConfig } from '@gmi/runtime-config';
 import { AppModule } from './modules/app.module.js';
 import { StandardErrorFilter } from './filters/standard-error.filter.js';
 import { accessLogMiddleware } from './middleware/access-log.middleware.js';
+import { createRateLimitMiddleware } from './middleware/rate-limit.middleware.js';
 import { requestIdMiddleware } from './middleware/request-id.middleware.js';
 
 const runtimeConfig = loadRuntimeConfig('api');
@@ -14,6 +15,7 @@ const app = await NestFactory.create(AppModule);
 app.enableShutdownHooks();
 app.use(requestIdMiddleware);
 app.use(accessLogMiddleware);
+app.use(createRateLimitMiddleware(runtimeConfig.apiRateLimit));
 app.useGlobalFilters(new StandardErrorFilter());
 app.enableCors({
   origin: corsOrigin
