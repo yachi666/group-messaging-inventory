@@ -787,6 +787,10 @@ export type GetAnalysisRunEvidencePackageRecord = {
   tenantScopes?: string[];
 };
 
+export type GetAnalysisRunRecord = {
+  tenantScopes?: string[];
+};
+
 export type GetChangeRequestEvidencePackageRecord = {
   changeRequestId: string;
   tenantScopes?: string[];
@@ -810,7 +814,10 @@ export type AnalysisRunEvidencePackageRecord = {
 
 export type AnalysisRunRepository = {
   enqueueRun(command: SubmitAnalysisRunRecord): Promise<QueuedAnalysisRunRecord>;
-  getRun(runId: string): Promise<CompletedAnalysisRunRecord | null>;
+  getRun(
+    runId: string,
+    command?: GetAnalysisRunRecord,
+  ): Promise<CompletedAnalysisRunRecord | null>;
   listAnalysisResults(
     command?: ListAnalysisResultsRecord,
   ): Promise<AiTemplateAnalysisProjection[]>;
@@ -962,16 +969,29 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
     return run;
   }
 
-  async getRun(runId: string): Promise<CompletedAnalysisRunRecord | null> {
+  async getRun(
+    runId: string,
+    command: GetAnalysisRunRecord = {},
+  ): Promise<CompletedAnalysisRunRecord | null> {
     const completedRun = this.completedRuns.get(runId);
 
     if (completedRun) {
+      if (!matchesTenantScope(completedRun.templateUuid, command.tenantScopes)) {
+        throw new RepositoryError(
+          'access_denied',
+          'Data scope does not permit access to this analysis run.',
+          {
+            objectType: 'analysis_run',
+            objectId: runId,
+          },
+        );
+      }
+
       return completedRun;
     }
 
     const now = new Date().toISOString();
-
-    return {
+    const scaffoldRun: CompletedAnalysisRunRecord = {
       runId,
       status: 'Succeeded',
       templateUuid: 'tpluuid_local_scaffold',
@@ -986,6 +1006,19 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
       traceRef: `trace_${runId}`,
       output: localAnalysisOutput,
     };
+
+    if (!matchesTenantScope(scaffoldRun.templateUuid, command.tenantScopes)) {
+      throw new RepositoryError(
+        'access_denied',
+        'Data scope does not permit access to this analysis run.',
+        {
+          objectType: 'analysis_run',
+          objectId: runId,
+        },
+      );
+    }
+
+    return scaffoldRun;
   }
 
   async listAnalysisResults(

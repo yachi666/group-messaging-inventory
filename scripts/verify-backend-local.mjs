@@ -85,6 +85,23 @@ try {
   analysisRunResponseSchema.parse(runResponse);
   assertEqual(runResponse.status, 'Succeeded', 'get run status');
   assertEqual(runResponse.routing.policyDecision, 'auto_record', 'scaffold routing decision');
+  const blockedScopeRunResponse = await getJsonWithStatus(
+    `${baseUrl}/analysis-runs/${submitResponse.runId}`,
+    {
+      'x-gmi-scope-tenants': 'tenant-without-access',
+    },
+  );
+  assertEqual(
+    blockedScopeRunResponse.status,
+    403,
+    'blocked tenant-scoped analysis run status',
+  );
+  standardErrorSchema.parse(blockedScopeRunResponse.body);
+  assertEqual(
+    blockedScopeRunResponse.body.error.code,
+    'access_denied',
+    'blocked tenant-scoped analysis run error code',
+  );
 
   const confirmResult = await postJsonWithStatus(
     `${baseUrl}/analysis-runs/${submitResponse.runId}/confirm`,

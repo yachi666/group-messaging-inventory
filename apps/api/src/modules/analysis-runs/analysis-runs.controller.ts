@@ -64,8 +64,13 @@ export class AnalysisRunsController {
 
   @Get('analysis-runs/:runId')
   @RequiresRoles('analysis_reader', 'analysis_runner', 'auditor')
-  getAnalysisRun(@Param('runId') runId: string) {
-    return this.analysisRuns.getRun(runId);
+  getAnalysisRun(
+    @Param('runId') runId: string,
+    @Headers(internalTenantScopeHeader) tenantScopes: string | undefined,
+  ) {
+    return this.analysisRuns.getRun(runId, {
+      tenantScopes: parseScopeHeader(tenantScopes),
+    });
   }
 
   @Get('analysis-runs/:runId/evidence-package')

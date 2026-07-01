@@ -23,6 +23,7 @@ import type {
   DecideChangeRequestRecord,
   Database,
   ChangeRequestEvidencePackageRecord,
+  GetAnalysisRunRecord,
   GetAnalysisRunEvidencePackageRecord,
   GetChangeRequestEvidencePackageRecord,
   GetProductInventoryRecord,
@@ -484,7 +485,10 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
     };
   }
 
-  async getRun(runId: string): Promise<CompletedAnalysisRunRecord | null> {
+  async getRun(
+    runId: string,
+    command: GetAnalysisRunRecord = {},
+  ): Promise<CompletedAnalysisRunRecord | null> {
     const run = await this.db
       .selectFrom('analysis_runs')
       .selectAll()
@@ -494,6 +498,13 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
     if (!run) {
       return null;
     }
+
+    await this.assertTemplateTenantScope(
+      run.template_uuid,
+      command.tenantScopes,
+      'analysis_run',
+      runId,
+    );
 
     const output = await this.db
       .selectFrom('analysis_outputs')
@@ -1505,9 +1516,16 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
     const allowed = await this.templateMatchesTenantScope(templateUuid, tenantScopes ?? []);
 
     if (!allowed) {
+      const objectLabel =
+        objectType === 'analysis_run'
+          ? 'analysis run'
+          : objectType === 'change_request'
+            ? 'change request evidence package'
+            : 'analysis run evidence package';
+
       throw new RepositoryError(
         'access_denied',
-        'Data scope does not permit access to this evidence package.',
+        `Data scope does not permit access to this ${objectLabel}.`,
         {
           objectType,
           objectId,

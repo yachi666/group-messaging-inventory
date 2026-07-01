@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import {
   analysisRunEvidencePackageSchema,
+  analysisRunResponseSchema,
   aiTemplateAnalysisResultsResponseSchema,
   auditEventsResponseSchema,
   changeRequestEvidencePackageSchema,
@@ -90,6 +91,24 @@ try {
     'local tenant-scoped seeded analysis result count',
   );
 
+  const scopedAnalysisRunId = locallyScopedSeededResults[0]?.id;
+  if (!scopedAnalysisRunId) {
+    throw new Error('Expected at least one locally scoped seeded analysis run.');
+  }
+
+  const locallyScopedRun = await getJson(
+    `${baseUrl}/analysis-runs/${scopedAnalysisRunId}`,
+    {
+      'x-gmi-scope-tenants': 'local',
+    },
+  );
+  analysisRunResponseSchema.parse(locallyScopedRun);
+  assertEqual(
+    locallyScopedRun.runId,
+    scopedAnalysisRunId,
+    'local tenant-scoped analysis run id',
+  );
+
   const blockedScopeResultsResponse = await getJson(
     `${baseUrl}/templates/analysis-results?limit=20`,
     {
@@ -104,6 +123,24 @@ try {
     blockedScopeSeededResults.length,
     0,
     'blocked tenant-scoped seeded analysis result count',
+  );
+
+  const blockedScopeRun = await getJsonWithStatus(
+    `${baseUrl}/analysis-runs/${scopedAnalysisRunId}`,
+    {
+      'x-gmi-scope-tenants': 'tenant-without-access',
+    },
+  );
+  assertEqual(
+    blockedScopeRun.status,
+    403,
+    'blocked tenant-scoped analysis run status',
+  );
+  standardErrorSchema.parse(blockedScopeRun.body);
+  assertEqual(
+    blockedScopeRun.body.error.code,
+    'access_denied',
+    'blocked tenant-scoped analysis run error code',
   );
 
   const reviewTasksResponse = await getJson(

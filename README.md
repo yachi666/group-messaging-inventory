@@ -244,6 +244,8 @@ Main product and harness endpoints include:
 
 The implemented API surface is tracked in [docs/api/template-analysis-api.json](./docs/api/template-analysis-api.json) and checked by `npm run test:api-surface`.
 
+Protected read endpoints honor `x-gmi-scope-tenants` in local header-auth mode. This includes list views, evidence packages, audit events, and direct `GET /analysis-runs/{runId}` lookups, so a known run id is not enough to bypass tenant scope.
+
 For local protected routes, use header auth:
 
 ```bash

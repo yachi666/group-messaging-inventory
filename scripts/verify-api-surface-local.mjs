@@ -93,6 +93,16 @@ assertSourceContains(
   'parseScopeHeader(tenantScopes)',
   'controller passes tenant scopes into list queries',
 );
+assertSourceContains(
+  analysisController,
+  'this.analysisRuns.getRun(runId, {',
+  'controller passes tenant scopes into single analysis run reads',
+);
+assertSourceContains(
+  analysisController,
+  '@Headers(internalTenantScopeHeader) tenantScopes: string | undefined',
+  'single analysis run reads accept internal tenant scope header',
+);
 
 const operationIds = new Set();
 for (const endpoint of manifest.endpoints) {

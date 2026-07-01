@@ -119,8 +119,13 @@ export class AnalysisRunsService {
     };
   }
 
-  async getRun(runId: string): Promise<AnalysisRunResponse> {
-    const run = await this.repository.getRun(runId);
+  async getRun(
+    runId: string,
+    scope: DataAccessScope = {},
+  ): Promise<AnalysisRunResponse> {
+    const run = await this.repository.getRun(runId, {
+      tenantScopes: scope.tenantScopes,
+    });
 
     if (!run) {
       throw new NotFoundException(`Analysis run ${runId} was not found.`);
