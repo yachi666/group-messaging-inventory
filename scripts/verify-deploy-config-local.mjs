@@ -39,6 +39,8 @@ for (const expected of [
 
 const workerDockerfile = read('apps/worker/Dockerfile');
 for (const expected of [
+  'FROM node:24-bookworm-slim AS build',
+  'FROM node:24-bookworm-slim AS runtime',
   'npm run build:packages && npm run build:worker',
   'CMD ["npm", "run", "start", "-w", "@gmi/worker"]'
 ]) {
@@ -67,6 +69,7 @@ for (const expected of [
   'gmi-web:',
   'gmi-db-migrate:',
   'profiles:',
+  'healthcheck:',
   'dockerfile: apps/api/Dockerfile',
   'dockerfile: apps/worker/Dockerfile',
   'dockerfile: apps/web/Dockerfile',
@@ -81,5 +84,18 @@ for (const expected of [
 ]) {
   assert(compose.includes(expected), `docker-compose.yml missing ${expected}`);
 }
+
+const packageJson = JSON.parse(read('package.json'));
+assert(
+  packageJson.scripts?.['test:deploy:compose'] ===
+    'node scripts/verify-compose-app-profile-local.mjs',
+  'package.json must expose test:deploy:compose.',
+);
+assert(
+  packageJson.scripts?.['test:release-preflight:local']?.includes(
+    'npm run test:deploy:compose',
+  ),
+  'test:release-preflight:local must include test:deploy:compose.',
+);
 
 console.log('Deploy configuration verifier passed.');

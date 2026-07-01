@@ -244,6 +244,14 @@ docker compose --profile app up --build gmi-api gmi-worker gmi-web
 
 The containerized API is available on `http://127.0.0.1:4000`, and the web app is served on `http://127.0.0.1:5080`. The app profile uses `AI_PROVIDER=noop`, header-based local authorization, Postgres, and Temporal by default. A one-shot `gmi-db-migrate` service applies database migrations before the API starts. API and worker processes handle shutdown signals so Postgres and Temporal connections are released during container stop or deploy replacement.
 
+To verify the containerized app profile end to end, run:
+
+```bash
+npm run test:deploy:compose
+```
+
+This builds and starts the app profile, verifies the migration job, API `/health` and `/ready`, nginx-served web bundle, and a real API -> container worker -> Temporal -> Postgres analysis run.
+
 Run type checks:
 
 ```bash
@@ -278,7 +286,7 @@ Before publishing or promoting a release candidate, run the Docker-backed prefli
 npm run test:release-preflight:local
 ```
 
-This starts local Postgres and Temporal, applies migrations, runs the Postgres repository smoke, verifies seeded API data, persists evaluation and release evidence through Postgres and the API, and exercises both successful and provider-failure API -> Temporal -> worker -> Postgres evidence loops. The same command is available as a manual GitHub Actions workflow in `.github/workflows/release-preflight.yml`.
+This starts local Postgres and Temporal, applies migrations, runs the Postgres repository smoke, verifies seeded API data, persists evaluation and release evidence through Postgres and the API, exercises both successful and provider-failure API -> Temporal -> worker -> Postgres evidence loops, and verifies the containerized app profile. The same command is available as a manual GitHub Actions workflow in `.github/workflows/release-preflight.yml`.
 
 The repository also includes a Playwright-based UI verification script:
 

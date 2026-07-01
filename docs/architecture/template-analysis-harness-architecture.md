@@ -1544,8 +1544,9 @@ The current local Docker Compose profile follows that shape:
 
 - `gmi-db-migrate` runs `@gmi/db` production migrations and must complete successfully before `gmi-api`.
 - `gmi-api` exposes the NestJS API on port 4000 and uses header auth, Temporal workflow driver, Postgres, and the deterministic `noop` AI provider by default.
-- `gmi-worker` consumes the same Temporal task queue and writes analysis evidence through the shared repository layer.
+- `gmi-worker` consumes the same Temporal task queue and writes analysis evidence through the shared repository layer. Its runtime image uses Debian slim rather than Alpine so the Temporal TypeScript native bridge has the expected glibc-compatible runtime.
 - `gmi-web` serves the Vite production bundle through nginx on port 5080.
+- `npm run test:deploy:compose` builds and starts the app profile, verifies the migration job, API readiness, web bundle serving, and a real containerized API -> worker -> Temporal -> Postgres analysis run.
 
 Long-running runtimes must also own connection lifecycle. The API should enable Nest shutdown hooks so injected Postgres-backed repositories close their Kysely pools. The worker should handle `SIGINT` and `SIGTERM`, request Temporal worker shutdown, close the Temporal native connection, and release its lazily created Postgres repository.
 
@@ -1612,6 +1613,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented `npm run test:release-readiness:local` and `npm run check:release-readiness` so persisted release evidence can be enforced by CI/CD or promotion workflows, not only displayed in dashboards.
 - Implemented `npm run test:no-infra` plus GitHub Actions CI for no-infrastructure typecheck, secret scan, backend smoke, readiness probes, runtime lifecycle checks, API surface checks, PII gate, replay and provider-adapter eval gates, release mapping/readiness gates, web contract checks, workflow verification, deploy config checks, build, bundle budget, and local UI verification.
 - Implemented `npm run test:release-preflight:local` plus a manual GitHub Actions release-preflight workflow for Docker-backed Postgres, Temporal, release evidence API, seed verification, and success/failure Temporal harness checks before promotion.
+- Implemented `npm run test:deploy:compose` for containerized app-profile verification across `gmi-db-migrate`, `gmi-api`, `gmi-worker`, and `gmi-web`.
 - Implemented contract-backed backend smoke parsing for key API success and error responses via `packages/contracts`.
 - Next: add reviewer-labeled production PII/false-positive samples once data handling approvals are available.
 

@@ -111,6 +111,7 @@ const requiredReleasePreflightCommands = [
   'npm run test:evals:release-api:pg',
   'npm run test:harness:temporal',
   'npm run test:harness:temporal:provider-failure',
+  'npm run test:deploy:compose',
 ];
 
 for (const command of requiredReleasePreflightCommands) {
