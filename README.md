@@ -158,7 +158,7 @@ Common variables:
 | `TEMPORAL_NAMESPACE` | Temporal namespace | `default` |
 | `TEMPORAL_TASK_QUEUE` | Temporal task queue | `template-analysis` |
 | `AI_PROVIDER` | `noop`, `openai`, or `openai-compatible` | `noop` |
-| `AI_PROVIDER_READINESS_MODE` | `config`-style lightweight provider readiness by default; set `connectivity` to probe the provider models endpoint | unset |
+| `AI_PROVIDER_READINESS_MODE` | `config`-style lightweight provider readiness by default; set `connectivity` to probe the provider models endpoint | `config` |
 | `READINESS_TIMEOUT_MS` | Dependency probe timeout | `1000` |
 
 Use the deterministic local provider for normal development:

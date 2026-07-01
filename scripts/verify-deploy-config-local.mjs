@@ -79,6 +79,7 @@ for (const expected of [
   'ANALYSIS_WORKFLOW_DRIVER: temporal',
   'TEMPORAL_ADDRESS: temporal:7233',
   'API_AUTH_MODE: header',
+  'AI_PROVIDER_READINESS_MODE: config',
   'VITE_API_BASE_URL: http://127.0.0.1:4000',
   "'5080:80'"
 ]) {

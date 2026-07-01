@@ -7,6 +7,7 @@ assertEqual(defaultApi.authMode, 'header', 'default auth mode');
 assertEqual(defaultApi.workflow.driver, 'none', 'default workflow driver');
 assertEqual(defaultApi.workflow.temporalAddress, '127.0.0.1:7233', 'default temporal address');
 assertEqual(defaultApi.aiProvider.provider, 'noop', 'default AI provider');
+assertEqual(defaultApi.aiProvider.readinessMode, 'config', 'default AI provider readiness mode');
 assertEqual(
   defaultApi.aiProvider.openaiCompatibleRetryBackoffMs,
   250,
@@ -36,7 +37,13 @@ const compatibleWorker = loadRuntimeConfig('worker', {
   OPENAI_COMPATIBLE_MODEL: 'deepseek-v4-flash',
   OPENAI_COMPATIBLE_PROVIDER_NAME: 'deepseek',
   OPENAI_COMPATIBLE_EXTRA_BODY_JSON: '{"thinking":{"type":"enabled"},"reasoning_effort":"high"}',
+  AI_PROVIDER_READINESS_MODE: 'connectivity',
 });
+assertEqual(
+  compatibleWorker.aiProvider.readinessMode,
+  'connectivity',
+  'OpenAI-compatible readiness mode',
+);
 assertEqual(
   compatibleWorker.aiProvider.openaiCompatibleProviderName,
   'deepseek',
@@ -115,6 +122,7 @@ assertConfigIssues(
     loadRuntimeConfig('api', {
       PORT: '0',
       READINESS_TIMEOUT_MS: '-1',
+      AI_PROVIDER_READINESS_MODE: 'probe',
       API_AUTH_MODE: 'cookie',
       DATABASE_URL: 'not a url',
       OPENAI_COMPATIBLE_MAX_RETRIES: '-2',
@@ -123,6 +131,7 @@ assertConfigIssues(
   [
     'PORT must be a positive integer.',
     'READINESS_TIMEOUT_MS must be a positive integer.',
+    'AI_PROVIDER_READINESS_MODE must be one of: config, connectivity.',
     'API_AUTH_MODE must be one of: header, gateway, disabled.',
     'OPENAI_COMPATIBLE_MAX_RETRIES must be a non-negative integer.',
     'OPENAI_COMPATIBLE_RETRY_BACKOFF_MS must be a non-negative integer.',

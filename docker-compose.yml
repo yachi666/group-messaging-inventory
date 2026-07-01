@@ -94,6 +94,7 @@ services:
       TEMPORAL_NAMESPACE: default
       TEMPORAL_TASK_QUEUE: template-analysis
       AI_PROVIDER: noop
+      AI_PROVIDER_READINESS_MODE: config
       API_AUTH_MODE: header
     ports:
       - '4000:4000'
@@ -127,6 +128,7 @@ services:
       TEMPORAL_NAMESPACE: default
       TEMPORAL_TASK_QUEUE: template-analysis
       AI_PROVIDER: noop
+      AI_PROVIDER_READINESS_MODE: config
 
   gmi-web:
     profiles:

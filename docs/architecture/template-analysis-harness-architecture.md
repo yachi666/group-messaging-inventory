@@ -1609,6 +1609,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented worker failure persistence activity and repository support for marking failed analysis runs with structured error metadata.
 - Implemented shared `@gmi/runtime-config` startup validation for API and worker configuration.
 - Implemented optional AI-provider connectivity readiness for `/ready`, with fixture-backed verification for OpenAI-compatible providers such as DeepSeek. Production preflight can require provider `/models` reachability while local no-infrastructure checks remain deterministic.
+- Added `AI_PROVIDER_READINESS_MODE` to shared runtime configuration validation and the compose app profile so invalid readiness modes fail fast before API/worker startup.
 - Implemented low-cardinality Prometheus domain counters for analysis submissions, analysis confirmations, and release evidence records, with smoke coverage that prevents governed object ids from leaking into metric labels.
 - Implemented `GET /analysis-runs/{runId}/evidence-package` with contract-backed local, Temporal success, and provider-failure smoke coverage.
 - Implemented and verified `npm run test:harness:temporal` for the full API -> Temporal -> worker -> Postgres analysis evidence loop with local header authorization and persisted analysis output, review task, and audit event checks.

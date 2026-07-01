@@ -15,6 +15,7 @@ export type RuntimeConfig = {
   };
   aiProvider: {
     provider: 'noop' | 'openai' | 'openai-compatible';
+    readinessMode: 'config' | 'connectivity';
     openaiModel?: string;
     openaiCompatibleBaseUrl?: string;
     openaiCompatibleModel?: string;
@@ -60,6 +61,13 @@ export function loadRuntimeConfig(
     ['noop', 'openai', 'openai-compatible'],
     issues,
     'noop',
+  );
+  const aiProviderReadinessMode = readEnum(
+    env.AI_PROVIDER_READINESS_MODE,
+    'AI_PROVIDER_READINESS_MODE',
+    ['config', 'connectivity'],
+    issues,
+    'config',
   );
   const readinessTimeoutMs = readOptionalPositiveInteger(
     env.READINESS_TIMEOUT_MS,
@@ -143,6 +151,7 @@ export function loadRuntimeConfig(
     },
     aiProvider: {
       provider: aiProvider,
+      readinessMode: aiProviderReadinessMode,
       openaiModel: trimToUndefined(env.OPENAI_MODEL) ?? 'gpt-5.4-mini',
       openaiCompatibleBaseUrl:
         trimToUndefined(env.OPENAI_COMPATIBLE_BASE_URL) ?? 'http://127.0.0.1:4001/v1',
