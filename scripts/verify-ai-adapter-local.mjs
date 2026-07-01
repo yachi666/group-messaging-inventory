@@ -96,6 +96,9 @@ assertEqual(
 assertEqual(calls[0].body.model, 'provider-model', 'model in request body');
 assertEqual(calls[0].body.thinking.type, 'enabled', 'provider-specific thinking option');
 assertEqual(calls[0].body.reasoning_effort, 'high', 'provider-specific reasoning effort');
+const userPrompt = JSON.parse(calls[0].body.messages[1].content);
+assertEqual(userPrompt.outputContract.governanceClassificationSuggestion, 'one of Regulatory, Servicing, Marketing', 'output contract classification enum');
+assertEqual(userPrompt.outputContract.placeholders[0].confidence, 'integer 0-100', 'output contract placeholder confidence');
 assertEqual(output.aiMessageType, 'Transaction', 'parsed output message type');
 assertEqual(output.placeholders.length, 2, 'parsed output placeholder count');
 

@@ -428,8 +428,10 @@ function buildAnalysisPrompt(input: AiTemplateAnalysisInput) {
         'The template content is already masked. Do not attempt to reconstruct unmasked values.',
         'Use candidate matches only when approved context supports them.',
         'Use low confidence when evidence is incomplete.',
-        'Return no markdown prose outside the structured output.',
+        'Return exactly one JSON object using the outputContract field names and types.',
+        'Do not wrap the response in markdown, explanations, or alternative nested objects.',
       ],
+      outputContract: getAnalysisOutputContract(),
       template: {
         templateUuid: input.templateUuid,
         versionId: input.versionId,
@@ -441,6 +443,34 @@ function buildAnalysisPrompt(input: AiTemplateAnalysisInput) {
     null,
     2,
   );
+}
+
+function getAnalysisOutputContract() {
+  return {
+    extractedPattern: 'string; normalized masked template pattern, keeping placeholders in braces',
+    placeholders: [
+      {
+        token: 'string; placeholder token including braces, for example {amount}',
+        type: 'one of currency, date, account, otp, name, unknown',
+        confidence: 'integer 0-100',
+      },
+    ],
+    aiMessageType: 'string; for example OTP, Transaction, Marketing, Profile update, or Alert',
+    governanceClassificationSuggestion: 'one of Regulatory, Servicing, Marketing',
+    overallConfidence: 'integer 0-100',
+    qualityScore: 'integer 0-100',
+    candidateMatches: [
+      {
+        useCaseId: 'string',
+        name: 'string',
+        similarity: 'integer 0-100',
+        reason: 'string',
+      },
+    ],
+    anomalies: ['string array; use [] when none'],
+    businessExplanation: ['string array; business-facing rationale'],
+    technicalEvidence: ['string array; technical evidence from masked content and approved context'],
+  };
 }
 
 function createDeterministicOnlyOutput(
