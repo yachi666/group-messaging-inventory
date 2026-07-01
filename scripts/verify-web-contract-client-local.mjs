@@ -30,6 +30,14 @@ const auditApi = await readFile(
   path.join(repoRoot, 'apps/web/src/features/workspace/auditApi.ts'),
   'utf8',
 );
+const modelConfigurationApi = await readFile(
+  path.join(repoRoot, 'apps/web/src/features/governance/modelConfigurationApi.ts'),
+  'utf8',
+);
+const governancePages = await readFile(
+  path.join(repoRoot, 'apps/web/src/features/governance/GovernancePages.tsx'),
+  'utf8',
+);
 const apiClient = await readFile(
   path.join(repoRoot, 'apps/web/src/lib/apiClient.ts'),
   'utf8',
@@ -99,6 +107,42 @@ if (!auditApi.includes('auditEventsResponseSchema')) {
 
 if (auditApi.includes('as AuditEventsResponse')) {
   throw new Error('auditApi.ts must not cast audit events before schema parsing.');
+}
+
+for (const expectedSchema of [
+  'modelRuntimeConfigurationResponseSchema',
+  'validateModelConfigurationResponseSchema',
+]) {
+  if (!modelConfigurationApi.includes(expectedSchema)) {
+    throw new Error(`modelConfigurationApi.ts must parse API responses with ${expectedSchema}.`);
+  }
+}
+
+for (const expectedSource of [
+  '/model-configuration/runtime',
+  '/model-configuration/validate',
+  "roles: ['analysis_reader', 'auditor']",
+  "roles: ['change_checker', 'auditor']",
+]) {
+  if (!modelConfigurationApi.includes(expectedSource)) {
+    throw new Error(`modelConfigurationApi.ts must call the protected backend model API: ${expectedSource}`);
+  }
+}
+
+for (const expectedSource of [
+  'fetchModelRuntimeConfiguration',
+  'validateModelConfigurationCandidate',
+  'data-testid="model-runtime-panel"',
+  'data-testid="model-validate-button"',
+  'data-testid="model-validation-result"',
+]) {
+  if (!governancePages.includes(expectedSource)) {
+    throw new Error(`GovernancePages.tsx must keep model configuration API wiring: ${expectedSource}`);
+  }
+}
+
+if (modelConfigurationApi.includes('as ModelRuntimeConfigurationResponse')) {
+  throw new Error('modelConfigurationApi.ts must not cast model runtime responses before schema parsing.');
 }
 
 for (const expectedSchema of ['reviewTasksResponseSchema', 'reviewTaskResponseSchema']) {
@@ -214,6 +258,7 @@ for (const [fileName, source] of [
   ['changeRequestApi.ts', changeRequestApi],
   ['reviewTaskApi.ts', reviewTaskApi],
   ['auditApi.ts', auditApi],
+  ['modelConfigurationApi.ts', modelConfigurationApi],
 ]) {
   if (!source.includes('apiFetch')) {
     throw new Error(`${fileName} must use the shared apiFetch helper for API requests.`);

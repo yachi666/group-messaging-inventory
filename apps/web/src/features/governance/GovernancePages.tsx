@@ -20,6 +20,14 @@ import type { GovernanceTemplate, GovernanceUseCase } from '../../domain/governa
 import type { CoveragePoint, GovernanceEvent } from '../../domain/inventory';
 import { useI18n } from '../../i18n/LanguageProvider';
 import { useProductInventory, type ProductInventory } from '../inventory/productInventoryApi';
+import {
+  fetchModelRuntimeConfiguration,
+  validateModelConfiguration as validateModelConfigurationCandidate,
+} from './modelConfigurationApi';
+import type {
+  ModelRuntimeConfigurationResponse,
+  ValidateModelConfigurationResponse,
+} from '@gmi/contracts';
 
 const DashboardPage = lazy(() =>
   import('../dashboard/DashboardPage').then((module) => ({ default: module.DashboardPage })),
@@ -239,9 +247,29 @@ function AdminSection({ inventory, section }: { inventory: ProductInventory; sec
 function ModelConfigurationPanel() {
   const [draft, setDraft] = useState<ModelConfigurationDraft>(defaultModelConfiguration);
   const [notice, setNotice] = useState('');
+  const [runtime, setRuntime] = useState<ModelRuntimeConfigurationResponse | null>(null);
+  const [runtimeError, setRuntimeError] = useState('');
+  const [candidateValidation, setCandidateValidation] =
+    useState<ValidateModelConfigurationResponse | null>(null);
+  const [validating, setValidating] = useState(false);
 
   useEffect(() => {
     setDraft(loadModelConfigurationDraft());
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchModelRuntimeConfiguration(controller.signal)
+      .then((result) => {
+        setRuntime(result);
+        setRuntimeError('');
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setRuntimeError(error instanceof Error ? error.message : String(error));
+      });
+
+    return () => controller.abort();
   }, []);
 
   const validation = validateModelConfiguration(draft);
@@ -252,12 +280,14 @@ function ModelConfigurationPanel() {
   function update<K extends keyof ModelConfigurationDraft>(key: K, value: ModelConfigurationDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
     setNotice('');
+    setCandidateValidation(null);
   }
 
   function selectProvider(provider: ModelProviderDraft) {
     const preset = getModelProviderPreset(provider);
     setDraft((current) => ({ ...current, ...preset, provider, apiKey: provider === current.provider ? current.apiKey : '' }));
     setNotice('');
+    setCandidateValidation(null);
   }
 
   function saveConfiguration() {
@@ -276,6 +306,24 @@ function ModelConfigurationPanel() {
     setNotice('Environment block copied. Secrets are included only from this browser session.');
   }
 
+  async function testCandidateConfiguration() {
+    setValidating(true);
+    setNotice('');
+    try {
+      const result = await validateModelConfigurationCandidate(toValidateModelConfigurationRequest(draft));
+      setCandidateValidation(result);
+      setNotice(
+        result.validation.status === 'up'
+          ? 'Candidate provider connectivity verified by the API.'
+          : result.validation.detail,
+      );
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    } finally {
+      setValidating(false);
+    }
+  }
+
   return (
     <div className="model-config" data-testid="model-config-panel">
       <div className="model-config-summary">
@@ -285,6 +333,18 @@ function ModelConfigurationPanel() {
           <small>Maps to the existing worker runtime config. The frontend does not hot-swap running workers.</small>
         </div>
         <Status value={validation.valid ? 'Ready' : 'Needs configuration'} />
+      </div>
+
+      <div className="model-config-runtime" data-testid="model-runtime-panel">
+        <div>
+          <span>Deployed runtime</span>
+          <strong>{runtime ? `${runtime.runtime.providerName} / ${runtime.runtime.model}` : runtimeError ? 'Unavailable' : 'Loading...'}</strong>
+          <small>{runtime ? runtime.validation.detail : runtimeError || 'Reading sanitized provider state from API.'}</small>
+        </div>
+        <div>
+          <Status value={runtime ? runtime.validation.status : runtimeError ? 'Degraded' : 'Loading'} />
+          {runtime && <small>{runtime.runtime.credentials.configured ? 'Credential configured' : 'Credential missing'} · {runtime.runtime.readinessMode}</small>}
+        </div>
       </div>
 
       <div className="model-config-grid">
@@ -351,10 +411,12 @@ function ModelConfigurationPanel() {
       </div>
 
       <footer className="model-config-actions">
-        <p>Provider settings are stored in local browser storage. The API key is kept only in session storage and appears in the copied env block when present.</p>
+        <p>Provider settings are stored in local browser storage. The API key is kept only in session storage, sent to validation once when requested, and appears in the copied env block when present.</p>
         <button className="g-button" onClick={() => setDraft(getModelProviderPreset(draft.provider))}>Reset preset</button>
+        <button className="g-button" data-testid="model-validate-button" disabled={!validation.valid || validating} onClick={testCandidateConfiguration}>{validating ? 'Testing...' : 'Test via API'}</button>
         <button className="g-button g-button-primary" data-testid="model-save-button" disabled={!validation.valid} onClick={saveConfiguration}>Save draft</button>
       </footer>
+      {candidateValidation && <div className="model-config-validation" data-testid="model-validation-result"><strong>{candidateValidation.validation.status}</strong><span>{candidateValidation.validation.detail}</span></div>}
       {notice && <div className="model-config-notice" role="status">{notice}</div>}
     </div>
   );
@@ -432,6 +494,24 @@ function buildModelEnvironment(draft: ModelConfigurationDraft, includeSecret: bo
   rows.push(`OPENAI_COMPATIBLE_MAX_RETRIES=${draft.maxRetries.trim()}`);
   rows.push(`OPENAI_COMPATIBLE_RETRY_BACKOFF_MS=${draft.retryBackoffMs.trim()}`);
   return rows.join('\n');
+}
+
+function toValidateModelConfigurationRequest(draft: ModelConfigurationDraft) {
+  const provider = draft.provider === 'deepseek' ? 'openai-compatible' : draft.provider;
+
+  return {
+    provider,
+    model: draft.model.trim(),
+    apiKey: draft.apiKey.trim() || undefined,
+    baseUrl: provider === 'openai-compatible' ? draft.baseUrl.trim() : undefined,
+    providerName: provider === 'openai-compatible' ? draft.providerName.trim() : undefined,
+    extraBody: draft.extraBodyJson.trim()
+      ? (JSON.parse(draft.extraBodyJson) as Record<string, unknown>)
+      : undefined,
+    timeoutMs: Number(draft.timeoutMs),
+    maxRetries: Number(draft.maxRetries),
+    retryBackoffMs: Number(draft.retryBackoffMs),
+  };
 }
 
 function AuditTrailSection() {

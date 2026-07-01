@@ -213,6 +213,8 @@ curl http://127.0.0.1:4000/ready
 
 Connectivity mode calls the configured provider's `/models` endpoint with a bounded timeout and never logs the API key.
 
+The Administration -> Model Configuration screen reads the deployed runtime through `GET /model-configuration/runtime` and can validate a candidate provider through `POST /model-configuration/validate`. Candidate API keys are used only for that validation request, are not persisted by the backend, and are never returned in API responses.
+
 ## API and Authorization
 
 Public operational endpoints:
@@ -234,6 +236,8 @@ Main product and harness endpoints include:
 - `GET /audit-events`
 - `GET /product-inventory`
 - `GET /change-requests/{changeRequestId}/evidence-package`
+- `GET /model-configuration/runtime`
+- `POST /model-configuration/validate`
 - `POST /templates/{templateUuid}/mapping-change-requests`
 - `POST /templates/{templateUuid}/lifecycle-change-requests`
 - `POST /template-versions/{versionId}/current-version-change-requests`
@@ -291,13 +295,14 @@ Run the main no-infrastructure PR gate before opening a pull request:
 npm run test:no-infra
 ```
 
-This runs type checks, secret scan, backend smoke tests, readiness and metrics checks, runtime configuration checks, API-surface checks, AI-adapter checks, PII masking checks, golden replay evals, release evidence checks, live frontend data checks, CI workflow checks, deploy config checks, build checks, web bundle checks, and local UI smoke checks.
+This runs type checks, secret scan, backend smoke tests, readiness and metrics checks, model-configuration API checks, runtime configuration checks, API-surface checks, AI-adapter checks, PII masking checks, golden replay evals, release evidence checks, live frontend data checks, CI workflow checks, deploy config checks, build checks, web bundle checks, and local UI smoke checks.
 
 Other useful gates:
 
 | Command | Use when |
 | --- | --- |
 | `npm run test:backend` | You need a local backend smoke test without Postgres or Temporal. |
+| `npm run test:model-config` | You changed provider runtime visibility, model configuration validation, or secret redaction behavior. |
 | `npm run test:evals` | You changed golden fixtures, contracts, provider output shape, or policy routing. |
 | `npm run test:ai-adapter` | You changed provider adapter behavior. |
 | `npm run test:pii:local` | You changed masking rules or prompt/provider boundaries. |
@@ -307,7 +312,7 @@ Other useful gates:
 | `npm run test:harness:temporal:provider-failure` | You need to verify failed provider-run persistence and public error summaries. |
 | `npm run test:release-readiness:api:pg` | You need a live API readiness gate over persisted release evidence. |
 | `npm run test:deploy:compose` | You changed Dockerfiles, compose config, migrations, API startup, worker startup, or web serving. |
-| `npm run test:release-preflight:local` | You are preparing a release candidate and want the Docker-backed preflight suite. |
+| `npm run test:release-preflight:local` | You are preparing a release candidate and want the Docker-backed preflight suite plus model-configuration API validation. |
 
 The GitHub CI workflow runs `npm run test:no-infra` on pull requests and pushes to `main` or `codex/**`. The release preflight workflow is available as a manual GitHub Actions dispatch.
 

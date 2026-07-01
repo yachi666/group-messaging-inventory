@@ -436,6 +436,63 @@ export const readinessResponseSchema = z.object({
   ),
 });
 
+export const modelProviderSchema = z.enum(['noop', 'openai', 'openai-compatible']);
+
+export const modelConfigurationStatusSchema = z.object({
+  status: z.enum(['up', 'degraded', 'skipped']),
+  checkedAt: z.string().datetime(),
+  detail: z.string().min(1),
+});
+
+export const modelRuntimeConfigurationResponseSchema = z.object({
+  runtime: z.object({
+    provider: modelProviderSchema,
+    model: z.string().min(1),
+    providerName: z.string().min(1),
+    promptVersion: z.string().min(1),
+    baseUrl: z.string().url().nullable(),
+    readinessMode: z.enum(['config', 'connectivity']),
+    credentials: z.object({
+      required: z.boolean(),
+      configured: z.boolean(),
+    }),
+    request: z.object({
+      timeoutMs: z.number().int().positive().nullable(),
+      maxRetries: z.number().int().nonnegative().nullable(),
+      retryBackoffMs: z.number().int().nonnegative().nullable(),
+      extraBodyConfigured: z.boolean(),
+    }),
+  }),
+  validation: modelConfigurationStatusSchema,
+});
+
+export const validateModelConfigurationSchema = z.object({
+  provider: modelProviderSchema,
+  model: z.string().min(1).max(200),
+  apiKey: z.string().min(1).max(500).optional(),
+  baseUrl: z.string().url().optional(),
+  providerName: z
+    .string()
+    .regex(/^[A-Za-z0-9._-]{1,64}$/)
+    .optional(),
+  extraBody: z.record(z.string(), z.unknown()).optional(),
+  timeoutMs: z.number().int().positive().max(300_000).default(60_000),
+  maxRetries: z.number().int().nonnegative().max(5).default(0),
+  retryBackoffMs: z.number().int().nonnegative().max(30_000).default(250),
+});
+
+export const validateModelConfigurationResponseSchema = z.object({
+  candidate: z.object({
+    provider: modelProviderSchema,
+    model: z.string().min(1),
+    providerName: z.string().min(1),
+    baseUrl: z.string().url().nullable(),
+    credentialsProvided: z.boolean(),
+    extraBodyConfigured: z.boolean(),
+  }),
+  validation: modelConfigurationStatusSchema,
+});
+
 export const standardErrorSchema = z.object({
   error: z.object({
     requestId: z.string().min(1),
@@ -505,3 +562,12 @@ export type RecordPipelineReleaseEvidenceResponse = z.infer<
   typeof recordPipelineReleaseEvidenceResponseSchema
 >;
 export type ReadinessResponse = z.infer<typeof readinessResponseSchema>;
+export type ModelRuntimeConfigurationResponse = z.infer<
+  typeof modelRuntimeConfigurationResponseSchema
+>;
+export type ValidateModelConfigurationRequest = z.infer<
+  typeof validateModelConfigurationSchema
+>;
+export type ValidateModelConfigurationResponse = z.infer<
+  typeof validateModelConfigurationResponseSchema
+>;

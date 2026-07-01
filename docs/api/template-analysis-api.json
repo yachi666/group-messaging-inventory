@@ -164,6 +164,23 @@
       "response": "changeRequestResponseSchema"
     },
     {
+      "operationId": "getModelRuntimeConfiguration",
+      "method": "GET",
+      "path": "/model-configuration/runtime",
+      "status": 200,
+      "roles": ["analysis_reader", "auditor"],
+      "response": "modelRuntimeConfigurationResponseSchema"
+    },
+    {
+      "operationId": "validateModelConfiguration",
+      "method": "POST",
+      "path": "/model-configuration/validate",
+      "status": 200,
+      "roles": ["change_checker", "auditor"],
+      "request": "validateModelConfigurationSchema",
+      "response": "validateModelConfigurationResponseSchema"
+    },
+    {
       "operationId": "getLatestEvaluation",
       "method": "GET",
       "path": "/analysis-evaluations/latest",

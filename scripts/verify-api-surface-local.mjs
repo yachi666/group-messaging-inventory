@@ -8,12 +8,18 @@ const analysisController = read('apps/api/src/modules/analysis-runs/analysis-run
 const evaluationsController = read(
   'apps/api/src/modules/analysis-evaluations/analysis-evaluations.controller.ts',
 );
+const modelConfigurationController = read(
+  'apps/api/src/modules/model-configuration/model-configuration.controller.ts',
+);
+const modelConfigurationService = read(
+  'apps/api/src/modules/model-configuration/model-configuration.service.ts',
+);
 const healthController = read('apps/api/src/modules/health.controller.ts');
 const governanceAuthContext = read('apps/api/src/auth/governance-auth-context.ts');
 const governanceAuthGuard = read('apps/api/src/auth/governance-auth.guard.ts');
 const contracts = read('packages/contracts/src/index.ts');
 
-const expectedEndpointCount = 20;
+const expectedEndpointCount = 22;
 
 assertEqual(manifest.service, 'group-messaging-inventory-api', 'manifest service');
 assertEqual(manifest.basePath, '/', 'manifest basePath');
@@ -102,6 +108,31 @@ assertSourceContains(
   analysisController,
   '@Headers(internalTenantScopeHeader) tenantScopes: string | undefined',
   'single analysis run reads accept internal tenant scope header',
+);
+assertSourceContains(
+  contracts,
+  'modelRuntimeConfigurationResponseSchema',
+  'model runtime configuration response schema',
+);
+assertSourceContains(
+  contracts,
+  'validateModelConfigurationSchema',
+  'candidate model configuration validation request schema',
+);
+assertSourceContains(
+  modelConfigurationService,
+  'credentials: {',
+  'model configuration service returns credential metadata only',
+);
+assertSourceContains(
+  modelConfigurationService,
+  'configured: !external || Boolean(apiKey)',
+  'model configuration service redacts runtime api key',
+);
+assertSourceContains(
+  modelConfigurationService,
+  'credentialsProvided: request.provider ===',
+  'model validation service redacts candidate api key',
 );
 
 const operationIds = new Set();
@@ -225,6 +256,17 @@ assertEndpoint('decideChangeRequest', analysisController, {
   roles: ['change_checker'],
   status: 200,
   requestSchema: 'decideChangeRequestSchema',
+});
+assertEndpoint('getModelRuntimeConfiguration', modelConfigurationController, {
+  decorator: "@Get('runtime')",
+  roles: ['analysis_reader', 'auditor'],
+  status: 200,
+});
+assertEndpoint('validateModelConfiguration', modelConfigurationController, {
+  decorator: "@Post('validate')",
+  roles: ['change_checker', 'auditor'],
+  status: 200,
+  requestSchema: 'validateModelConfigurationSchema',
 });
 assertEndpoint('getLatestEvaluation', evaluationsController, {
   decorator: "@Get('latest')",
