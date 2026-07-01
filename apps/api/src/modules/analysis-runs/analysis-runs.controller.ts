@@ -70,8 +70,13 @@ export class AnalysisRunsController {
 
   @Get('analysis-runs/:runId/evidence-package')
   @RequiresRoles('analysis_reader', 'auditor')
-  getAnalysisRunEvidencePackage(@Param('runId') runId: string) {
-    return this.analysisRuns.getAnalysisRunEvidencePackage(runId);
+  getAnalysisRunEvidencePackage(
+    @Param('runId') runId: string,
+    @Headers(internalTenantScopeHeader) tenantScopes: string | undefined,
+  ) {
+    return this.analysisRuns.getAnalysisRunEvidencePackage(runId, {
+      tenantScopes: parseScopeHeader(tenantScopes),
+    });
   }
 
   @Post('analysis-runs/:runId/confirm')
@@ -144,16 +149,26 @@ export class AnalysisRunsController {
 
   @Get('audit-events')
   @RequiresRoles('change_checker', 'auditor')
-  listAuditEvents(@Query() query: unknown) {
+  listAuditEvents(
+    @Query() query: unknown,
+    @Headers(internalTenantScopeHeader) tenantScopes: string | undefined,
+  ) {
     const request = listAuditEventsQuerySchema.parse(query) satisfies ListAuditEventsQuery;
 
-    return this.analysisRuns.listAuditEvents(request);
+    return this.analysisRuns.listAuditEvents(request, {
+      tenantScopes: parseScopeHeader(tenantScopes),
+    });
   }
 
   @Get('change-requests/:changeRequestId/evidence-package')
   @RequiresRoles('change_checker', 'auditor')
-  getChangeRequestEvidencePackage(@Param('changeRequestId') changeRequestId: string) {
-    return this.analysisRuns.getChangeRequestEvidencePackage(changeRequestId);
+  getChangeRequestEvidencePackage(
+    @Param('changeRequestId') changeRequestId: string,
+    @Headers(internalTenantScopeHeader) tenantScopes: string | undefined,
+  ) {
+    return this.analysisRuns.getChangeRequestEvidencePackage(changeRequestId, {
+      tenantScopes: parseScopeHeader(tenantScopes),
+    });
   }
 
   @Post('templates/:templateUuid/mapping-change-requests')

@@ -53,9 +53,9 @@ try {
     throw new Error(`Expected 1 seeded pending approval, got ${seededPending.length}.`);
   }
 
-  const evidencePackage = await repository.getChangeRequestEvidencePackage(
-    changeRequests.approved.changeRequestId,
-  );
+  const evidencePackage = await repository.getChangeRequestEvidencePackage({
+    changeRequestId: changeRequests.approved.changeRequestId,
+  });
 
   if (!evidencePackage || evidencePackage.auditEvents.length < 2) {
     throw new Error('Expected approved change request evidence package with audit events.');

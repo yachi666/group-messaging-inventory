@@ -110,6 +110,23 @@ try {
   ) {
     throw new Error('analysis run evidence package must include confirmation audit event');
   }
+  const blockedScopeRunEvidencePackage = await getJsonWithStatus(
+    `${baseUrl}/analysis-runs/${submitResponse.runId}/evidence-package`,
+    {
+      'x-gmi-scope-tenants': 'tenant-without-access',
+    },
+  );
+  assertEqual(
+    blockedScopeRunEvidencePackage.status,
+    403,
+    'blocked tenant-scoped analysis run evidence status',
+  );
+  standardErrorSchema.parse(blockedScopeRunEvidencePackage.body);
+  assertEqual(
+    blockedScopeRunEvidencePackage.body.error.code,
+    'access_denied',
+    'blocked tenant-scoped analysis run evidence error code',
+  );
 
   await verifyBaseRevisionConflict(submitResponse.runId);
   await verifyAnalysisRunTerminalGuard(submitResponse.runId);
@@ -864,6 +881,23 @@ async function verifyMakerCheckerDecisionFlow() {
   if (!evidencePackage.proposedPatch?.targetUseCaseId) {
     throw new Error('evidence package did not include proposed mapping patch');
   }
+  const blockedScopeEvidencePackage = await getJsonWithStatus(
+    `${baseUrl}/change-requests/${changeRequest.changeRequestId}/evidence-package`,
+    {
+      'x-gmi-scope-tenants': 'tenant-without-access',
+    },
+  );
+  assertEqual(
+    blockedScopeEvidencePackage.status,
+    403,
+    'blocked tenant-scoped change request evidence status',
+  );
+  standardErrorSchema.parse(blockedScopeEvidencePackage.body);
+  assertEqual(
+    blockedScopeEvidencePackage.body.error.code,
+    'access_denied',
+    'blocked tenant-scoped change request evidence error code',
+  );
 
   const auditEventsResponse = await getJson(
     `${baseUrl}/audit-events?changeRequestId=${changeRequest.changeRequestId}`,
@@ -878,6 +912,18 @@ async function verifyMakerCheckerDecisionFlow() {
     ),
     true,
     'audit event change request filter',
+  );
+  const blockedScopeAuditEventsResponse = await getJson(
+    `${baseUrl}/audit-events?changeRequestId=${changeRequest.changeRequestId}`,
+    {
+      'x-gmi-scope-tenants': 'tenant-without-access',
+    },
+  );
+  auditEventsResponseSchema.parse(blockedScopeAuditEventsResponse);
+  assertEqual(
+    blockedScopeAuditEventsResponse.auditEvents.length,
+    0,
+    'blocked tenant-scoped audit event count',
   );
 
   const queueAfterApproval = await getJson(`${baseUrl}/change-requests?status=PendingApproval`);
@@ -1209,6 +1255,20 @@ async function getJson(url, headers = {}) {
   }
 
   return response.json();
+}
+
+async function getJsonWithStatus(url, headers = {}) {
+  const response = await fetch(url, {
+    headers: {
+      ...defaultAuthHeaders(),
+      ...headers,
+    },
+  });
+
+  return {
+    status: response.status,
+    body: await response.json(),
+  };
 }
 
 async function postJson(url, body, headers = {}) {

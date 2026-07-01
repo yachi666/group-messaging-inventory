@@ -586,6 +586,17 @@ export type ListAuditEventsRecord = {
   sourceRunId?: string;
   changeRequestId?: string;
   limit?: number;
+  tenantScopes?: string[];
+};
+
+export type GetAnalysisRunEvidencePackageRecord = {
+  runId: string;
+  tenantScopes?: string[];
+};
+
+export type GetChangeRequestEvidencePackageRecord = {
+  changeRequestId: string;
+  tenantScopes?: string[];
 };
 
 export type ChangeRequestEvidencePackageRecord = {
@@ -631,10 +642,10 @@ export type AnalysisRunRepository = {
   transitionReviewTask(command: TransitionReviewTaskRecord): Promise<ReviewTaskRecord>;
   listAuditEvents(command?: ListAuditEventsRecord): Promise<AuditEvidenceEventRecord[]>;
   getAnalysisRunEvidencePackage(
-    runId: string,
+    command: GetAnalysisRunEvidencePackageRecord,
   ): Promise<AnalysisRunEvidencePackageRecord | null>;
   getChangeRequestEvidencePackage(
-    changeRequestId: string,
+    command: GetChangeRequestEvidencePackageRecord,
   ): Promise<ChangeRequestEvidencePackageRecord | null>;
   submitChangeRequest(command: SubmitChangeRequestRecord): Promise<MappingChangeRequestRecord>;
   decideChangeRequest(command: DecideChangeRequestRecord): Promise<MappingChangeRequestRecord>;
@@ -1105,12 +1116,24 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
   }
 
   async getChangeRequestEvidencePackage(
-    changeRequestId: string,
+    command: GetChangeRequestEvidencePackageRecord,
   ): Promise<ChangeRequestEvidencePackageRecord | null> {
+    const { changeRequestId } = command;
     const changeRequest = this.changeRequests.get(changeRequestId);
 
     if (!changeRequest) {
       return null;
+    }
+
+    if (!matchesTenantScope(changeRequest.objectId, command.tenantScopes)) {
+      throw new RepositoryError(
+        'access_denied',
+        'Data scope does not permit access to this change request evidence package.',
+        {
+          objectType: 'change_request',
+          objectId: changeRequestId,
+        },
+      );
     }
 
     const sourceRun = await this.getRun(changeRequest.sourceRunId);
@@ -1133,17 +1156,30 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
   }
 
   async getAnalysisRunEvidencePackage(
-    runId: string,
+    command: GetAnalysisRunEvidencePackageRecord,
   ): Promise<AnalysisRunEvidencePackageRecord | null> {
+    const { runId } = command;
     const sourceRun = await this.getRun(runId);
 
     if (!sourceRun) {
       return null;
     }
 
+    if (!matchesTenantScope(sourceRun.templateUuid, command.tenantScopes)) {
+      throw new RepositoryError(
+        'access_denied',
+        'Data scope does not permit access to this analysis run evidence package.',
+        {
+          objectType: 'analysis_run',
+          objectId: runId,
+        },
+      );
+    }
+
     const auditEvents = await this.listAuditEvents({
       sourceRunId: runId,
       limit: 200,
+      tenantScopes: command.tenantScopes,
     });
 
     return {
@@ -1172,8 +1208,37 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
         (event) =>
           !command.changeRequestId || event.changeRequestId === command.changeRequestId,
       )
+      .filter((event) => this.matchesAuditEventTenantScope(event, command.tenantScopes))
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
       .slice(0, limit);
+  }
+
+  private matchesAuditEventTenantScope(
+    event: AuditEvidenceEventRecord,
+    tenantScopes: string[] | undefined,
+  ) {
+    if (!tenantScopes || tenantScopes.length === 0) {
+      return true;
+    }
+
+    if (event.sourceRunId) {
+      const sourceRun =
+        this.completedRuns.get(event.sourceRunId) ?? this.queuedRuns.get(event.sourceRunId);
+
+      if (sourceRun) {
+        return matchesTenantScope(sourceRun.templateUuid, tenantScopes);
+      }
+    }
+
+    if (event.changeRequestId) {
+      const changeRequest = this.changeRequests.get(event.changeRequestId);
+
+      if (changeRequest) {
+        return matchesTenantScope(changeRequest.objectId, tenantScopes);
+      }
+    }
+
+    return matchesTenantScope(event.objectId, tenantScopes);
   }
 
   private getExistingReviewTask(taskId: string): ReviewTaskRecord {

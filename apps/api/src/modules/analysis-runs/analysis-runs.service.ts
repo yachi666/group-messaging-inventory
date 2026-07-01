@@ -289,13 +289,17 @@ export class AnalysisRunsService {
     };
   }
 
-  async listAuditEvents(query: ListAuditEventsQuery): Promise<AuditEventsResponse> {
+  async listAuditEvents(
+    query: ListAuditEventsQuery,
+    scope: DataAccessScope = {},
+  ): Promise<AuditEventsResponse> {
     const auditEvents = await this.repository.listAuditEvents({
       objectType: query.objectType,
       objectId: query.objectId,
       sourceRunId: query.sourceRunId,
       changeRequestId: query.changeRequestId,
       limit: query.limit,
+      tenantScopes: scope.tenantScopes,
     });
 
     return {
@@ -305,10 +309,12 @@ export class AnalysisRunsService {
 
   async getChangeRequestEvidencePackage(
     changeRequestId: string,
+    scope: DataAccessScope = {},
   ): Promise<ChangeRequestEvidencePackage> {
-    const evidencePackage = await this.repository.getChangeRequestEvidencePackage(
+    const evidencePackage = await this.repository.getChangeRequestEvidencePackage({
       changeRequestId,
-    );
+      tenantScopes: scope.tenantScopes,
+    });
 
     if (!evidencePackage) {
       throw new NotFoundException(
@@ -330,8 +336,12 @@ export class AnalysisRunsService {
 
   async getAnalysisRunEvidencePackage(
     runId: string,
+    scope: DataAccessScope = {},
   ): Promise<AnalysisRunEvidencePackage> {
-    const evidencePackage = await this.repository.getAnalysisRunEvidencePackage(runId);
+    const evidencePackage = await this.repository.getAnalysisRunEvidencePackage({
+      runId,
+      tenantScopes: scope.tenantScopes,
+    });
 
     if (!evidencePackage) {
       throw new NotFoundException(

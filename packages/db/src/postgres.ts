@@ -23,6 +23,8 @@ import type {
   DecideChangeRequestRecord,
   Database,
   ChangeRequestEvidencePackageRecord,
+  GetAnalysisRunEvidencePackageRecord,
+  GetChangeRequestEvidencePackageRecord,
   ListAnalysisResultsRecord,
   ListAuditEventsRecord,
   ListChangeRequestsRecord,
@@ -981,8 +983,9 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
   }
 
   async getChangeRequestEvidencePackage(
-    changeRequestId: string,
+    command: GetChangeRequestEvidencePackageRecord,
   ): Promise<ChangeRequestEvidencePackageRecord | null> {
+    const { changeRequestId } = command;
     const changeRequest = await this.db
       .selectFrom('change_requests')
       .selectAll()
@@ -992,6 +995,13 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
     if (!changeRequest?.source_run_id) {
       return null;
     }
+
+    await this.assertTemplateTenantScope(
+      changeRequest.object_id,
+      command.tenantScopes,
+      'change_request',
+      changeRequestId,
+    );
 
     const sourceRun = await this.getRun(changeRequest.source_run_id);
 
@@ -1019,13 +1029,21 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
   }
 
   async getAnalysisRunEvidencePackage(
-    runId: string,
+    command: GetAnalysisRunEvidencePackageRecord,
   ): Promise<AnalysisRunEvidencePackageRecord | null> {
+    const { runId } = command;
     const sourceRun = await this.getRun(runId);
 
     if (!sourceRun) {
       return null;
     }
+
+    await this.assertTemplateTenantScope(
+      sourceRun.templateUuid,
+      command.tenantScopes,
+      'analysis_run',
+      runId,
+    );
 
     const auditRows = await this.db
       .selectFrom('audit_events')
@@ -1049,30 +1067,104 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
     command: ListAuditEventsRecord = {},
   ): Promise<AuditEvidenceEventRecord[]> {
     let query = this.db
-      .selectFrom('audit_events')
+      .selectFrom('audit_events as ae')
       .selectAll()
-      .orderBy('created_at', 'desc')
+      .orderBy('ae.created_at', 'desc')
       .limit(command.limit ?? 100);
 
     if (command.objectType) {
-      query = query.where('object_type', '=', command.objectType);
+      query = query.where('ae.object_type', '=', command.objectType);
     }
 
     if (command.objectId) {
-      query = query.where('object_id', '=', command.objectId);
+      query = query.where('ae.object_id', '=', command.objectId);
     }
 
     if (command.sourceRunId) {
-      query = query.where('source_run_id', '=', command.sourceRunId);
+      query = query.where('ae.source_run_id', '=', command.sourceRunId);
     }
 
     if (command.changeRequestId) {
-      query = query.where('change_request_id', '=', command.changeRequestId);
+      query = query.where('ae.change_request_id', '=', command.changeRequestId);
+    }
+
+    if (hasTenantScopes(command.tenantScopes)) {
+      const tenantScopes = command.tenantScopes ?? [];
+      query = query.where(sql<boolean>`(
+        (
+          ae.object_type = 'template'
+          and exists (
+            select 1
+            from templates as t
+            where t.template_uuid = ae.object_id
+              and t.tenant_or_workspace = any(${tenantScopes})
+          )
+        )
+        or (
+          ae.source_run_id is not null
+          and exists (
+            select 1
+            from analysis_runs as ar
+            join templates as t on t.template_uuid = ar.template_uuid
+            where ar.run_id = ae.source_run_id
+              and t.tenant_or_workspace = any(${tenantScopes})
+          )
+        )
+        or (
+          ae.change_request_id is not null
+          and exists (
+            select 1
+            from change_requests as cr
+            join templates as t on t.template_uuid = cr.object_id
+            where cr.change_request_id = ae.change_request_id
+              and t.tenant_or_workspace = any(${tenantScopes})
+          )
+        )
+      )`);
     }
 
     const rows = await query.execute();
 
     return rows.map(mapAuditEvent);
+  }
+
+  private async assertTemplateTenantScope(
+    templateUuid: string,
+    tenantScopes: string[] | undefined,
+    objectType: string,
+    objectId: string,
+  ) {
+    if (!hasTenantScopes(tenantScopes)) {
+      return;
+    }
+
+    const allowed = await this.templateMatchesTenantScope(templateUuid, tenantScopes ?? []);
+
+    if (!allowed) {
+      throw new RepositoryError(
+        'access_denied',
+        'Data scope does not permit access to this evidence package.',
+        {
+          objectType,
+          objectId,
+        },
+      );
+    }
+  }
+
+  private async templateMatchesTenantScope(templateUuid: string, tenantScopes: string[]) {
+    if (tenantScopes.length === 0) {
+      return true;
+    }
+
+    const template = await this.db
+      .selectFrom('templates')
+      .select('template_uuid')
+      .where('template_uuid', '=', templateUuid)
+      .where('tenant_or_workspace', 'in', tenantScopes)
+      .executeTakeFirst();
+
+    return Boolean(template);
   }
 
   private async createTemplateChangeRequest(command: {

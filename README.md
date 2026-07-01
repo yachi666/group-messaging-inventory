@@ -179,9 +179,10 @@ curl -H 'x-actor-id: auditor-local' \
 
 `/templates/analysis-results` accepts `limit` and tenant scope filtering so workbench projections stay bounded and scoped.
 `/change-requests` supports `status`, `limit`, and tenant scope filtering for maker-checker queues.
-`/audit-events` supports filtering by `objectType`, `objectId`, `sourceRunId`, `changeRequestId`, and `limit`.
+`/audit-events` supports filtering by `objectType`, `objectId`, `sourceRunId`, `changeRequestId`, `limit`, and tenant scope.
 `/review-tasks` exposes analysis review tasks with `status`, `objectType`, `objectId`, `sourceRunId`, `assignedTo`, `limit`, and tenant scope filters so review-required analysis results can be traced from the workbench into a reviewer queue.
-`GET /analysis-runs/{runId}/evidence-package` exports a single-run evidence package with the public run response and related audit events. Successful and failed provider runs use the same contract; failed packages expose public error summaries without raw provider details.
+`GET /analysis-runs/{runId}/evidence-package` exports a tenant-scoped single-run evidence package with the public run response and related audit events. Successful and failed provider runs use the same contract; failed packages expose public error summaries without raw provider details.
+`GET /change-requests/{changeRequestId}/evidence-package` exports tenant-scoped maker-checker evidence for approved or rejected change decisions.
 `POST /review-tasks/{taskId}/transition` lets reviewers claim, start, escalate, resolve, or dismiss review tasks with actor attribution and audit events.
 The Review Queue Discovery, My Tasks, and Completed tabs load status-filtered template review tasks from this API. API-backed tasks can be claimed, started, and resolved from the queue, with local fallback data when the API is unavailable.
 

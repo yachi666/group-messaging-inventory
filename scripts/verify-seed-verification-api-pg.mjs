@@ -1,10 +1,13 @@
 import { spawn } from 'node:child_process';
 import {
+  analysisRunEvidencePackageSchema,
   aiTemplateAnalysisResultsResponseSchema,
+  auditEventsResponseSchema,
   changeRequestEvidencePackageSchema,
   changeRequestsResponseSchema,
   latestAnalysisEvaluationResponseSchema,
   reviewTasksResponseSchema,
+  standardErrorSchema,
 } from '@gmi/contracts';
 import { verificationSeedCases } from '@gmi/evals';
 
@@ -191,6 +194,79 @@ try {
     throw new Error('Approved evidence package missing decision audit event.');
   }
 
+  const blockedScopeApprovedEvidencePackage = await getJsonWithStatus(
+    `${baseUrl}/change-requests/${seedSummary.changeRequests.approved}/evidence-package`,
+    {
+      'x-gmi-scope-tenants': 'tenant-without-access',
+    },
+  );
+  assertEqual(
+    blockedScopeApprovedEvidencePackage.status,
+    403,
+    'blocked tenant-scoped change request evidence status',
+  );
+  standardErrorSchema.parse(blockedScopeApprovedEvidencePackage.body);
+  assertEqual(
+    blockedScopeApprovedEvidencePackage.body.error.code,
+    'access_denied',
+    'blocked tenant-scoped change request evidence error code',
+  );
+
+  const runEvidencePackage = await getJson(
+    `${baseUrl}/analysis-runs/${seedSummary.analysisRuns.approvalCandidate}/evidence-package`,
+    {
+      'x-gmi-scope-tenants': 'local',
+    },
+  );
+  analysisRunEvidencePackageSchema.parse(runEvidencePackage);
+  assertEqual(
+    runEvidencePackage.sourceRun.runId,
+    seedSummary.analysisRuns.approvalCandidate,
+    'analysis run evidence source run id',
+  );
+
+  const blockedScopeRunEvidencePackage = await getJsonWithStatus(
+    `${baseUrl}/analysis-runs/${seedSummary.analysisRuns.approvalCandidate}/evidence-package`,
+    {
+      'x-gmi-scope-tenants': 'tenant-without-access',
+    },
+  );
+  assertEqual(
+    blockedScopeRunEvidencePackage.status,
+    403,
+    'blocked tenant-scoped analysis run evidence status',
+  );
+  standardErrorSchema.parse(blockedScopeRunEvidencePackage.body);
+  assertEqual(
+    blockedScopeRunEvidencePackage.body.error.code,
+    'access_denied',
+    'blocked tenant-scoped analysis run evidence error code',
+  );
+
+  const locallyScopedAuditEvents = await getJson(
+    `${baseUrl}/audit-events?sourceRunId=${seedSummary.analysisRuns.approvalCandidate}`,
+    {
+      'x-gmi-scope-tenants': 'local',
+    },
+  );
+  auditEventsResponseSchema.parse(locallyScopedAuditEvents);
+  if (locallyScopedAuditEvents.auditEvents.length === 0) {
+    throw new Error('Expected local tenant-scoped audit events for seeded approval run.');
+  }
+
+  const blockedScopeAuditEvents = await getJson(
+    `${baseUrl}/audit-events?sourceRunId=${seedSummary.analysisRuns.approvalCandidate}`,
+    {
+      'x-gmi-scope-tenants': 'tenant-without-access',
+    },
+  );
+  auditEventsResponseSchema.parse(blockedScopeAuditEvents);
+  assertEqual(
+    blockedScopeAuditEvents.auditEvents.length,
+    0,
+    'blocked tenant-scoped audit event count',
+  );
+
   const latestEvaluation = await getJson(`${baseUrl}/analysis-evaluations/latest`);
   latestAnalysisEvaluationResponseSchema.parse(latestEvaluation);
   assertEqual(latestEvaluation.source.kind, 'postgres', 'latest evaluation source');
@@ -266,6 +342,21 @@ async function getJson(url, headers = {}) {
   }
 
   return response.json();
+}
+
+async function getJsonWithStatus(url, headers = {}) {
+  const response = await fetch(url, {
+    headers: {
+      'x-actor-id': 'seed-api-verifier',
+      'x-gmi-roles': 'analysis_reader,analysis_runner,change_checker,auditor',
+      ...headers,
+    },
+  });
+
+  return {
+    status: response.status,
+    body: await response.json(),
+  };
 }
 
 async function runNodeScript(scriptPath, env) {
