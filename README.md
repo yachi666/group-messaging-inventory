@@ -1,16 +1,22 @@
 # Group Messaging Inventory
 
-> Dashboard-first React MVP for discovering, matching, validating, and exporting a governed inventory of outbound group messaging use cases.
+> Dashboard-first TypeScript monorepo for governing outbound group messaging inventory and running the Templates Analysis Harness.
 
 [中文说明](./README.zh.md) · [MIT License](./LICENSE)
 
-## ✨ Overview
+## Overview
 
-Group Messaging Inventory helps teams answer a simple governance question: what outbound messages are live, who owns them, how are they sent, and can the control evidence be exported when needed?
+Group Messaging Inventory helps governance, messaging, and operations teams answer:
 
-This repository contains a workspaces-based TypeScript monorepo. The existing Vite + React frontend models the product experience, while new API, worker, and shared-package scaffolding begins the Templates Analysis Harness backend.
+- What outbound message templates and use cases are live?
+- Who owns them?
+- Which platform, tenant, sender, and template identifiers are involved?
+- Which changes require review or maker-checker approval?
+- Can audit evidence be exported when a reviewer, regulator, or release gate asks for it?
 
-## 🎯 MVP Scope
+The repository currently contains a Vite + React product UI, a NestJS API, a Temporal TypeScript worker, shared TypeScript packages, database migrations, deterministic evaluation gates, and Docker Compose profiles for local Postgres and Temporal.
+
+## Current Scope
 
 The MVP focuses on Messaging-owned platforms:
 
@@ -19,83 +25,148 @@ The MVP focuses on Messaging-owned platforms:
 - ICCM
 - IRIS
 
-The product direction is dashboard-first rather than marketing-first. The initial experience opens directly into operational inventory coverage, unknown traffic, drift exceptions, owner confirmation, and evidence readiness.
+The product is dashboard-first rather than marketing-first. The frontend opens into operational coverage, unknown traffic, drift exceptions, review queues, maker-checker governance, model configuration, and evidence readiness.
 
-## 🧭 Product Capabilities
+## Capabilities
 
-- Production-log inventory baseline for outbound messages
-- Candidate use case matching with confidence scoring
-- Drift detection for retired-but-live traffic, new sender identities, new templates, unknown traffic, and volume anomalies
-- Ownership workflow for Message Owner and Integrating System Owner confirmation
-- Classification support for Regulatory, Servicing, and Marketing messages
-- Evidence tracking, maker-checker status, and export-oriented audit trail
-- CSV and regulator response pack direction for future implementation
-- English and Simplified Chinese UI copy through the built-in language provider
+- Product inventory projection for dashboards, use cases, templates, review queues, governance, settings, analytics, and upload status.
+- Template analysis runs through either an enqueue-only local path or a Temporal-backed workflow.
+- AI provider isolation through `@gmi/ai-adapters`, with deterministic `noop`, OpenAI Agents SDK, and OpenAI-compatible chat-completions adapters.
+- Policy routing for auto-recorded, review-required, blocked, and maker-checker flows.
+- PII masking checks before provider calls.
+- Governance authorization through local headers or trusted gateway headers.
+- Postgres-backed audit events, review tasks, change requests, analysis outputs, evaluations, and release evidence.
+- Evidence-package exports for analysis runs and change requests.
+- Golden dataset evaluation gates and release-readiness checks.
 
-## 🧱 Tech Stack
+## Tech Stack
 
-- React 19
-- TypeScript
-- Vite
-- NestJS API scaffold
-- Temporal TypeScript worker scaffold
+- Node.js 24 in CI
 - npm workspaces
+- TypeScript
+- React 19 and Vite 8
+- NestJS 11 API
+- Temporal TypeScript SDK worker
+- PostgreSQL 16, Kysely, and `pg`
 - Zod contracts
-- Kysely database types
-- OpenAI Agents SDK behind a replaceable AI adapter
-- CSS design tokens
-- API-projected frontend data from Postgres-backed repository views
+- OpenAI Agents SDK behind replaceable adapters
+- Playwright-based UI smoke checks
+- Docker Compose for local infrastructure and app-profile verification
 
-## 📁 Project Structure
+## Repository Layout
 
 ```text
 apps/
-  web/                  Vite + React frontend
-  api/                  NestJS API scaffold
-  worker/               Temporal worker scaffold
+  web/          Vite + React frontend
+  api/          NestJS API
+  worker/       Temporal TypeScript worker
+
 packages/
-  domain/               Shared product types and status models
-  contracts/            Zod API and provider schemas
-  db/                   Kysely database table types
-  policy/               Governance and routing rules
-  runtime-config/       Shared startup configuration validation
-  ai-adapters/          Replaceable AI provider adapters: OpenAI Agents SDK, OpenAI-compatible, noop, replay
+  domain/       Shared product types and status models
+  contracts/    Zod API and provider schemas
+  db/           Kysely table types, migrations, and Postgres smoke test
+  policy/       Governance, routing, and PII masking rules
+  runtime-config/
+                Shared API/worker runtime configuration validation
+  ai-adapters/  Noop, OpenAI, and OpenAI-compatible provider adapters
+  evals/        Golden dataset evaluation and release-readiness logic
+
+docs/
+  agents/       Agent-facing repository operating notes
+  api/          API surface snapshot
+  architecture/ Backend architecture notes
+
+design/         Product design index, domain model, workflows, and page specs
+scripts/        Local verification, seeding, release, and smoke-test scripts
 ```
 
-The frontend source lives in `apps/web/src/`.
+Frontend source lives in `apps/web/src/`. Product and implementation direction is documented in [design/README.md](./design/README.md), [DESIGN.md](./DESIGN.md), [requirements.md](./requirements.md), and [requirements.zh.md](./requirements.zh.md).
 
-## 🚀 Getting Started
+## Prerequisites
 
-Install dependencies:
+- Node.js 24, matching `.github/workflows/ci.yml`.
+- npm, using the checked-in `package-lock.json`.
+- Docker Desktop or a compatible Docker Compose runtime for Postgres, Temporal, and containerized app-profile checks.
+
+Install dependencies with:
 
 ```bash
 npm install
 ```
 
-Start the development server:
+CI uses `npm ci`; use that when you want a clean lockfile-exact install.
+
+## Quick Start
+
+Run the frontend only:
 
 ```bash
 npm run dev
 ```
 
-Start backend processes:
+Run the API only:
 
 ```bash
 npm run dev:api
-npm run dev:worker
 ```
 
-Operational endpoints:
+Run the frontend against a local API at `http://127.0.0.1:4000`:
 
-- `GET /health` is the API liveness check.
-- `GET /ready` returns component readiness for the API, Postgres, Temporal workflow driver, and AI provider configuration. When `DATABASE_URL` or `ANALYSIS_WORKFLOW_DRIVER=temporal` is enabled, readiness performs lightweight dependency probes instead of only checking environment variables.
-- `GET /metrics` exposes Prometheus-style API request counters, duration sums, and low-cardinality domain counters for analysis submissions, confirmations, and release evidence records. Labels intentionally avoid template ids, run ids, release ids, and change request ids.
-- Every API response includes `x-request-id`. Send `x-request-id` on inbound requests to preserve a caller trace id; standard error responses also include `error.requestId`.
-- API access logs are emitted as single-line JSON with `event=http_request`, `requestId`, `actorId`, `roleCount`, method, path, status code, and duration.
-- API and worker startup use shared runtime configuration validation through `@gmi/runtime-config`, so invalid provider, Temporal, port, timeout, or database URL settings fail early with actionable errors.
-- The implemented API surface is tracked in `docs/api/template-analysis-api.json` and checked by `npm run test:api-surface`.
+```bash
+npm run dev:web:api
+```
 
-By default the worker uses `AI_PROVIDER=noop`, which keeps local development deterministic and does not call a model provider. To run the analysis activity through OpenAI Agents SDK, set:
+Run local infrastructure and migrations:
+
+```bash
+npm run infra:up
+npm run db:migrate
+npm run db:smoke
+```
+
+Run API, worker, and frontend together with the local app Docker profile:
+
+```bash
+docker compose --profile app up --build gmi-api gmi-worker gmi-web
+```
+
+Default local URLs:
+
+- Frontend dev server: shown by Vite, usually `http://127.0.0.1:5173`
+- Containerized web app: `http://127.0.0.1:5080`
+- API: `http://127.0.0.1:4000`
+- API health: `http://127.0.0.1:4000/health`
+- API readiness: `http://127.0.0.1:4000/ready`
+- API metrics: `http://127.0.0.1:4000/metrics`
+- Postgres: `postgres://gmi:gmi@127.0.0.1:55432/gmi`
+- Temporal: `127.0.0.1:7233`
+- Temporal UI: `http://127.0.0.1:8233`
+
+## Runtime Configuration
+
+The API and worker validate runtime configuration through `@gmi/runtime-config` and fail fast on invalid values.
+
+Common variables:
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `PORT` | API port | `4000` |
+| `DATABASE_URL` | Enables Postgres-backed repositories | unset, in-memory/local fallback where supported |
+| `API_AUTH_MODE` | `header`, `gateway`, or `disabled` | `header` |
+| `ANALYSIS_WORKFLOW_DRIVER` | `none` or `temporal` | `none` |
+| `TEMPORAL_ADDRESS` | Temporal service address | `127.0.0.1:7233` unless Temporal mode requires explicit config |
+| `TEMPORAL_NAMESPACE` | Temporal namespace | `default` |
+| `TEMPORAL_TASK_QUEUE` | Temporal task queue | `template-analysis` |
+| `AI_PROVIDER` | `noop`, `openai`, or `openai-compatible` | `noop` |
+| `READINESS_TIMEOUT_MS` | Dependency probe timeout | `1000` |
+
+Use the deterministic local provider for normal development:
+
+```bash
+AI_PROVIDER=noop npm run dev:worker
+```
+
+Use OpenAI Agents SDK:
 
 ```bash
 AI_PROVIDER=openai
@@ -105,7 +176,7 @@ OPENAI_TRACE_INCLUDE_SENSITIVE_DATA=false
 npm run dev:worker
 ```
 
-To run through an OpenAI-compatible chat-completions gateway such as LiteLLM, vLLM, OpenRouter, or an internal model gateway, set:
+Use an OpenAI-compatible gateway such as LiteLLM, vLLM, OpenRouter, DeepSeek, or an internal gateway:
 
 ```bash
 AI_PROVIDER=openai-compatible
@@ -113,253 +184,129 @@ OPENAI_COMPATIBLE_BASE_URL=http://127.0.0.1:4001/v1
 OPENAI_COMPATIBLE_API_KEY=...
 OPENAI_COMPATIBLE_MODEL=provider-model-name
 OPENAI_COMPATIBLE_PROVIDER_NAME=internal-gateway
-OPENAI_COMPATIBLE_EXTRA_BODY_JSON=
 OPENAI_COMPATIBLE_TIMEOUT_MS=60000
 OPENAI_COMPATIBLE_MAX_RETRIES=2
 OPENAI_COMPATIBLE_RETRY_BACKOFF_MS=250
 npm run dev:worker
 ```
 
-For a future DeepSeek integration, keep the API key in the environment and configure the same adapter:
+Provider-specific request metadata can be supplied with `OPENAI_COMPATIBLE_EXTRA_BODY_JSON`, which must be a JSON object. Secrets should stay in the environment; do not commit real API keys.
+
+## API and Authorization
+
+Public operational endpoints:
+
+- `GET /health`
+- `GET /ready`
+- `GET /metrics`
+
+Main product and harness endpoints include:
+
+- `POST /template-versions/{versionId}/analysis-runs`
+- `GET /analysis-runs/{runId}`
+- `GET /analysis-runs/{runId}/evidence-package`
+- `POST /analysis-runs/{runId}/confirm`
+- `GET /templates/analysis-results`
+- `GET /review-tasks`
+- `POST /review-tasks/{taskId}/transition`
+- `GET /change-requests`
+- `GET /audit-events`
+- `GET /product-inventory`
+- `GET /change-requests/{changeRequestId}/evidence-package`
+- `POST /templates/{templateUuid}/mapping-change-requests`
+- `POST /templates/{templateUuid}/lifecycle-change-requests`
+- `POST /template-versions/{versionId}/current-version-change-requests`
+- `POST /change-requests/{changeRequestId}/submit`
+- `POST /change-requests/{changeRequestId}/decision`
+- `GET /analysis-evaluations/latest`
+- `POST /analysis-evaluations/release-evidence`
+
+The implemented API surface is tracked in [docs/api/template-analysis-api.json](./docs/api/template-analysis-api.json) and checked by `npm run test:api-surface`.
+
+For local protected routes, use header auth:
 
 ```bash
-export DEEPSEEK_API_KEY=...
-AI_PROVIDER=openai-compatible
-OPENAI_COMPATIBLE_BASE_URL=https://api.deepseek.com
-OPENAI_COMPATIBLE_API_KEY=$DEEPSEEK_API_KEY
-OPENAI_COMPATIBLE_MODEL=deepseek-v4-flash
-OPENAI_COMPATIBLE_PROVIDER_NAME=deepseek
-OPENAI_COMPATIBLE_EXTRA_BODY_JSON='{"thinking":{"type":"enabled"},"reasoning_effort":"high"}'
-OPENAI_COMPATIBLE_TIMEOUT_MS=60000
-OPENAI_COMPATIBLE_MAX_RETRIES=2
-OPENAI_COMPATIBLE_RETRY_BACKOFF_MS=250
-npm run dev:worker
-```
-
-The standalone curl example lives at `scripts/examples/deepseek-chat-completions.curl`.
-The OpenAI-compatible adapter retries transient provider failures such as HTTP 408, 429, 5xx, and network errors with configurable exponential backoff, while non-retryable 4xx errors fail fast with a stable `provider_error:*` message. Startup configuration rejects invalid provider names and requires `OPENAI_COMPATIBLE_EXTRA_BODY_JSON` to be a JSON object, so provider metadata stays low-cardinality and bad provider-specific options fail before the first workflow task. `npm run test:ai-adapter` verifies retry, backoff, provider-specific request fields, output schema parsing, and deterministic-only no-provider behavior locally.
-
-The frontend Administration area includes a `Model Configuration` screen for selecting `noop`, OpenAI, an OpenAI-compatible gateway, or the DeepSeek preset. It stores non-secret draft settings in browser local storage, keeps the API key only in browser session storage, and generates the exact env block expected by the API and Temporal worker. Applying a provider change still requires setting those env vars on the running API/worker process and restarting them; the browser UI does not hot-swap a live worker.
-
-The business harness still owns workflow state, policy routing, persistence, and review gates. Provider SDKs and OpenAI-compatible APIs are used only behind `@gmi/ai-adapters` for model orchestration, structured output, guardrails, and tracing.
-Worker analysis activities emit single-line JSON events with `event=ai_analysis_activity`, run/template/version ids, provider, model, prompt version, status, and duration. These activity logs deliberately omit raw template content, masked prompts, and model output.
-
-For local governance API authorization, use the lightweight header mode until SSO or an API gateway is attached:
-
-```bash
-API_AUTH_MODE=header
 curl -H 'x-actor-id: analyst-local' \
   -H 'x-gmi-roles: analysis_runner,change_maker,change_checker,auditor' \
   -H 'x-gmi-scope-tenants: local' \
   http://127.0.0.1:4000/ready
 ```
 
-Protected analysis and governance routes require both `x-actor-id` and one of these roles: `analysis_runner`, `analysis_reader`, `change_maker`, `change_checker`, or `auditor`. Health and readiness remain public. Set `API_AUTH_MODE=disabled` only for isolated local debugging.
-When `x-gmi-scope-tenants` is present, API-backed analysis results, review tasks, and Change Request queues are filtered to those tenant/workspace values before returning data.
+Supported roles are `analysis_runner`, `analysis_reader`, `change_maker`, `change_checker`, and `auditor`. Gateway mode reads trusted identity headers configured by `API_GATEWAY_ACTOR_HEADER`, `API_GATEWAY_ROLES_HEADER`, and `API_GATEWAY_TENANT_SCOPE_HEADER`.
 
-For an API gateway, SSO proxy, or service mesh that injects already-authenticated identity headers, use gateway mode:
-
-```bash
-API_AUTH_MODE=gateway
-API_GATEWAY_ACTOR_HEADER=x-gmi-authenticated-actor
-API_GATEWAY_ROLES_HEADER=x-gmi-authenticated-roles
-API_GATEWAY_TENANT_SCOPE_HEADER=x-gmi-authenticated-tenant-scopes
-```
-
-Gateway mode ignores local client `x-actor-id` / `x-gmi-roles` / `x-gmi-scope-tenants` as the source of truth, normalizes the trusted gateway actor and tenant scopes into the internal command context, and keeps controller-level `@RequiresRoles(...)` checks unchanged.
-
-The web client centralizes its local actor context in `apps/web/src/lib/governanceActor.ts`. Override `VITE_GOVERNANCE_ACTOR_ID`, `VITE_GOVERNANCE_ACTOR_DISPLAY_NAME`, and `VITE_GOVERNANCE_ROLES` to align API auth headers, My Tasks reviewer filtering, and audit actor IDs during local testing.
-For protected command routes, the API uses the authenticated `x-actor-id` header as the command actor and ignores spoofed actor IDs in request bodies; body actor fields remain only for backwards-compatible local clients.
-
-The immutable governance ledger is exposed through:
+The web client can align local testing headers with:
 
 ```bash
-curl -H 'x-actor-id: auditor-local' \
-  -H 'x-gmi-roles: auditor' \
-  'http://127.0.0.1:4000/audit-events?changeRequestId=CR-...'
+VITE_GOVERNANCE_ACTOR_ID=analyst-local
+VITE_GOVERNANCE_ACTOR_DISPLAY_NAME='Analyst Local'
+VITE_GOVERNANCE_ROLES=analysis_runner,change_maker,change_checker,auditor
 ```
 
-`/templates/analysis-results` accepts `limit` and tenant scope filtering so workbench projections stay bounded and scoped.
-`/change-requests` supports `status`, `limit`, and tenant scope filtering for maker-checker queues.
-`/audit-events` supports filtering by `objectType`, `objectId`, `sourceRunId`, `changeRequestId`, `limit`, and tenant scope.
-`/review-tasks` exposes analysis review tasks with `status`, `objectType`, `objectId`, `sourceRunId`, `assignedTo`, `limit`, and tenant scope filters so review-required analysis results can be traced from the workbench into a reviewer queue.
-`/product-inventory` exposes the live frontend inventory projection used by Dashboard, Use Cases, Templates, Workspace, Review Queue, Governance, Settings, and Analytics surfaces. It derives templates, use cases, review summaries, triage, evidence readiness, analytics signals, policy controls, and upload status from the API repository instead of browser-side mock files.
-`GET /analysis-runs/{runId}/evidence-package` exports a tenant-scoped single-run evidence package with the public run response and related audit events. Successful and failed provider runs use the same contract; failed packages expose public error summaries without raw provider details.
-`GET /change-requests/{changeRequestId}/evidence-package` exports tenant-scoped maker-checker evidence for approved or rejected change decisions.
-`POST /review-tasks/{taskId}/transition` lets reviewers claim, start, escalate, resolve, or dismiss review tasks with actor attribution and audit events.
-The Review Queue Discovery, My Tasks, and Completed tabs load status-filtered template review tasks from this API. When the task-specific API is empty or unavailable, the queue displays the live `/product-inventory` projection instead of local mock data.
+## Development Commands
 
-API submission can either enqueue only or start the Temporal workflow. For the full local harness path, run Temporal and set:
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Starts the Vite frontend. |
+| `npm run dev:web:api` | Starts the frontend with `VITE_API_BASE_URL=http://127.0.0.1:4000`. |
+| `npm run dev:api` | Starts the NestJS API. |
+| `npm run dev:api:pg` | Starts the API with the local Postgres connection string. |
+| `npm run dev:worker` | Starts the Temporal worker. |
+| `npm run dev:worker:local` | Starts the worker against local Temporal. |
+| `npm run infra:up` | Starts local Postgres and Temporal services. |
+| `npm run infra:down` | Stops local infrastructure. |
+| `npm run db:migrate` | Applies local Postgres migrations. |
+| `npm run db:smoke` | Runs the Postgres repository smoke test. |
+| `npm run typecheck` | Builds shared packages and runs TypeScript checks across workspaces. |
+| `npm run build` | Type-checks and builds packages, API, worker, and frontend. |
+| `npm run preview` | Serves the frontend production build. |
 
-```bash
-ANALYSIS_WORKFLOW_DRIVER=temporal
-TEMPORAL_ADDRESS=127.0.0.1:7233
-TEMPORAL_NAMESPACE=default
-TEMPORAL_TASK_QUEUE=template-analysis
-npm run dev:api
-```
+## Verification
 
-`POST /template-versions/{versionId}/analysis-runs` is idempotent when `idempotency-key` is supplied. A retry with the same key returns the existing run and its current status; if the Temporal workflow has already been started or completed, the API returns the same workflow id with `workflow.started=false` instead of starting duplicate work.
-
-Start local infrastructure for the backend:
-
-```bash
-npm run infra:up
-npm run db:migrate
-npm run db:smoke
-```
-
-To seed a richer Postgres-backed verification dataset for manual API/UI checks, run:
-
-```bash
-npm run seed:verification:pg
-```
-
-The seed command writes a timestamped dataset with nine reusable verification cases: auto-recorded, review-required, blocked, enhanced-review, candidate-version-drift, approved, pending, changes-requested, and rejected governance paths. It then verifies analysis result projections, review task queues, pending approvals, evidence packages, audit events, and latest release evidence. Override `SEED_DATASET_ID` when you need a stable dataset label for demos.
-
-To generate a fresh dataset and verify that the NestJS API can read it through real HTTP endpoints, run this after `npm run infra:up`:
-
-```bash
-npm run test:seed-verification-api:pg
-```
-
-This API-level gate starts the API against local Postgres, checks the nine seeded analysis results, the in-review task, the pending approval, the approved change request evidence package, and the persisted latest release evaluation.
-
-To validate the seed dataset shape without Postgres, run:
-
-```bash
-npm run test:verification-seed-cases:local
-```
-
-The local Postgres connection string is:
-
-```text
-postgres://gmi:gmi@127.0.0.1:55432/gmi
-```
-
-Temporal runs on `127.0.0.1:7233`, with the Temporal UI on `http://127.0.0.1:8233`.
-
-Run the local deploy profile with API, worker, and web containers:
-
-```bash
-docker compose --profile app up --build gmi-api gmi-worker gmi-web
-```
-
-The containerized API is available on `http://127.0.0.1:4000`, and the web app is served on `http://127.0.0.1:5080`. The app profile uses `AI_PROVIDER=noop`, header-based local authorization, Postgres, and Temporal by default. A one-shot `gmi-db-migrate` service applies database migrations before the API starts. API and worker processes handle shutdown signals so Postgres and Temporal connections are released during container stop or deploy replacement.
-
-To verify the containerized app profile end to end, run:
-
-```bash
-npm run test:deploy:compose
-```
-
-This builds and starts the app profile, verifies the migration job, API `/health` and `/ready`, nginx-served web bundle, and a real API -> container worker -> Temporal -> Postgres analysis run.
-
-Run type checks:
-
-```bash
-npm run typecheck
-```
-
-Build all packages, backend apps, and the frontend production bundle:
-
-```bash
-npm run build
-```
-
-Preview the production build:
-
-```bash
-npm run preview
-```
-
-## ✅ Verification
-
-Before opening a pull request, run:
+Run the main no-infrastructure PR gate before opening a pull request:
 
 ```bash
 npm run test:no-infra
 ```
 
-This runs type checks, secret scan, backend smoke, readiness and metrics smoke, PII masking gate, golden replay evals, verification seed-case validation, provider-adapter evals without external model calls, release evidence and release-readiness gates, CI workflow verification, and build. The same no-infrastructure gate set is wired into `.github/workflows/ci.yml` for pull requests and pushes to `main` or `codex/**` branches.
+This runs type checks, secret scan, backend smoke tests, readiness and metrics checks, runtime configuration checks, API-surface checks, AI-adapter checks, PII masking checks, golden replay evals, release evidence checks, live frontend data checks, CI workflow checks, deploy config checks, build checks, web bundle checks, and local UI smoke checks.
 
-Before publishing or promoting a release candidate, run the Docker-backed preflight gate:
+Other useful gates:
 
-```bash
-npm run test:release-preflight:local
-```
+| Command | Use when |
+| --- | --- |
+| `npm run test:backend` | You need a local backend smoke test without Postgres or Temporal. |
+| `npm run test:evals` | You changed golden fixtures, contracts, provider output shape, or policy routing. |
+| `npm run test:ai-adapter` | You changed provider adapter behavior. |
+| `npm run test:pii:local` | You changed masking rules or prompt/provider boundaries. |
+| `npm run test:live-frontend-data` | You changed frontend data loading or inventory projections. |
+| `npm run test:ui` | You changed visible frontend behavior and have a dev server running. |
+| `npm run test:harness:temporal` | You need the full API -> Temporal -> worker -> Postgres evidence-loop smoke. |
+| `npm run test:harness:temporal:provider-failure` | You need to verify failed provider-run persistence and public error summaries. |
+| `npm run test:deploy:compose` | You changed Dockerfiles, compose config, migrations, API startup, worker startup, or web serving. |
+| `npm run test:release-preflight:local` | You are preparing a release candidate and want the Docker-backed preflight suite. |
 
-This starts local Postgres and Temporal, applies migrations, runs the Postgres repository smoke, verifies seeded API data, persists evaluation and release evidence through Postgres and the API, exercises both successful and provider-failure API -> Temporal -> worker -> Postgres evidence loops, and verifies the containerized app profile. The same command is available as a manual GitHub Actions workflow in `.github/workflows/release-preflight.yml`.
+The GitHub CI workflow runs `npm run test:no-infra` on pull requests and pushes to `main` or `codex/**`. The release preflight workflow is available as a manual GitHub Actions dispatch.
 
-The repository also includes a Playwright-based UI verification script:
+## Evaluation and Release Evidence
 
-```bash
-npm run test:ui
-```
-
-For local backend contract verification without Postgres or Temporal, run:
-
-```bash
-npm run test:backend
-```
-
-This smoke test covers API validation, analysis run submission, repository domain errors, Change Request creation, maker-checker submission/decision, self-approval blocking, pending approval queue projection, Analysis Run and Change Request evidence packages, and the local latest-evaluation query surface. Key success and error responses are parsed through the shared Zod response contracts in `packages/contracts`.
-
-The AI Template Analysis frontend uses the same contracts for result projections and can submit a manual re-analysis through `POST /template-versions/{versionId}/analysis-runs`, then poll `GET /analysis-runs/{runId}` with the returned run id. Analysis result projections include both `templateUuid` and `versionId` so UI commands use stable governance identities instead of display labels. They also carry routing metadata (`policyDecision`, `reviewTaskId`, and `changeRequestId`) so the workbench can show why a result is auto-recorded, review-required, or blocked.
-
-`npm run test:live-frontend-data` verifies that the main frontend surfaces remain wired to live API data and do not reintroduce browser-side mock inventory imports.
-
-For the golden dataset evaluation gate, run:
+Run deterministic golden dataset evaluation:
 
 ```bash
 npm run test:evals
 ```
 
-The gate currently requires at least six golden cases and checks schema validity, classification accuracy, policy routing accuracy, and placeholder recall. The replay suite covers servicing, marketing, regulatory, candidate drift, low-confidence review, PII masking block, and classification-conflict review paths.
-
-For local PII masking trap verification before provider calls, run:
+Run the same evaluation against an injected provider adapter:
 
 ```bash
-npm run test:pii:local
+EVAL_MODE=provider \
+AI_PROVIDER=openai-compatible \
+OPENAI_COMPATIBLE_BASE_URL=http://127.0.0.1:4001/v1 \
+OPENAI_COMPATIBLE_API_KEY=... \
+OPENAI_COMPATIBLE_MODEL=provider-model-name \
+npm run test:gate -w @gmi/evals
 ```
 
-This deterministic smoke test reads `packages/policy/fixtures/pii-masking-fixtures.json` and checks that common raw email, phone, account, name, HK/CN/SG/India phone, grouped card-number, HKID, Singapore NRIC/FIN, India PAN, and IBAN patterns are converted into placeholder tokens before worker analysis reaches an AI adapter. It also protects known false positives such as OTPs, dates, template IDs, batch IDs, campaign IDs, regional-looking SKUs, rules, tickets, and experiment IDs.
-
-For local secret scanning, run:
-
-```bash
-npm run test:secrets
-```
-
-This check fails on checked-in `sk-*` style API keys while allowing documented environment-variable placeholders.
-
-To verify that the same golden cases can run through an injected provider adapter without calling an external model, run:
-
-```bash
-npm run test:evals:provider:local
-```
-
-To verify the local release gate evidence object that blocks failed evaluations and marks passing evaluations as promotion-ready, run:
-
-```bash
-npm run test:evals:release:local
-```
-
-To verify deployment-style readiness checks for the latest release evidence, run:
-
-```bash
-npm run test:release-readiness:local
-```
-
-The readiness check requires a passing evaluation, `ReadyForPromotion`, `promotionAllowed=true`, a stable `sha256:` evidence hash, no failed cases, metrics above thresholds, and optionally exact pipeline/prompt/provider/model/ruleset/dataset versions. The local smoke proves passing evidence is accepted while failed, unpersisted, and version-mismatched evidence is blocked.
-
-The eval CLI can also emit release evidence with:
-
-```bash
-EVAL_CREATE_RELEASE_EVIDENCE=true npm run test:gate -w @gmi/evals
-```
-
-To write that release evidence as a JSON artifact for CI/CD or human approval handoff, set `EVAL_RELEASE_EVIDENCE_PATH`:
+Create a release evidence artifact:
 
 ```bash
 EVAL_CREATE_RELEASE_EVIDENCE=true \
@@ -367,120 +314,71 @@ EVAL_RELEASE_EVIDENCE_PATH=artifacts/release-evidence.json \
 npm run test:gate -w @gmi/evals
 ```
 
-The local artifact smoke can be run with:
-
-```bash
-npm run test:evals:release-artifact:local
-```
-
-Release evidence includes a stable `sha256:` `evidenceHash`; local smoke tests verify that the artifact can be recomputed and checked after it is written.
-
-To verify the release evidence can be mapped into the Postgres `pipeline_releases` record shape, run:
-
-```bash
-npm run test:evals:release-persistence:local
-```
-
-To verify the Postgres latest-evaluation rows can be mapped into the API response contract, run:
-
-```bash
-npm run test:evals:latest-api-mapping:local
-```
-
-To run the golden gate through a configured provider adapter, set `EVAL_MODE=provider` along with the provider environment variables, for example:
-
-```bash
-EVAL_MODE=provider \
-AI_PROVIDER=openai-compatible \
-OPENAI_COMPATIBLE_BASE_URL=http://127.0.0.1:4001/v1 \
-OPENAI_COMPATIBLE_MODEL=provider-model-name \
-npm run test:gate -w @gmi/evals
-```
-
-To persist a passing evaluation report into Postgres evidence, run:
+Persist evaluation results and release evidence to local Postgres:
 
 ```bash
 npm run infra:up
 npm run test:evals:pg
-```
-
-To also persist release evidence into `pipeline_releases`, create release evidence and enable the release write switch:
-
-```bash
-npm run infra:up
 EVAL_CREATE_RELEASE_EVIDENCE=true \
 EVAL_WRITE_RELEASE_DATABASE=true \
 DATABASE_URL=postgres://gmi:gmi@127.0.0.1:55432/gmi \
 npm run test:gate -w @gmi/evals
 ```
 
-To verify the full Postgres-backed evaluation plus release evidence readback path, run:
-
-```bash
-npm run infra:up
-npm run test:evals:release-persistence:pg
-```
-
-To verify the API-owned release evidence ingestion path, including hash rejection and latest-evaluation readback, run:
-
-```bash
-npm run infra:up
-npm run test:evals:release-api:pg
-```
-
-To run the same readiness check against a live API before deployment or promotion, use:
+Check release readiness against the default local API endpoint:
 
 ```bash
 npm run check:release-readiness
 ```
 
-By default this calls `http://127.0.0.1:4000/analysis-evaluations/latest` and requires persisted release evidence. Configure `RELEASE_READINESS_URL`, `RELEASE_READINESS_PIPELINE_VERSION`, `RELEASE_READINESS_PROMPT_VERSION`, `RELEASE_READINESS_MODEL_PROVIDER`, `RELEASE_READINESS_MODEL_NAME`, `RELEASE_READINESS_RULESET_VERSION`, `RELEASE_READINESS_DATASET_VERSION`, and `RELEASE_READINESS_MIN_CASE_COUNT` to bind the check to a specific candidate.
+Set `RELEASE_READINESS_URL`, `RELEASE_READINESS_PIPELINE_VERSION`, `RELEASE_READINESS_PROMPT_VERSION`, `RELEASE_READINESS_MODEL_PROVIDER`, `RELEASE_READINESS_MODEL_NAME`, `RELEASE_READINESS_RULESET_VERSION`, `RELEASE_READINESS_DATASET_VERSION`, and `RELEASE_READINESS_MIN_CASE_COUNT` to bind readiness checks to a specific candidate.
 
-For backend persistence verification, run:
+## Seed Data
 
-```bash
-npm run infra:up
-npm run db:smoke
-```
-
-For the full API -> Temporal -> worker -> Postgres evidence loop, run:
+Seed a richer Postgres-backed verification dataset for manual API/UI checks:
 
 ```bash
 npm run infra:up
-npm run test:harness:temporal
+npm run db:migrate
+npm run seed:verification:pg
 ```
 
-This smoke uses the local header authorization mode, starts the API and worker on an isolated Temporal task queue, submits an analysis run, waits for worker completion, verifies persisted `analysis_outputs`, `review_tasks`, and `audit_events`, then retries the same `idempotency-key` to prove the API returns the existing succeeded run without starting a duplicate workflow or writing duplicate evidence.
-
-To verify provider failure persistence through the same API -> Temporal -> worker -> Postgres loop, run:
+Verify the seed dataset through real API endpoints:
 
 ```bash
-npm run infra:up
-npm run test:harness:temporal:provider-failure
+npm run test:seed-verification-api:pg
 ```
 
-This smoke points the OpenAI-compatible adapter at an unavailable local provider endpoint, then verifies the API exposes a `Failed` run with a public `errors` summary, `/audit-events` exposes the `analysis_run_failed` ledger entry, and Postgres contains structured `errors_json`. It also retries the same `idempotency-key` after failure to prove failed terminal runs are reused without starting a duplicate workflow or writing duplicate failure evidence. The AI Template Analysis workbench consumes that summary when a re-analysis run fails, so reviewers see the failure class without raw provider payloads or direct database access; detailed provider evidence remains in Postgres for audit/debug workflows.
+Verify the seed-case shape without Postgres:
 
-In Postgres-backed mode, analysis runs remain `Queued`, `Running`, `Failed`, or `Succeeded` according to the stored run state. API responses include `output` and policy routing only after the worker records `analysis_outputs`. If provider analysis ultimately fails, the worker records a failed run with structured error metadata and an audit event before preserving Temporal retry/failure semantics.
+```bash
+npm run test:verification-seed-cases:local
+```
 
-`GET /analysis-evaluations/latest` reads persisted `analysis_evaluations` and `pipeline_releases` when `DATABASE_URL` is set, and falls back to the local replay gate when no database is configured. The response includes `source.kind`, `source.persisted`, and `source.generatedAt` so release dashboards can distinguish Postgres-backed evidence from local replay fallback data.
+The seed covers auto-recorded, review-required, blocked, enhanced-review, candidate-version-drift, approved, pending, changes-requested, and rejected governance paths. Override `SEED_DATASET_ID` when you need a stable demo dataset label.
 
-## 🎨 Design Direction
+## Design and Product Documentation
 
-The visual language is documented in [DESIGN.md](./DESIGN.md). The interface uses a friendly, data-dense governance dashboard style: pale navigation, compact tables, rounded metric cards, calm status chips, and audit-ready language.
+- [design/README.md](./design/README.md): product design and implementation entry point.
+- [DESIGN.md](./DESIGN.md): visual language.
+- [requirements.md](./requirements.md): English PRD and roadmap.
+- [requirements.zh.md](./requirements.zh.md): Chinese PRD and roadmap.
+- [docs/architecture/template-analysis-harness-architecture.md](./docs/architecture/template-analysis-harness-architecture.md): backend architecture.
+- [docs/agents/issue-tracker.md](./docs/agents/issue-tracker.md): GitHub Issues workflow for agents.
+- [docs/agents/triage-labels.md](./docs/agents/triage-labels.md): canonical issue labels.
+- [docs/agents/domain.md](./docs/agents/domain.md): domain-documentation layout.
 
-Product behavior, domain rules, workflows, page specifications, and agent implementation guidance are indexed in [design/README.md](./design/README.md). Agents implementing product changes should begin there rather than inferring behavior from the current UI.
+Agents implementing product changes should start with `design/README.md` rather than inferring behavior from the current UI.
 
-## 🗺️ Roadmap
+## Contribution Notes
 
-The product roadmap is documented in [requirements.md](./requirements.md) and [requirements.zh.md](./requirements.zh.md). Planned phases include:
+- Keep `package-lock.json` committed when dependencies change.
+- Use TypeScript, React function components, named exports, 2-space indentation, and single quotes in `.ts` and `.tsx` files.
+- Prefer design tokens from `apps/web/src/styles/tokens.css` over hard-coded visual values.
+- Keep changes scoped; avoid mixing formatting-only edits with behavior changes.
+- For visible UI changes, include screenshots in pull requests and run the UI smoke check.
+- For backend, policy, provider, or evidence changes, include the relevant verification command in the pull request.
 
-- MVP pilot ingestion, extraction, deterministic matching, clustering, triage, and export
-- Expanded platform coverage and classification suggestions
-- End-to-end traceability using upstream identifiers where available
-- Broader enterprise onboarding through telemetry feeds
-- BAU hardening for access, retention, resilience, and automated governance reporting
-
-## 📄 License
+## License
 
 This project is licensed under the [MIT License](./LICENSE).

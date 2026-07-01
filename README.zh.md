@@ -1,70 +1,92 @@
 # Group Messaging Inventory
 
-> 面向 Group Messaging Inventory MVP 的 React 仪表盘，用于发现、匹配、确认并导出可治理的 outbound messaging use case 清单。
+> 面向 outbound group messaging 治理与 Templates Analysis Harness 的 Dashboard-first TypeScript monorepo。
 
 [English README](./README.md) · [MIT License](./LICENSE)
 
-## ✨ 项目概览
+## 概览
 
-Group Messaging Inventory 用于回答一个核心治理问题：当前有哪些 outbound messages 正在生产环境发送，它们由谁负责，通过什么平台、渠道、sender identity 和 template 发送，以及是否能够提供可导出的 control evidence。
+Group Messaging Inventory 帮助治理、消息和运营团队回答以下问题：
 
-本仓库是一个基于 npm workspaces 的 TypeScript monorepo。现有 Vite + React 前端承载产品体验，新增 API、worker 与共享 packages 用于逐步落地 Templates Analysis Harness 后台。
+- 当前有哪些 outbound message template 和 use case 在生产环境中运行？
+- 谁负责它们？
+- 涉及哪些平台、租户、发送方和模板标识符？
+- 哪些变更需要复核或 maker-checker 审批？
+- 当 reviewer、监管者或发布门禁要求时，能否导出审计证据？
 
-## 🎯 MVP 范围
+本仓库目前包含 Vite + React 产品界面、NestJS API、Temporal TypeScript worker、共享 TypeScript packages、数据库迁移脚本、确定性评估门禁，以及用于本地 Postgres 和 Temporal 的 Docker Compose profile。
 
-MVP 聚焦 Messaging-owned platforms：
+## 当前范围
+
+MVP 聚焦 Messaging-owned 平台：
 
 - MDP
 - SFMC
 - ICCM
 - IRIS
 
-产品方向是 dashboard-first，而不是 landing page-first。应用打开后直接进入可操作的 inventory coverage、unknown traffic、drift exceptions、owner confirmation 和 evidence readiness。
+产品方向是 dashboard-first 而非 marketing-first。前端直接进入可操作的 inventory coverage、unknown traffic、drift exceptions、review queue、maker-checker 治理、模型配置和 evidence readiness。
 
-## 🧭 产品能力
+## 能力
 
-- 基于 production logs 建立 outbound messages inventory baseline
-- 基于规则和聚类生成 candidate use cases，并展示 confidence score
-- 识别 retired-but-live、new sender identity、new template、unknown traffic 和 volume anomaly 等 drift
-- 支持确认 Message Owner 与 Integrating System Owner 的 ownership workflow
-- 支持 Regulatory、Servicing、Marketing 三类消息 classification
-- 跟踪 evidence、maker-checker status 与可审计事件
-- 为后续 CSV export 和 regulator response pack 提供产品方向
-- 通过内置 language provider 支持英文和简体中文 UI 文案
+- 面向仪表盘、use case、template、review queue、治理、设置、分析和上传状态的产品 inventory projection。
+- 通过仅入队本地路径或 Temporal-backed workflow 的模板分析运行。
+- 通过 `@gmi/ai-adapters` 实现 AI provider 隔离，包含确定性 `noop`、OpenAI Agents SDK 和 OpenAI-compatible chat-completions adapter。
+- 面向 auto-recorded、review-required、blocked 和 maker-checker 流程的 policy routing。
+- 在调用 provider 前的 PII masking 检查。
+- 通过本地 header 或可信 gateway header 实现治理授权。
+- Postgres-backed 审计事件、review task、change request、analysis output、evaluation 和 release evidence。
+- 面向 analysis run 和 change request 的 evidence-package 导出。
+- 黄金数据集评估门禁和 release-readiness 检查。
 
-## 🧱 技术栈
+## 技术栈
 
-- React 19
-- TypeScript
-- Vite
-- NestJS API scaffold
-- Temporal TypeScript worker scaffold
+- CI 中使用 Node.js 24
 - npm workspaces
+- TypeScript
+- React 19 与 Vite 8
+- NestJS 11 API
+- Temporal TypeScript SDK worker
+- PostgreSQL 16、Kysely 与 `pg`
 - Zod contracts
-- Kysely database types
-- 通过可替换 adapter 接入 OpenAI Agents SDK
-- CSS design tokens
-- 面向未来 API response 结构设计的 mock data
+- OpenAI Agents SDK，通过可替换 adapter 接入
+- 基于 Playwright 的 UI smoke 检查
+- 用于本地基础设施和应用 profile 验证的 Docker Compose
 
-## 📁 项目结构
+## 仓库结构
 
 ```text
 apps/
-  web/                  Vite + React 前端
-  api/                  NestJS API scaffold
-  worker/               Temporal worker scaffold
+  web/          Vite + React 前端
+  api/          NestJS API
+  worker/       Temporal TypeScript worker
+
 packages/
-  domain/               共享产品类型与状态模型
-  contracts/            Zod API 与 provider schemas
-  db/                   Kysely 数据库表类型
-  policy/               治理与路由规则
-  runtime-config/       共享启动配置校验
-  ai-adapters/          可替换 AI provider adapter，包括 OpenAI Agents SDK
+  domain/       共享产品类型与状态模型
+  contracts/    Zod API 与 provider schemas
+  db/           Kysely 表类型、迁移脚本与 Postgres smoke test
+  policy/       治理、路由与 PII masking 规则
+  runtime-config/
+                共享 API/worker 运行时配置校验
+  ai-adapters/  Noop、OpenAI 与 OpenAI-compatible provider adapter
+  evals/        黄金数据集评估与 release-readiness 逻辑
+
+docs/
+  agents/       面向 Agent 的仓库操作说明
+  api/          API surface 快照
+  architecture/ 后端架构说明
+
+design/         产品设计索引、领域模型、工作流与页面规格
+scripts/        本地验证、seed、发布与 smoke-test 脚本
 ```
 
-前端源码位于 `apps/web/src/`。
+前端源码位于 `apps/web/src/`。产品与实现方向记录在 [design/README.md](./design/README.md)、[DESIGN.md](./DESIGN.md)、[requirements.md](./requirements.md) 和 [requirements.zh.md](./requirements.zh.md)。
 
-## 🚀 本地运行
+## 前置条件
+
+- Node.js 24，与 `.github/workflows/ci.yml` 保持一致。
+- npm，使用仓内的 `package-lock.json`。
+- Docker Desktop 或兼容的 Docker Compose 运行时，用于 Postgres、Temporal 和容器化 app-profile 检查。
 
 安装依赖：
 
@@ -72,29 +94,79 @@ packages/
 npm install
 ```
 
-启动开发服务器：
+CI 使用 `npm ci`；当需要干净的 lockfile 精确安装时可使用该命令。
+
+## 快速开始
+
+仅运行前端：
 
 ```bash
 npm run dev
 ```
 
-启动后台进程：
+仅运行 API：
 
 ```bash
 npm run dev:api
-npm run dev:worker
 ```
 
-运行状态接口：
+前端对接本地 API（`http://127.0.0.1:4000`）：
 
-- `GET /health` 是 API liveness check。
-- `GET /ready` 返回 API、Postgres、Temporal workflow driver 与 AI provider 配置的组件化 readiness。当启用 `DATABASE_URL` 或 `ANALYSIS_WORKFLOW_DRIVER=temporal` 时，readiness 会执行轻量依赖探测，而不只是检查环境变量是否存在。
-- `GET /metrics` 暴露 Prometheus 风格的 API request counter、duration sum，以及 analysis submission、confirmation、release evidence record 等低基数业务指标。标签刻意避免 template id、run id、release id 或 change request id。
-- API access log 是单行 JSON，包含 `event=http_request`、`requestId`、`actorId`、`roleCount`、method、path、status code 和 duration，方便审计与排障。
-- API 与 worker 启动时会通过 `@gmi/runtime-config` 做共享运行配置校验，provider、Temporal、端口、timeout 或数据库 URL 配错时会尽早失败并返回可操作错误。
-- 已实现的 API surface 记录在 `docs/api/template-analysis-api.json`，并由 `npm run test:api-surface` 校验。
+```bash
+npm run dev:web:api
+```
 
-默认 worker 使用 `AI_PROVIDER=noop`，本地开发不会调用模型 provider。需要通过 OpenAI Agents SDK 执行分析活动时，设置：
+启动本地基础设施与数据库迁移：
+
+```bash
+npm run infra:up
+npm run db:migrate
+npm run db:smoke
+```
+
+使用本地 app Docker profile 同时运行 API、worker 与前端：
+
+```bash
+docker compose --profile app up --build gmi-api gmi-worker gmi-web
+```
+
+默认本地地址：
+
+- 前端开发服务器：由 Vite 显示，通常为 `http://127.0.0.1:5173`
+- 容器化 Web 应用：`http://127.0.0.1:5080`
+- API：`http://127.0.0.1:4000`
+- API 健康检查：`http://127.0.0.1:4000/health`
+- API 就绪检查：`http://127.0.0.1:4000/ready`
+- API 指标：`http://127.0.0.1:4000/metrics`
+- Postgres：`postgres://gmi:gmi@127.0.0.1:55432/gmi`
+- Temporal：`127.0.0.1:7233`
+- Temporal UI：`http://127.0.0.1:8233`
+
+## 运行时配置
+
+API 和 worker 通过 `@gmi/runtime-config` 校验运行时配置，并在配置无效时快速失败。
+
+常用变量：
+
+| 变量 | 用途 | 默认值 |
+| --- | --- | --- |
+| `PORT` | API 端口 | `4000` |
+| `DATABASE_URL` | 启用 Postgres-backed 仓库 | 未设置时使用内存/本地回退（如支持） |
+| `API_AUTH_MODE` | `header`、`gateway` 或 `disabled` | `header` |
+| `ANALYSIS_WORKFLOW_DRIVER` | `none` 或 `temporal` | `none` |
+| `TEMPORAL_ADDRESS` | Temporal 服务地址 | `127.0.0.1:7233`（Temporal 模式需要显式配置时除外） |
+| `TEMPORAL_NAMESPACE` | Temporal 命名空间 | `default` |
+| `TEMPORAL_TASK_QUEUE` | Temporal 任务队列 | `template-analysis` |
+| `AI_PROVIDER` | `noop`、`openai` 或 `openai-compatible` | `noop` |
+| `READINESS_TIMEOUT_MS` | 依赖探测超时 | `1000` |
+
+日常开发使用确定性本地 provider：
+
+```bash
+AI_PROVIDER=noop npm run dev:worker
+```
+
+使用 OpenAI Agents SDK：
 
 ```bash
 AI_PROVIDER=openai
@@ -104,250 +176,209 @@ OPENAI_TRACE_INCLUDE_SENSITIVE_DATA=false
 npm run dev:worker
 ```
 
-需要通过 LiteLLM、vLLM、OpenRouter、内部模型网关或 DeepSeek 这类 OpenAI-compatible chat-completions API 执行分析时，设置：
+使用 OpenAI-compatible 网关，如 LiteLLM、vLLM、OpenRouter、DeepSeek 或内部网关：
 
 ```bash
 AI_PROVIDER=openai-compatible
-OPENAI_COMPATIBLE_BASE_URL=https://api.deepseek.com
-OPENAI_COMPATIBLE_API_KEY=$DEEPSEEK_API_KEY
-OPENAI_COMPATIBLE_MODEL=deepseek-v4-flash
-OPENAI_COMPATIBLE_PROVIDER_NAME=deepseek
-OPENAI_COMPATIBLE_EXTRA_BODY_JSON='{"thinking":{"type":"enabled"},"reasoning_effort":"high"}'
+OPENAI_COMPATIBLE_BASE_URL=http://127.0.0.1:4001/v1
+OPENAI_COMPATIBLE_API_KEY=...
+OPENAI_COMPATIBLE_MODEL=provider-model-name
+OPENAI_COMPATIBLE_PROVIDER_NAME=internal-gateway
 OPENAI_COMPATIBLE_TIMEOUT_MS=60000
 OPENAI_COMPATIBLE_MAX_RETRIES=2
 OPENAI_COMPATIBLE_RETRY_BACKOFF_MS=250
 npm run dev:worker
 ```
 
-OpenAI-compatible adapter 会对 HTTP 408、429、5xx 和网络错误做有界重试与可配置指数 backoff；不可重试的 4xx 会快速失败并返回稳定的 `provider_error:*` 消息。启动配置会拒绝非法 provider name，并要求 `OPENAI_COMPATIBLE_EXTRA_BODY_JSON` 必须是 JSON object，这样 provider metadata 保持低基数，provider-specific options 配错会在第一个 workflow task 前失败。`npm run test:ai-adapter` 会在本地校验 retry、backoff、provider-specific request fields、结构化输出解析，以及 `deterministic_only` 不调用 provider 的行为。
+Provider 特定的请求元数据可通过 `OPENAI_COMPATIBLE_EXTRA_BODY_JSON` 提供，该值必须是 JSON object。密钥应保留在环境变量中，不要提交真实的 API key。
 
-业务 Harness 仍然负责 workflow 状态、policy routing、持久化和 review gates。Provider SDK 与兼容 API 只封装在 `@gmi/ai-adapters` 后面，用于模型编排、结构化输出、guardrails 和 tracing。
-Worker analysis activity 会输出单行 JSON 事件，包含 `event=ai_analysis_activity`、run/template/version id、provider、model、prompt version、status 和 duration。该日志不会记录原始模板内容、masked prompt 或模型输出。
+## API 与授权
 
-本地治理 API 授权先使用轻量 header 模式，后续可替换为 SSO 或 API Gateway 注入的身份上下文：
+公开运维端点：
+
+- `GET /health`
+- `GET /ready`
+- `GET /metrics`
+
+主要产品与 Harness 端点包括：
+
+- `POST /template-versions/{versionId}/analysis-runs`
+- `GET /analysis-runs/{runId}`
+- `GET /analysis-runs/{runId}/evidence-package`
+- `POST /analysis-runs/{runId}/confirm`
+- `GET /templates/analysis-results`
+- `GET /review-tasks`
+- `POST /review-tasks/{taskId}/transition`
+- `GET /change-requests`
+- `GET /audit-events`
+- `GET /product-inventory`
+- `GET /change-requests/{changeRequestId}/evidence-package`
+- `POST /templates/{templateUuid}/mapping-change-requests`
+- `POST /templates/{templateUuid}/lifecycle-change-requests`
+- `POST /template-versions/{versionId}/current-version-change-requests`
+- `POST /change-requests/{changeRequestId}/submit`
+- `POST /change-requests/{changeRequestId}/decision`
+- `GET /analysis-evaluations/latest`
+- `POST /analysis-evaluations/release-evidence`
+
+已实现的 API surface 记录在 [docs/api/template-analysis-api.json](./docs/api/template-analysis-api.json)，并由 `npm run test:api-surface` 校验。
+
+对于本地受保护路由，使用 header 授权：
 
 ```bash
-API_AUTH_MODE=header
 curl -H 'x-actor-id: analyst-local' \
   -H 'x-gmi-roles: analysis_runner,change_maker,change_checker,auditor' \
+  -H 'x-gmi-scope-tenants: local' \
   http://127.0.0.1:4000/ready
 ```
 
-受保护的分析与治理路由必须同时带 `x-actor-id` 和以下角色之一：`analysis_runner`、`analysis_reader`、`change_maker`、`change_checker` 或 `auditor`。`/health` 与 `/ready` 保持公开。只有隔离本地调试时才建议设置 `API_AUTH_MODE=disabled`。
+支持的角色为 `analysis_runner`、`analysis_reader`、`change_maker`、`change_checker` 和 `auditor`。Gateway 模式读取由 `API_GATEWAY_ACTOR_HEADER`、`API_GATEWAY_ROLES_HEADER` 和 `API_GATEWAY_TENANT_SCOPE_HEADER` 配置的可信身份 header。
 
-如果由 API Gateway、SSO proxy 或 service mesh 注入已认证身份，使用 gateway 模式：
-
-```bash
-API_AUTH_MODE=gateway
-API_GATEWAY_ACTOR_HEADER=x-gmi-authenticated-actor
-API_GATEWAY_ROLES_HEADER=x-gmi-authenticated-roles
-```
-
-Gateway 模式不会把本地客户端传来的 `x-actor-id` / `x-gmi-roles` 当成信任来源，而是把网关注入的 actor 规范化成内部 command context，并继续复用 controller 上的 `@RequiresRoles(...)` 角色声明。
-
-Web client 的本地 actor context 统一收敛在 `apps/web/src/lib/governanceActor.ts`。本地测试时可用 `VITE_GOVERNANCE_ACTOR_ID`、`VITE_GOVERNANCE_ACTOR_DISPLAY_NAME` 和 `VITE_GOVERNANCE_ROLES` 覆盖，从而让 API auth header、My Tasks reviewer 筛选和 audit actor ID 保持一致。
-对于受保护的 command route，API 会以认证后的 `x-actor-id` header 作为 command actor，并忽略 request body 中伪造的 actor ID；body actor 字段仅保留给本地旧客户端兼容。
-
-不可变治理账本通过以下接口暴露：
+Web 客户端可通过以下方式对齐本地测试 header：
 
 ```bash
-curl -H 'x-actor-id: auditor-local' \
-  -H 'x-gmi-roles: auditor' \
-  'http://127.0.0.1:4000/audit-events?changeRequestId=CR-...'
+VITE_GOVERNANCE_ACTOR_ID=analyst-local
+VITE_GOVERNANCE_ACTOR_DISPLAY_NAME='Analyst Local'
+VITE_GOVERNANCE_ROLES=analysis_runner,change_maker,change_checker,auditor
 ```
 
-`/audit-events` 支持按 `objectType`、`objectId`、`sourceRunId`、`changeRequestId` 和 `limit` 筛选。
-`/review-tasks` 暴露 analysis review task，并支持按 `status`、`objectType`、`objectId`、`sourceRunId`、`assignedTo` 和 `limit` 筛选，让需要人工复核的分析结果可以从工作台追踪到 reviewer queue。
-`GET /analysis-runs/{runId}/evidence-package` 导出单次 analysis run 的 evidence package，包含 public run response 与相关 audit events。成功 run 与 provider 失败 run 使用同一 contract；失败包只暴露 public error summary，不暴露 raw provider details。
-`POST /review-tasks/{taskId}/transition` 支持 reviewer 认领、开始处理、升级待批、完成或关闭 review task，并写入 actor attribution 与 audit event。
-Review Queue 的 Discovery、My Tasks、Completed 标签会按状态读取该 API 中的 template review task，并可对 API-backed task 执行认领、开始处理、完成操作；API 不可用时回退到本地队列数据。
+## 开发命令
 
-API 提交可以只入队，也可以直接启动 Temporal workflow。需要本地完整 Harness 链路时，先运行 Temporal，并设置：
+| 命令 | 作用 |
+| --- | --- |
+| `npm run dev` | 启动 Vite 前端。 |
+| `npm run dev:web:api` | 以 `VITE_API_BASE_URL=http://127.0.0.1:4000` 启动前端。 |
+| `npm run dev:api` | 启动 NestJS API。 |
+| `npm run dev:api:pg` | 使用本地 Postgres 连接串启动 API。 |
+| `npm run dev:worker` | 启动 Temporal worker。 |
+| `npm run dev:worker:local` | 对接本地 Temporal 启动 worker。 |
+| `npm run infra:up` | 启动本地 Postgres 与 Temporal 服务。 |
+| `npm run infra:down` | 停止本地基础设施。 |
+| `npm run db:migrate` | 执行本地 Postgres 数据库迁移。 |
+| `npm run db:smoke` | 运行 Postgres 仓库 smoke test。 |
+| `npm run typecheck` | 构建共享 packages 并在所有 workspace 中运行 TypeScript 检查。 |
+| `npm run build` | 类型检查并构建 packages、API、worker 与前端。 |
+| `npm run preview` | 提供前端生产构建预览。 |
 
-```bash
-ANALYSIS_WORKFLOW_DRIVER=temporal
-TEMPORAL_ADDRESS=127.0.0.1:7233
-TEMPORAL_NAMESPACE=default
-TEMPORAL_TASK_QUEUE=template-analysis
-npm run dev:api
-```
+## 验证
 
-启动本地后台基础设施：
-
-```bash
-npm run infra:up
-npm run db:migrate
-npm run db:smoke
-```
-
-如需为手工 API/UI 验证写入一批更完整的 Postgres-backed 数据，运行：
-
-```bash
-npm run seed:verification:pg
-```
-
-该 seed 命令会写入带时间戳的数据集，包含 9 个可复用验证场景：auto-recorded、review-required、blocked、enhanced-review、candidate-version-drift、approved、pending、changes-requested 和 rejected，并立即验证 analysis result projection、review task queue、pending approval、evidence package、audit events 与 latest release evidence。需要稳定 demo 标签时可设置 `SEED_DATASET_ID`。
-
-如需在不启动 Postgres 的情况下先验证 seed 数据结构，运行：
-
-```bash
-npm run test:verification-seed-cases:local
-```
-
-本地 Postgres 连接串：
-
-```text
-postgres://gmi:gmi@127.0.0.1:55432/gmi
-```
-
-Temporal 运行在 `127.0.0.1:7233`，Temporal UI 位于 `http://127.0.0.1:8233`。
-
-使用本地 deploy profile 一起启动 API、worker 与 web 容器：
-
-```bash
-docker compose --profile app up --build gmi-api gmi-worker gmi-web
-```
-
-容器化 API 位于 `http://127.0.0.1:4000`，前端位于 `http://127.0.0.1:5080`。该 app profile 默认使用 `AI_PROVIDER=noop`、本地 header 授权、Postgres 与 Temporal，并通过一次性的 `gmi-db-migrate` 服务在 API 启动前自动执行数据库迁移。API 与 worker 会处理停机信号，在容器停止或部署替换时释放 Postgres 与 Temporal 连接。
-
-运行类型检查：
-
-```bash
-npm run typecheck
-```
-
-构建共享包、后台应用与前端生产包：
-
-```bash
-npm run build
-```
-
-预览生产构建：
-
-```bash
-npm run preview
-```
-
-## ✅ 验证
-
-在提交 PR 或发布前，建议运行：
+在提交 PR 前运行主要的无基础设施 PR 门禁：
 
 ```bash
 npm run test:no-infra
 ```
 
-该命令会执行类型检查、secret scan、后台 smoke、readiness 与 metrics smoke、PII masking、golden replay evals、verification seed-case validation、无需外部模型调用的 provider-adapter evals、release evidence 与 release-readiness gate、CI workflow、部署配置、构建、前端 bundle 和本地 UI 验证。
+该命令执行类型检查、secret scan、后端 smoke test、readiness 与 metrics 检查、运行时配置检查、API-surface 检查、AI-adapter 检查、PII masking 检查、golden replay evals、release evidence 检查、前端实时数据检查、CI workflow 检查、部署配置检查、构建检查、Web bundle 检查与本地 UI smoke 检查。
 
-仓库还包含基于 Playwright 的 UI 验证脚本：
+其他常用门禁：
 
-```bash
-npm run test:ui
-```
+| 命令 | 使用场景 |
+| --- | --- |
+| `npm run test:backend` | 无需 Postgres 或 Temporal 的本地后端 smoke test。 |
+| `npm run test:evals` | 修改了 golden fixtures、contracts、provider output shape 或 policy routing。 |
+| `npm run test:ai-adapter` | 修改了 provider adapter 行为。 |
+| `npm run test:pii:local` | 修改了 masking 规则或 prompt/provider 边界。 |
+| `npm run test:live-frontend-data` | 修改了前端数据加载或 inventory projection。 |
+| `npm run test:ui` | 修改了前端可见行为，且开发服务器正在运行。 |
+| `npm run test:harness:temporal` | 需要完整的 API -> Temporal -> worker -> Postgres evidence-loop smoke。 |
+| `npm run test:harness:temporal:provider-failure` | 需要验证 provider 失败的 run 持久化和公开错误摘要。 |
+| `npm run test:deploy:compose` | 修改了 Dockerfiles、compose 配置、迁移脚本、API 启动、worker 启动或 Web serving。 |
+| `npm run test:release-preflight:local` | 准备发布候选版本，需要 Docker-backed preflight 套件。 |
 
-无需 Postgres 或 Temporal 的本地后台契约验证：
+GitHub CI workflow 在 PR 和推送到 `main` 或 `codex/**` 分支时运行 `npm run test:no-infra`。Release preflight workflow 可通过 GitHub Actions 手动触发。
 
-```bash
-npm run test:backend
-```
+## 评估与发布证据
 
-该 smoke test 覆盖 API validation、analysis run submission、repository domain errors、Change Request 创建、maker-checker submit/decision、禁止自审批、待审批队列 projection，以及 Analysis Run / Change Request evidence package。
-
-AI Template Analysis 前端使用同一组 contract 读取结果 projection，并可以通过 `POST /template-versions/{versionId}/analysis-runs` 发起人工 re-analysis，再用返回的 run id 轮询 `GET /analysis-runs/{runId}`。Analysis result projection 会同时返回 `templateUuid` 与 `versionId`，保证 UI command 使用稳定治理身份，而不是展示标签；同时返回 `policyDecision`、`reviewTaskId` 和 `changeRequestId` 等 routing metadata，让工作台能解释结果为什么被自动记录、进入人工复核或被阻断。
-
-运行 golden dataset evaluation gate：
+运行确定性黄金数据集评估：
 
 ```bash
 npm run test:evals
 ```
 
-运行模型调用前的 PII masking trap gate：
+对接注入的 provider adapter 运行相同评估：
 
 ```bash
-npm run test:pii:local
+EVAL_MODE=provider \
+AI_PROVIDER=openai-compatible \
+OPENAI_COMPATIBLE_BASE_URL=http://127.0.0.1:4001/v1 \
+OPENAI_COMPATIBLE_API_KEY=... \
+OPENAI_COMPATIBLE_MODEL=provider-model-name \
+npm run test:gate -w @gmi/evals
 ```
 
-该 smoke 会读取 `packages/policy/fixtures/pii-masking-fixtures.json`，验证 email、phone、account、name、HK/CN/SG/India phone、card、HKID、Singapore NRIC/FIN、India PAN 与 IBAN 会在进入 AI adapter 前被替换为 placeholder；同时保护 OTP、日期、template ID、batch ID、campaign ID、区域化 SKU/rule/ticket/experiment ID 等 false positives。
-
-验证面向部署/发布前检查的 latest release evidence readiness：
+创建 release evidence artifact：
 
 ```bash
-npm run test:release-readiness:local
+EVAL_CREATE_RELEASE_EVIDENCE=true \
+EVAL_RELEASE_EVIDENCE_PATH=artifacts/release-evidence.json \
+npm run test:gate -w @gmi/evals
 ```
 
-readiness check 要求 evaluation verdict 为 `pass`、release status 为 `ReadyForPromotion`、`promotionAllowed=true`、存在稳定 `sha256:` evidence hash、没有 failed cases、metrics 达到 thresholds，并可选地精确绑定 pipeline/prompt/provider/model/ruleset/dataset 版本。本地 smoke 会证明通过证据可放行，而失败、未持久化、版本不匹配的证据会被拦截。
-
-将通过的 evaluation report 写入 Postgres evidence：
+将评估结果和 release evidence 持久化到本地 Postgres：
 
 ```bash
 npm run infra:up
 npm run test:evals:pg
+EVAL_CREATE_RELEASE_EVIDENCE=true \
+EVAL_WRITE_RELEASE_DATABASE=true \
+DATABASE_URL=postgres://gmi:gmi@127.0.0.1:55432/gmi \
+npm run test:gate -w @gmi/evals
 ```
 
-验证 evaluation 与 release evidence 的完整 Postgres 写入和 latest readback：
-
-```bash
-npm run infra:up
-npm run test:evals:release-persistence:pg
-```
-
-验证由 API 接收 release evidence 的生产式入口，包括 hash 篡改拒绝和 latest-evaluation readback：
-
-```bash
-npm run infra:up
-npm run test:evals:release-api:pg
-```
-
-在部署或 promotion 前对真实 API 运行同一套 readiness check：
+对默认本地 API 端点执行 release readiness 检查：
 
 ```bash
 npm run check:release-readiness
 ```
 
-默认会调用 `http://127.0.0.1:4000/analysis-evaluations/latest` 并要求 release evidence 已持久化。可通过 `RELEASE_READINESS_URL`、`RELEASE_READINESS_PIPELINE_VERSION`、`RELEASE_READINESS_PROMPT_VERSION`、`RELEASE_READINESS_MODEL_PROVIDER`、`RELEASE_READINESS_MODEL_NAME`、`RELEASE_READINESS_RULESET_VERSION`、`RELEASE_READINESS_DATASET_VERSION` 和 `RELEASE_READINESS_MIN_CASE_COUNT` 将检查绑定到指定候选版本。
+设置 `RELEASE_READINESS_URL`、`RELEASE_READINESS_PIPELINE_VERSION`、`RELEASE_READINESS_PROMPT_VERSION`、`RELEASE_READINESS_MODEL_PROVIDER`、`RELEASE_READINESS_MODEL_NAME`、`RELEASE_READINESS_RULESET_VERSION`、`RELEASE_READINESS_DATASET_VERSION` 和 `RELEASE_READINESS_MIN_CASE_COUNT` 可将 readiness check 绑定到指定的候选版本。
 
-验证后台持久化链路：
+## Seed 数据
 
-```bash
-npm run infra:up
-npm run db:smoke
-```
-
-验证完整 API -> Temporal -> worker -> Postgres evidence loop：
+为手工 API/UI 验证写入更丰富的 Postgres-backed 数据集：
 
 ```bash
 npm run infra:up
-npm run test:harness:temporal
+npm run db:migrate
+npm run seed:verification:pg
 ```
 
-这条 smoke 使用本地 header 授权模式，在隔离的 Temporal task queue 上启动 API 和 worker，提交 analysis run，等待 worker 完成，并验证已持久化的 `analysis_outputs`、`review_tasks` 和 `audit_events`。
-
-验证同一链路下的 provider 失败持久化证据：
+通过真实 API 端点验证 seed 数据集：
 
 ```bash
-npm run infra:up
-npm run test:harness:temporal:provider-failure
+npm run test:seed-verification-api:pg
 ```
 
-该 smoke 会把 OpenAI-compatible adapter 指向不可用的本地 provider endpoint，然后验证 API 返回带 public `errors` 摘要的 `Failed` run，`/audit-events` 暴露 `analysis_run_failed` ledger entry，且 Postgres 中存在结构化 `errors_json`。AI Template Analysis 工作台会消费这份摘要，在 re-analysis run 失败时让 reviewer 看到失败类别，不暴露 raw provider payload；详细 provider evidence 仍保留在 Postgres 供审计和排障使用。
+无需 Postgres 验证 seed-case 数据结构：
 
-在 Postgres-backed 模式下，analysis run 会按照存储状态保持为 `Queued`、`Running`、`Failed` 或 `Succeeded`。只有 worker 写入 `analysis_outputs` 之后，API response 才会包含 `output` 和 policy routing。如果 provider analysis 最终失败，worker 会先写入 failed run、结构化 error metadata 和 audit event，再保留 Temporal retry/failure 语义。
+```bash
+npm run test:verification-seed-cases:local
+```
 
-`GET /analysis-evaluations/latest` 在配置 `DATABASE_URL` 时读取持久化的 `analysis_evaluations` 与 `pipeline_releases`；未配置数据库时回退到本地 replay gate。响应包含 `source.kind`、`source.persisted` 和 `source.generatedAt`，让发布看板能够区分 Postgres-backed evidence 与本地 replay fallback 数据。
+Seed 覆盖 auto-recorded、review-required、blocked、enhanced-review、candidate-version-drift、approved、pending、changes-requested 和 rejected 治理路径。需要稳定 demo 数据集标签时，可通过 `SEED_DATASET_ID` 覆盖。
 
-## 🎨 设计方向
+## 设计与产品文档
 
-视觉语言记录在 [DESIGN.md](./DESIGN.md)。界面采用友好且信息密度较高的治理仪表盘风格，包括浅色导航、紧凑表格、圆角指标卡、平静的状态标签和面向审计的语言。
+- [design/README.md](./design/README.md)：产品设计与实现入口。
+- [DESIGN.md](./DESIGN.md)：视觉语言。
+- [requirements.md](./requirements.md)：英文 PRD 与路线图。
+- [requirements.zh.md](./requirements.zh.md)：中文 PRD 与路线图。
+- [docs/architecture/template-analysis-harness-architecture.md](./docs/architecture/template-analysis-harness-architecture.md)：后端架构。
+- [docs/agents/issue-tracker.md](./docs/agents/issue-tracker.md)：面向 Agent 的 GitHub Issues 工作流。
+- [docs/agents/triage-labels.md](./docs/agents/triage-labels.md)：标准 issue 标签。
+- [docs/agents/domain.md](./docs/agents/domain.md)：领域文档布局。
 
-## 🗺️ 路线图
+Agent 在实施产品变更时应从 `design/README.md` 开始，而非从当前 UI 推断行为。
 
-产品路线图记录在 [requirements.md](./requirements.md) 和 [requirements.zh.md](./requirements.zh.md)。计划阶段包括：
+## 贡献说明
 
-- MVP pilot ingestion、extraction、deterministic matching、clustering、triage 和 export
-- 扩展平台覆盖并增加 classification suggestions
-- 在可用 upstream identifier 的前提下建立端到端 traceability
-- 通过 telemetry feeds 扩展 enterprise coverage
-- 强化 BAU 能力，包括 access、retention、resilience 和 automated governance reporting
+- 依赖变更时需保持 `package-lock.json` 提交。
+- 使用 TypeScript、React 函数组件、命名导出、2 空格缩进，`.ts` 和 `.tsx` 文件中使用单引号。
+- 优先使用 `apps/web/src/styles/tokens.css` 中的 design token，而非硬编码视觉值。
+- 保持变更范围聚焦；避免将纯格式化编辑与行为变更混在一起。
+- 对于可见 UI 变更，请在 PR 中包含截图并运行 UI smoke check。
+- 对于后端、policy、provider 或 evidence 变更，请在 PR 中包含相关验证命令。
 
-## 📄 License
+## License
 
 本项目基于 [MIT License](./LICENSE) 开源。
