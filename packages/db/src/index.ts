@@ -213,12 +213,13 @@ export type SubmitAnalysisRunRecord = {
 
 export type QueuedAnalysisRunRecord = {
   runId: string;
-  status: 'Queued';
+  status: AnalysisRunStatus;
   templateUuid: string;
   versionId: string;
   createdAt: string;
   idempotencyKey: string | null;
   requestedEffort: AnalysisEffort;
+  idempotencyReused?: boolean;
 };
 
 export type CompletedAnalysisRunRecord = {
@@ -725,7 +726,25 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
         const existingRun = this.queuedRuns.get(existingRunId);
 
         if (existingRun) {
-          return existingRun;
+          return {
+            ...existingRun,
+            idempotencyReused: true,
+          };
+        }
+
+        const completedRun = this.completedRuns.get(existingRunId);
+
+        if (completedRun) {
+          return {
+            runId: completedRun.runId,
+            status: completedRun.status,
+            templateUuid: completedRun.templateUuid,
+            versionId: completedRun.versionId,
+            createdAt: completedRun.startedAt ?? completedRun.completedAt ?? new Date().toISOString(),
+            idempotencyKey: command.idempotencyKey,
+            requestedEffort: command.effort,
+            idempotencyReused: true,
+          };
         }
       }
     }

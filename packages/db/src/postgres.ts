@@ -381,12 +381,13 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
       if (existing) {
         return {
           runId: existing.run_id,
-          status: 'Queued',
+          status: existing.status,
           templateUuid: existing.template_uuid,
           versionId: existing.version_id,
           createdAt: toIsoString(existing.created_at),
           idempotencyKey: existing.idempotency_key,
           requestedEffort: command.effort,
+          idempotencyReused: true,
         };
       }
     }

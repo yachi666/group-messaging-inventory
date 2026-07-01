@@ -45,6 +45,11 @@ assertSourceContains(
 );
 assertSourceContains(
   contracts,
+  'status: analysisRunStatusSchema',
+  'submit response exposes current analysis run status',
+);
+assertSourceContains(
+  contracts,
   'retryable: z.boolean()',
   'analysis run retryable failure schema',
 );

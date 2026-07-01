@@ -95,12 +95,16 @@ export class AnalysisRunsService {
       idempotencyKey: command.idempotencyKey,
     });
 
-    const workflow = await this.workflowClient.startAnalysisRun({
+    const workflowCommand = {
       runId: run.runId,
       templateUuid: run.templateUuid,
       versionId: run.versionId,
       effort: command.request.effort,
-    });
+    };
+    const workflow =
+      run.idempotencyReused && isTerminalAnalysisRunStatus(run.status)
+        ? this.workflowClient.getAnalysisRunWorkflowReference(workflowCommand)
+        : await this.workflowClient.startAnalysisRun(workflowCommand);
 
     domainMetricsRegistry.recordAnalysisRunSubmitted({
       triggerType: command.request.triggerType,
@@ -383,6 +387,10 @@ export class AnalysisRunsService {
       reason: command.request.reason,
     });
   }
+}
+
+function isTerminalAnalysisRunStatus(status: string) {
+  return status === 'Succeeded' || status === 'Failed' || status === 'Cancelled';
 }
 
 function toResponseOutput(output: AiTemplateAnalysisOutput): AnalysisRunResponse['output'] {

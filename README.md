@@ -196,6 +196,8 @@ TEMPORAL_TASK_QUEUE=template-analysis
 npm run dev:api
 ```
 
+`POST /template-versions/{versionId}/analysis-runs` is idempotent when `idempotency-key` is supplied. A retry with the same key returns the existing run and its current status; if the Temporal workflow has already been started or completed, the API returns the same workflow id with `workflow.started=false` instead of starting duplicate work.
+
 Start local infrastructure for the backend:
 
 ```bash
@@ -427,7 +429,7 @@ npm run infra:up
 npm run test:harness:temporal
 ```
 
-This smoke uses the local header authorization mode, starts the API and worker on an isolated Temporal task queue, submits an analysis run, waits for worker completion, and verifies persisted `analysis_outputs`, `review_tasks`, and `audit_events`.
+This smoke uses the local header authorization mode, starts the API and worker on an isolated Temporal task queue, submits an analysis run, waits for worker completion, verifies persisted `analysis_outputs`, `review_tasks`, and `audit_events`, then retries the same `idempotency-key` to prove the API returns the existing succeeded run without starting a duplicate workflow or writing duplicate evidence.
 
 To verify provider failure persistence through the same API -> Temporal -> worker -> Postgres loop, run:
 

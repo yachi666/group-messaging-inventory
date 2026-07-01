@@ -112,7 +112,7 @@ export const analysisRunResponseSchema = z.object({
 
 export const submitAnalysisRunResponseSchema = z.object({
   runId: z.string().min(1),
-  status: z.literal('Queued'),
+  status: analysisRunStatusSchema,
   templateUuid: z.string().min(1),
   versionId: z.string().min(1),
   createdAt: z.string().datetime(),

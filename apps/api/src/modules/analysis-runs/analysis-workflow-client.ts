@@ -22,10 +22,21 @@ export type AnalysisWorkflowClient = {
   startAnalysisRun(
     command: StartAnalysisWorkflowCommand,
   ): Promise<StartAnalysisWorkflowResult>;
+  getAnalysisRunWorkflowReference(
+    command: StartAnalysisWorkflowCommand,
+  ): StartAnalysisWorkflowResult;
 };
 
 export class NoopAnalysisWorkflowClient implements AnalysisWorkflowClient {
   async startAnalysisRun(): Promise<StartAnalysisWorkflowResult> {
+    return {
+      driver: 'none',
+      workflowId: null,
+      started: false,
+    };
+  }
+
+  getAnalysisRunWorkflowReference(): StartAnalysisWorkflowResult {
     return {
       driver: 'none',
       workflowId: null,
@@ -51,7 +62,7 @@ export class TemporalAnalysisWorkflowClient implements AnalysisWorkflowClient {
     command: StartAnalysisWorkflowCommand,
   ): Promise<StartAnalysisWorkflowResult> {
     const client = await this.clientPromise;
-    const workflowId = `template-analysis-${command.runId}`;
+    const workflowId = toAnalysisWorkflowId(command.runId);
 
     try {
       await client.workflow.start('analyzeTemplateVersionWorkflow', {
@@ -85,6 +96,16 @@ export class TemporalAnalysisWorkflowClient implements AnalysisWorkflowClient {
     }
   }
 
+  getAnalysisRunWorkflowReference(
+    command: StartAnalysisWorkflowCommand,
+  ): StartAnalysisWorkflowResult {
+    return {
+      driver: 'temporal',
+      workflowId: toAnalysisWorkflowId(command.runId),
+      started: false,
+    };
+  }
+
   private async connect() {
     const connection = await Connection.connect({
       address: this.options.address,
@@ -95,6 +116,10 @@ export class TemporalAnalysisWorkflowClient implements AnalysisWorkflowClient {
       namespace: this.options.namespace,
     });
   }
+}
+
+function toAnalysisWorkflowId(runId: string) {
+  return `template-analysis-${runId}`;
 }
 
 export function createAnalysisWorkflowClientFromEnv(

@@ -70,18 +70,21 @@ try {
   );
 
   const idempotencyKey = `harness-temporal-smoke-${Date.now()}`;
+  const versionId = `tv-harness-temporal-smoke-${Date.now()}`;
+  const submitBody = {
+    triggerType: 'manual_reanalysis',
+    reason: 'Temporal harness smoke test',
+    effort: 'normal',
+    requestedOutputs: [],
+  };
+  const submitHeaders = {
+    'idempotency-key': idempotencyKey,
+    ...governanceHeaders,
+  };
   const submitResponse = await postJson(
-    `${baseUrl}/template-versions/tv-harness-temporal-smoke-${Date.now()}/analysis-runs`,
-    {
-      triggerType: 'manual_reanalysis',
-      reason: 'Temporal harness smoke test',
-      effort: 'normal',
-      requestedOutputs: [],
-    },
-    {
-      'idempotency-key': idempotencyKey,
-      ...governanceHeaders,
-    },
+    `${baseUrl}/template-versions/${versionId}/analysis-runs`,
+    submitBody,
+    submitHeaders,
   );
 
   assertEqual(submitResponse.status, 'Queued', 'submit status');
@@ -99,6 +102,42 @@ try {
   assertEqual(evidence.analysisOutputs, 1, 'analysis_outputs count');
   assertEqual(evidence.reviewTasks, 1, 'review_tasks count');
   assertEqual(evidence.auditEvents, 1, 'audit_events count');
+
+  const duplicateSubmitResponse = await postJson(
+    `${baseUrl}/template-versions/${versionId}/analysis-runs`,
+    submitBody,
+    submitHeaders,
+  );
+  assertEqual(
+    duplicateSubmitResponse.runId,
+    submitResponse.runId,
+    'duplicate idempotency run id',
+  );
+  assertEqual(
+    duplicateSubmitResponse.status,
+    'Succeeded',
+    'duplicate idempotency current status',
+  );
+  assertEqual(
+    duplicateSubmitResponse.workflow.driver,
+    'temporal',
+    'duplicate idempotency workflow driver',
+  );
+  assertEqual(
+    duplicateSubmitResponse.workflow.workflowId,
+    submitResponse.workflow.workflowId,
+    'duplicate idempotency workflow id',
+  );
+  assertEqual(
+    duplicateSubmitResponse.workflow.started,
+    false,
+    'duplicate idempotency workflow started',
+  );
+
+  const duplicateEvidence = await readEvidenceCounts(submitResponse.runId);
+  assertEqual(duplicateEvidence.analysisOutputs, 1, 'duplicate analysis_outputs count');
+  assertEqual(duplicateEvidence.reviewTasks, 1, 'duplicate review_tasks count');
+  assertEqual(duplicateEvidence.auditEvents, 1, 'duplicate audit_events count');
 
   const evidencePackage = analysisRunEvidencePackageSchema.parse(
     await getJson(
