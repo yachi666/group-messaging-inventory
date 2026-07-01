@@ -71,6 +71,38 @@ try {
     }
   }
 
+  const locallyScopedResultsResponse = await getJson(
+    `${baseUrl}/templates/analysis-results?limit=20`,
+    {
+      'x-gmi-scope-tenants': 'local',
+    },
+  );
+  aiTemplateAnalysisResultsResponseSchema.parse(locallyScopedResultsResponse);
+  const locallyScopedSeededResults = locallyScopedResultsResponse.results.filter((result) =>
+    result.versionId.includes(datasetId),
+  );
+  assertEqual(
+    locallyScopedSeededResults.length,
+    verificationSeedCases.length,
+    'local tenant-scoped seeded analysis result count',
+  );
+
+  const blockedScopeResultsResponse = await getJson(
+    `${baseUrl}/templates/analysis-results?limit=20`,
+    {
+      'x-gmi-scope-tenants': 'tenant-without-access',
+    },
+  );
+  aiTemplateAnalysisResultsResponseSchema.parse(blockedScopeResultsResponse);
+  const blockedScopeSeededResults = blockedScopeResultsResponse.results.filter((result) =>
+    result.versionId.includes(datasetId),
+  );
+  assertEqual(
+    blockedScopeSeededResults.length,
+    0,
+    'blocked tenant-scoped seeded analysis result count',
+  );
+
   const reviewTasksResponse = await getJson(
     `${baseUrl}/review-tasks?status=InReview&assignedTo=seed-reviewer&limit=20`,
   );
@@ -83,6 +115,22 @@ try {
     seededReviewTasks[0].assignedTo,
     'seed-reviewer',
     'seeded review task assignee',
+  );
+  const blockedScopeReviewTasksResponse = await getJson(
+    `${baseUrl}/review-tasks?status=InReview&assignedTo=seed-reviewer&limit=20`,
+    {
+      'x-gmi-scope-tenants': 'tenant-without-access',
+    },
+  );
+  reviewTasksResponseSchema.parse(blockedScopeReviewTasksResponse);
+  const blockedScopeSeededReviewTasks =
+    blockedScopeReviewTasksResponse.reviewTasks.filter((task) =>
+      task.objectId.includes(datasetId),
+    );
+  assertEqual(
+    blockedScopeSeededReviewTasks.length,
+    0,
+    'blocked tenant-scoped seeded review task count',
   );
 
   const pendingApprovals = await getJson(
@@ -97,6 +145,23 @@ try {
     seededPendingApprovals[0].changeRequestId,
     seedSummary.changeRequests.pending,
     'seeded pending approval id',
+  );
+
+  const blockedScopePendingApprovals = await getJson(
+    `${baseUrl}/change-requests?status=PendingApproval&limit=20`,
+    {
+      'x-gmi-scope-tenants': 'tenant-without-access',
+    },
+  );
+  changeRequestsResponseSchema.parse(blockedScopePendingApprovals);
+  const blockedScopeSeededPendingApprovals =
+    blockedScopePendingApprovals.changeRequests.filter((request) =>
+      request.objectId.includes(datasetId),
+    );
+  assertEqual(
+    blockedScopeSeededPendingApprovals.length,
+    0,
+    'blocked tenant-scoped seeded pending approval count',
   );
 
   const approvedEvidencePackage = await getJson(
@@ -187,11 +252,12 @@ async function waitForHealth() {
   );
 }
 
-async function getJson(url) {
+async function getJson(url, headers = {}) {
   const response = await fetch(url, {
     headers: {
       'x-actor-id': 'seed-api-verifier',
       'x-gmi-roles': 'analysis_reader,analysis_runner,change_checker,auditor',
+      ...headers,
     },
   });
 

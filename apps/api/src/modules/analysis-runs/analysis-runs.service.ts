@@ -73,6 +73,10 @@ type TransitionReviewTaskCommand = {
   request: TransitionReviewTaskRequest & { actorId: string };
 };
 
+export type DataAccessScope = {
+  tenantScopes?: string[];
+};
+
 @Injectable()
 export class AnalysisRunsService {
   constructor(
@@ -149,9 +153,11 @@ export class AnalysisRunsService {
 
   async listAnalysisResults(
     query: ListAnalysisResultsQuery,
+    scope: DataAccessScope = {},
   ): Promise<AiTemplateAnalysisResultsResponse> {
     const results = await this.repository.listAnalysisResults({
       limit: query.limit,
+      tenantScopes: scope.tenantScopes,
     });
 
     return {
@@ -162,7 +168,10 @@ export class AnalysisRunsService {
     };
   }
 
-  async listReviewTasks(query: ListReviewTasksQuery): Promise<ReviewTasksResponse> {
+  async listReviewTasks(
+    query: ListReviewTasksQuery,
+    scope: DataAccessScope = {},
+  ): Promise<ReviewTasksResponse> {
     const reviewTasks = await this.repository.listReviewTasks({
       status: query.status,
       objectType: query.objectType,
@@ -170,6 +179,7 @@ export class AnalysisRunsService {
       sourceRunId: query.sourceRunId,
       assignedTo: query.assignedTo,
       limit: query.limit,
+      tenantScopes: scope.tenantScopes,
     });
 
     return {
@@ -264,10 +274,14 @@ export class AnalysisRunsService {
     });
   }
 
-  async listChangeRequests(query: ListChangeRequestsQuery): Promise<ChangeRequestsResponse> {
+  async listChangeRequests(
+    query: ListChangeRequestsQuery,
+    scope: DataAccessScope = {},
+  ): Promise<ChangeRequestsResponse> {
     const changeRequests = await this.repository.listChangeRequests({
       status: query.status,
       limit: query.limit,
+      tenantScopes: scope.tenantScopes,
     });
 
     return {

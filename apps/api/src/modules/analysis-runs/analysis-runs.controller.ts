@@ -36,6 +36,7 @@ import {
   type TransitionReviewTaskRequest,
 } from '@gmi/contracts';
 import { RequiresRoles } from '../../auth/governance-auth.guard.js';
+import { internalTenantScopeHeader } from '../../auth/governance-auth-context.js';
 import { AnalysisRunsService } from './analysis-runs.service.js';
 
 @Controller()
@@ -82,19 +83,29 @@ export class AnalysisRunsController {
 
   @Get('templates/analysis-results')
   @RequiresRoles('analysis_reader', 'analysis_runner', 'auditor')
-  listAnalysisResults(@Query() query: unknown) {
+  listAnalysisResults(
+    @Query() query: unknown,
+    @Headers(internalTenantScopeHeader) tenantScopes: string | undefined,
+  ) {
     const request =
       listAnalysisResultsQuerySchema.parse(query) satisfies ListAnalysisResultsQuery;
 
-    return this.analysisRuns.listAnalysisResults(request);
+    return this.analysisRuns.listAnalysisResults(request, {
+      tenantScopes: parseScopeHeader(tenantScopes),
+    });
   }
 
   @Get('review-tasks')
   @RequiresRoles('analysis_reader', 'analysis_runner', 'auditor')
-  listReviewTasks(@Query() query: unknown) {
+  listReviewTasks(
+    @Query() query: unknown,
+    @Headers(internalTenantScopeHeader) tenantScopes: string | undefined,
+  ) {
     const request = listReviewTasksQuerySchema.parse(query) satisfies ListReviewTasksQuery;
 
-    return this.analysisRuns.listReviewTasks(request);
+    return this.analysisRuns.listReviewTasks(request, {
+      tenantScopes: parseScopeHeader(tenantScopes),
+    });
   }
 
   @Post('review-tasks/:taskId/transition')
@@ -120,10 +131,15 @@ export class AnalysisRunsController {
 
   @Get('change-requests')
   @RequiresRoles('change_maker', 'change_checker', 'auditor')
-  listChangeRequests(@Query() query: unknown) {
+  listChangeRequests(
+    @Query() query: unknown,
+    @Headers(internalTenantScopeHeader) tenantScopes: string | undefined,
+  ) {
     const request = listChangeRequestsQuerySchema.parse(query) satisfies ListChangeRequestsQuery;
 
-    return this.analysisRuns.listChangeRequests(request);
+    return this.analysisRuns.listChangeRequests(request, {
+      tenantScopes: parseScopeHeader(tenantScopes),
+    });
   }
 
   @Get('audit-events')
@@ -260,6 +276,13 @@ function normalizeIdempotencyKey(headerValue: string | undefined) {
   }
 
   return normalized;
+}
+
+function parseScopeHeader(value: string | undefined) {
+  return value
+    ?.split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function withSubmitterActor<

@@ -148,10 +148,12 @@ For local governance API authorization, use the lightweight header mode until SS
 API_AUTH_MODE=header
 curl -H 'x-actor-id: analyst-local' \
   -H 'x-gmi-roles: analysis_runner,change_maker,change_checker,auditor' \
+  -H 'x-gmi-scope-tenants: local' \
   http://127.0.0.1:4000/ready
 ```
 
 Protected analysis and governance routes require both `x-actor-id` and one of these roles: `analysis_runner`, `analysis_reader`, `change_maker`, `change_checker`, or `auditor`. Health and readiness remain public. Set `API_AUTH_MODE=disabled` only for isolated local debugging.
+When `x-gmi-scope-tenants` is present, API-backed analysis results, review tasks, and Change Request queues are filtered to those tenant/workspace values before returning data.
 
 For an API gateway, SSO proxy, or service mesh that injects already-authenticated identity headers, use gateway mode:
 
@@ -159,9 +161,10 @@ For an API gateway, SSO proxy, or service mesh that injects already-authenticate
 API_AUTH_MODE=gateway
 API_GATEWAY_ACTOR_HEADER=x-gmi-authenticated-actor
 API_GATEWAY_ROLES_HEADER=x-gmi-authenticated-roles
+API_GATEWAY_TENANT_SCOPE_HEADER=x-gmi-authenticated-tenant-scopes
 ```
 
-Gateway mode ignores local client `x-actor-id` / `x-gmi-roles` as the source of truth, normalizes the trusted gateway actor into the internal command context, and keeps controller-level `@RequiresRoles(...)` checks unchanged.
+Gateway mode ignores local client `x-actor-id` / `x-gmi-roles` / `x-gmi-scope-tenants` as the source of truth, normalizes the trusted gateway actor and tenant scopes into the internal command context, and keeps controller-level `@RequiresRoles(...)` checks unchanged.
 
 The web client centralizes its local actor context in `apps/web/src/lib/governanceActor.ts`. Override `VITE_GOVERNANCE_ACTOR_ID`, `VITE_GOVERNANCE_ACTOR_DISPLAY_NAME`, and `VITE_GOVERNANCE_ROLES` to align API auth headers, My Tasks reviewer filtering, and audit actor IDs during local testing.
 For protected command routes, the API uses the authenticated `x-actor-id` header as the command actor and ignores spoofed actor IDs in request bodies; body actor fields remain only for backwards-compatible local clients.
@@ -174,10 +177,10 @@ curl -H 'x-actor-id: auditor-local' \
   'http://127.0.0.1:4000/audit-events?changeRequestId=CR-...'
 ```
 
-`/templates/analysis-results` accepts `limit` so workbench projections stay bounded.
-`/change-requests` supports `status` and `limit` filters for maker-checker queues.
+`/templates/analysis-results` accepts `limit` and tenant scope filtering so workbench projections stay bounded and scoped.
+`/change-requests` supports `status`, `limit`, and tenant scope filtering for maker-checker queues.
 `/audit-events` supports filtering by `objectType`, `objectId`, `sourceRunId`, `changeRequestId`, and `limit`.
-`/review-tasks` exposes analysis review tasks with `status`, `objectType`, `objectId`, `sourceRunId`, `assignedTo`, and `limit` filters so review-required analysis results can be traced from the workbench into a reviewer queue.
+`/review-tasks` exposes analysis review tasks with `status`, `objectType`, `objectId`, `sourceRunId`, `assignedTo`, `limit`, and tenant scope filters so review-required analysis results can be traced from the workbench into a reviewer queue.
 `GET /analysis-runs/{runId}/evidence-package` exports a single-run evidence package with the public run response and related audit events. Successful and failed provider runs use the same contract; failed packages expose public error summaries without raw provider details.
 `POST /review-tasks/{taskId}/transition` lets reviewers claim, start, escalate, resolve, or dismiss review tasks with actor attribution and audit events.
 The Review Queue Discovery, My Tasks, and Completed tabs load status-filtered template review tasks from this API. API-backed tasks can be claimed, started, and resolved from the queue, with local fallback data when the API is unavailable.

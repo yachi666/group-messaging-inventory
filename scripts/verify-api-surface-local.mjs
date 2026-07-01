@@ -69,9 +69,24 @@ assertSourceContains(
   'default gateway actor header',
 );
 assertSourceContains(
+  governanceAuthContext,
+  'x-gmi-authenticated-tenant-scopes',
+  'default gateway tenant scope header',
+);
+assertSourceContains(
+  governanceAuthContext,
+  'internalTenantScopeHeader',
+  'internal tenant scope header',
+);
+assertSourceContains(
   governanceAuthGuard,
   'applyInternalGovernanceHeaders(request.headers, authContext)',
   'gateway auth normalizes internal command actor headers',
+);
+assertSourceContains(
+  analysisController,
+  'parseScopeHeader(tenantScopes)',
+  'controller passes tenant scopes into list queries',
 );
 
 const operationIds = new Set();

@@ -52,6 +52,10 @@ function jsonb(value: unknown) {
   return sql`${JSON.stringify(value)}::jsonb`;
 }
 
+function hasTenantScopes(tenantScopes: string[] | undefined) {
+  return Boolean(tenantScopes && tenantScopes.length > 0);
+}
+
 export type PostgresConnectionOptions = {
   connectionString: string;
 };
@@ -518,6 +522,7 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
     const rows = await this.db
       .selectFrom('analysis_runs as ar')
       .innerJoin('template_versions as tv', 'tv.version_id', 'ar.version_id')
+      .innerJoin('templates as t', 't.template_uuid', 'tv.template_uuid')
       .leftJoin('analysis_outputs as ao', 'ao.run_id', 'ar.run_id')
       .leftJoin('review_tasks as rt', 'rt.source_run_id', 'ar.run_id')
       .select([
@@ -539,6 +544,9 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
         'rt.task_id as review_task_id',
         'rt.priority as review_task_priority',
       ])
+      .$if(hasTenantScopes(command.tenantScopes), (query) =>
+        query.where('t.tenant_or_workspace', 'in', command.tenantScopes ?? []),
+      )
       .orderBy('ar.created_at', 'desc')
       .limit(command.limit ?? 100)
       .execute();
@@ -849,13 +857,18 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
     command: ListChangeRequestsRecord = {},
   ): Promise<MappingChangeRequestRecord[]> {
     let query = this.db
-      .selectFrom('change_requests')
-      .selectAll()
-      .orderBy('created_at', 'desc')
+      .selectFrom('change_requests as cr')
+      .leftJoin('templates as t', 't.template_uuid', 'cr.object_id')
+      .selectAll('cr')
+      .orderBy('cr.created_at', 'desc')
       .limit(command.limit ?? 100);
 
     if (command.status) {
-      query = query.where('status', '=', command.status);
+      query = query.where('cr.status', '=', command.status);
+    }
+
+    if (hasTenantScopes(command.tenantScopes)) {
+      query = query.where('t.tenant_or_workspace', 'in', command.tenantScopes ?? []);
     }
 
     const rows = await query.execute();
@@ -865,29 +878,34 @@ export class PostgresAnalysisRunRepository implements AnalysisRunRepository {
 
   async listReviewTasks(command: ListReviewTasksRecord = {}): Promise<ReviewTaskRecord[]> {
     let query = this.db
-      .selectFrom('review_tasks')
-      .selectAll()
-      .orderBy('created_at', 'desc')
+      .selectFrom('review_tasks as rt')
+      .leftJoin('templates as t', 't.template_uuid', 'rt.object_id')
+      .selectAll('rt')
+      .orderBy('rt.created_at', 'desc')
       .limit(command.limit ?? 100);
 
     if (command.status) {
-      query = query.where('status', '=', command.status);
+      query = query.where('rt.status', '=', command.status);
     }
 
     if (command.objectType) {
-      query = query.where('object_type', '=', command.objectType);
+      query = query.where('rt.object_type', '=', command.objectType);
     }
 
     if (command.objectId) {
-      query = query.where('object_id', '=', command.objectId);
+      query = query.where('rt.object_id', '=', command.objectId);
     }
 
     if (command.sourceRunId) {
-      query = query.where('source_run_id', '=', command.sourceRunId);
+      query = query.where('rt.source_run_id', '=', command.sourceRunId);
     }
 
     if (command.assignedTo) {
-      query = query.where('assigned_to', '=', command.assignedTo);
+      query = query.where('rt.assigned_to', '=', command.assignedTo);
+    }
+
+    if (hasTenantScopes(command.tenantScopes)) {
+      query = query.where('t.tenant_or_workspace', 'in', command.tenantScopes ?? []);
     }
 
     const rows = await query.execute();

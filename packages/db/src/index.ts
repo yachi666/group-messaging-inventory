@@ -306,10 +306,12 @@ export type DecideChangeRequestRecord = {
 export type ListChangeRequestsRecord = {
   status?: ChangeRequestStatus;
   limit?: number;
+  tenantScopes?: string[];
 };
 
 export type ListAnalysisResultsRecord = {
   limit?: number;
+  tenantScopes?: string[];
 };
 
 export type ReviewTaskRecord = {
@@ -333,6 +335,7 @@ export type ListReviewTasksRecord = {
   sourceRunId?: string;
   assignedTo?: string;
   limit?: number;
+  tenantScopes?: string[];
 };
 
 export type TransitionReviewTaskRecord = {
@@ -803,7 +806,9 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
     }));
 
     if (completedProjections.length > 0) {
-      return completedProjections.slice(0, command.limit ?? 100);
+      return completedProjections
+        .filter((projection) => matchesTenantScope(projection.templateUuid, command.tenantScopes))
+        .slice(0, command.limit ?? 100);
     }
 
     const fallbackProjections: AiTemplateAnalysisProjection[] = [
@@ -841,7 +846,9 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
       },
     ];
 
-    return fallbackProjections.slice(0, command.limit ?? 100);
+    return fallbackProjections
+      .filter((projection) => matchesTenantScope(projection.templateUuid, command.tenantScopes))
+      .slice(0, command.limit ?? 100);
   }
 
   async recordAnalysisResult(
@@ -1023,6 +1030,7 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
   ): Promise<MappingChangeRequestRecord[]> {
     return Array.from(this.changeRequests.values())
       .filter((changeRequest) => !command.status || changeRequest.status === command.status)
+      .filter((changeRequest) => matchesTenantScope(changeRequest.objectId, command.tenantScopes))
       .map(toChangeRequestRecord)
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
       .slice(0, command.limit ?? 100);
@@ -1054,6 +1062,7 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
       .filter((task) => !command.objectId || task.objectId === command.objectId)
       .filter((task) => !command.sourceRunId || task.sourceRunId === command.sourceRunId)
       .filter((task) => !command.assignedTo || task.assignedTo === command.assignedTo)
+      .filter((task) => matchesTenantScope(task.objectId, command.tenantScopes))
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
       .slice(0, command.limit ?? 100);
   }
@@ -1453,6 +1462,14 @@ function toAuditEvents(record: MappingChangeRequestRecord): AuditEvidenceEventRe
   }
 
   return auditEvents;
+}
+
+function matchesTenantScope(objectId: string, tenantScopes: string[] | undefined) {
+  if (!tenantScopes || tenantScopes.length === 0) {
+    return true;
+  }
+
+  return tenantScopes.includes('local') && objectId.startsWith('tpluuid_');
 }
 
 function hasCompletedOutput(

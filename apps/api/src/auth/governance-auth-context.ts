@@ -1,5 +1,6 @@
 export const internalActorHeader = 'x-actor-id';
 export const internalRolesHeader = 'x-gmi-roles';
+export const internalTenantScopeHeader = 'x-gmi-scope-tenants';
 
 export type GovernanceAuthMode = 'header' | 'gateway' | 'disabled';
 
@@ -9,6 +10,7 @@ export type GovernanceAuthContext = {
   mode: GovernanceAuthMode;
   actorId?: string;
   roles: Set<string>;
+  tenantScopes: Set<string>;
 };
 
 export function resolveGovernanceAuthContext(
@@ -21,6 +23,7 @@ export function resolveGovernanceAuthContext(
     return {
       mode,
       roles: new Set(),
+      tenantScopes: new Set(),
     };
   }
 
@@ -32,6 +35,11 @@ export function resolveGovernanceAuthContext(
     mode === 'gateway'
       ? normalizeHeaderName(env.API_GATEWAY_ROLES_HEADER) ?? 'x-gmi-authenticated-roles'
       : internalRolesHeader;
+  const tenantScopesHeader =
+    mode === 'gateway'
+      ? normalizeHeaderName(env.API_GATEWAY_TENANT_SCOPE_HEADER) ??
+        'x-gmi-authenticated-tenant-scopes'
+      : internalTenantScopeHeader;
 
   const actorId = normalizeHeaderValue(getHeaderValue(headers, actorHeader));
 
@@ -39,6 +47,7 @@ export function resolveGovernanceAuthContext(
     mode,
     ...(actorId ? { actorId } : {}),
     roles: parseHeaderList(getHeaderValue(headers, rolesHeader)),
+    tenantScopes: parseHeaderList(getHeaderValue(headers, tenantScopesHeader)),
   };
 }
 
@@ -52,6 +61,9 @@ export function applyInternalGovernanceHeaders(
 
   headers[internalActorHeader] = context.actorId;
   headers[internalRolesHeader] = [...context.roles].join(',');
+  if (context.tenantScopes.size > 0) {
+    headers[internalTenantScopeHeader] = [...context.tenantScopes].join(',');
+  }
 }
 
 export function normalizeHeaderValue(value: string | string[] | undefined) {

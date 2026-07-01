@@ -123,6 +123,28 @@ try {
   if (!Array.isArray(resultsResponse.results) || resultsResponse.results.length === 0) {
     throw new Error('analysis results projection was empty');
   }
+  const locallyScopedResultsResponse = await getJson(
+    `${baseUrl}/templates/analysis-results?limit=10`,
+    {
+      'x-gmi-scope-tenants': 'local',
+    },
+  );
+  aiTemplateAnalysisResultsResponseSchema.parse(locallyScopedResultsResponse);
+  if (locallyScopedResultsResponse.results.length === 0) {
+    throw new Error('local tenant-scoped analysis results projection was empty');
+  }
+  const blockedScopeResultsResponse = await getJson(
+    `${baseUrl}/templates/analysis-results?limit=10`,
+    {
+      'x-gmi-scope-tenants': 'tenant-without-access',
+    },
+  );
+  aiTemplateAnalysisResultsResponseSchema.parse(blockedScopeResultsResponse);
+  assertEqual(
+    blockedScopeResultsResponse.results.length,
+    0,
+    'tenant-scoped analysis results are filtered',
+  );
   const limitedResultsResponse = await getJson(
     `${baseUrl}/templates/analysis-results?limit=1`,
   );
@@ -666,6 +688,18 @@ async function verifyCreateAndSubmitChangeRequest() {
 
   const pendingQueue = await getJson(`${baseUrl}/change-requests?status=PendingApproval`);
   changeRequestsResponseSchema.parse(pendingQueue);
+  const blockedScopePendingQueue = await getJson(
+    `${baseUrl}/change-requests?status=PendingApproval&limit=10`,
+    {
+      'x-gmi-scope-tenants': 'tenant-without-access',
+    },
+  );
+  changeRequestsResponseSchema.parse(blockedScopePendingQueue);
+  assertEqual(
+    blockedScopePendingQueue.changeRequests.length,
+    0,
+    'tenant-scoped change requests are filtered',
+  );
   const limitedPendingQueue = await getJson(
     `${baseUrl}/change-requests?status=PendingApproval&limit=1`,
   );
@@ -1162,9 +1196,12 @@ async function waitForHealth() {
   );
 }
 
-async function getJson(url) {
+async function getJson(url, headers = {}) {
   const response = await fetch(url, {
-    headers: defaultAuthHeaders(),
+    headers: {
+      ...defaultAuthHeaders(),
+      ...headers,
+    },
   });
 
   if (!response.ok) {

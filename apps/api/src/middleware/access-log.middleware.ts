@@ -38,6 +38,7 @@ export function accessLogMiddleware(
         requestId: request.requestId ?? 'unknown',
         actorId: authContext.actorId ?? 'anonymous',
         roleCount: authContext.roles.size,
+        tenantScopeCount: authContext.tenantScopes.size,
         method: request.method ?? 'UNKNOWN',
         path: request.originalUrl ?? request.url ?? 'unknown',
         statusCode,
