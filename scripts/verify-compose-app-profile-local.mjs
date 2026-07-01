@@ -298,7 +298,10 @@ function isRetryableDockerBuildError(error) {
     message.includes('context deadline exceeded') ||
     message.includes('only one connection allowed') ||
     message.includes('DeadlineExceeded') ||
-    message.includes('transport: Error while dialing')
+    message.includes('transport: Error while dialing') ||
+    message.includes('ECONNRESET') ||
+    message.includes('npm error network') ||
+    message.includes('network aborted')
   );
 }
 

@@ -110,6 +110,7 @@ const requiredReleasePreflightCommands = [
   'npm run test:evals:pg',
   'npm run test:evals:release-persistence:pg',
   'npm run test:evals:release-api:pg',
+  'npm run test:release-readiness:api:pg',
   'npm run test:harness:temporal',
   'npm run test:harness:temporal:provider-failure',
   'npm run test:deploy:compose',

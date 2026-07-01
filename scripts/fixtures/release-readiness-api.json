@@ -1,0 +1,10 @@
+{
+  "pipelineVersion": "template-analysis-pipeline@api-readiness-smoke",
+  "promptVersion": "template-analysis-agent@api-readiness-smoke",
+  "modelProvider": "replay",
+  "modelName": "replay-golden-fixtures",
+  "rulesetVersion": "messaging-governance-rules@local",
+  "minCaseCount": 6,
+  "actorId": "release-readiness-api-smoke",
+  "roles": "analysis_reader,auditor,change_checker"
+}

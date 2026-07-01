@@ -303,6 +303,7 @@ Other useful gates:
 | `npm run test:ui` | You changed visible frontend behavior and have a dev server running. |
 | `npm run test:harness:temporal` | You need the full API -> Temporal -> worker -> Postgres evidence-loop smoke. |
 | `npm run test:harness:temporal:provider-failure` | You need to verify failed provider-run persistence and public error summaries. |
+| `npm run test:release-readiness:api:pg` | You need a live API readiness gate over persisted release evidence. |
 | `npm run test:deploy:compose` | You changed Dockerfiles, compose config, migrations, API startup, worker startup, or web serving. |
 | `npm run test:release-preflight:local` | You are preparing a release candidate and want the Docker-backed preflight suite. |
 
@@ -355,6 +356,8 @@ npm run check:release-readiness
 ```
 
 Set `RELEASE_READINESS_URL`, `RELEASE_READINESS_PIPELINE_VERSION`, `RELEASE_READINESS_PROMPT_VERSION`, `RELEASE_READINESS_MODEL_PROVIDER`, `RELEASE_READINESS_MODEL_NAME`, `RELEASE_READINESS_RULESET_VERSION`, `RELEASE_READINESS_DATASET_VERSION`, and `RELEASE_READINESS_MIN_CASE_COUNT` to bind readiness checks to a specific candidate.
+
+`npm run test:release-readiness:api:pg` is the live API version of that gate. It records release evidence through the API, runs `check:release-readiness` against `/analysis-evaluations/latest`, verifies exact pipeline/prompt/model/ruleset/dataset expectations, and proves a version mismatch blocks promotion.
 
 ## Seed Data
 
