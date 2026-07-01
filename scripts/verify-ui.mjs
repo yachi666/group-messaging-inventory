@@ -81,6 +81,16 @@ await page.getByTestId('nav-dashboard').click();
 await page.getByRole('heading', { name: 'Messaging traffic analytics' }).waitFor();
 await page.getByTestId('nav-administration').click();
 await page.getByRole('heading', { name: 'Administration' }).waitFor();
+await page.getByRole('button', { name: 'Model Configuration' }).click();
+await page.getByTestId('model-config-panel').waitFor();
+await page.getByTestId('model-provider-select').selectOption('deepseek');
+const modelBaseUrl = await page.getByTestId('model-base-url-input').inputValue();
+if (modelBaseUrl !== 'https://api.deepseek.com') {
+  throw new Error(`DeepSeek preset base URL mismatch: ${modelBaseUrl}`);
+}
+await page.getByTestId('model-api-key-input').fill('ui-test-provider-key');
+await page.getByTestId('model-save-button').click();
+await page.getByRole('status').getByText(/Saved locally/).waitFor();
 await page.getByRole('button', { name: 'Audit Trail' }).click();
 await page.locator('.g-audit-list > div').first().waitFor();
 

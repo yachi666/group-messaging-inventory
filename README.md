@@ -139,6 +139,8 @@ npm run dev:worker
 The standalone curl example lives at `scripts/examples/deepseek-chat-completions.curl`.
 The OpenAI-compatible adapter retries transient provider failures such as HTTP 408, 429, 5xx, and network errors with configurable exponential backoff, while non-retryable 4xx errors fail fast with a stable `provider_error:*` message. Startup configuration rejects invalid provider names and requires `OPENAI_COMPATIBLE_EXTRA_BODY_JSON` to be a JSON object, so provider metadata stays low-cardinality and bad provider-specific options fail before the first workflow task. `npm run test:ai-adapter` verifies retry, backoff, provider-specific request fields, output schema parsing, and deterministic-only no-provider behavior locally.
 
+The frontend Administration area includes a `Model Configuration` screen for selecting `noop`, OpenAI, an OpenAI-compatible gateway, or the DeepSeek preset. It stores non-secret draft settings in browser local storage, keeps the API key only in browser session storage, and generates the exact env block expected by the API and Temporal worker. Applying a provider change still requires setting those env vars on the running API/worker process and restarting them; the browser UI does not hot-swap a live worker.
+
 The business harness still owns workflow state, policy routing, persistence, and review gates. Provider SDKs and OpenAI-compatible APIs are used only behind `@gmi/ai-adapters` for model orchestration, structured output, guardrails, and tracing.
 Worker analysis activities emit single-line JSON events with `event=ai_analysis_activity`, run/template/version ids, provider, model, prompt version, status, and duration. These activity logs deliberately omit raw template content, masked prompts, and model output.
 
