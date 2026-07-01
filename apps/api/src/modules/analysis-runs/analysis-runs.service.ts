@@ -311,6 +311,12 @@ export class AnalysisRunsService {
     };
   }
 
+  async getProductInventory(scope: DataAccessScope = {}) {
+    return this.repository.getProductInventory({
+      tenantScopes: scope.tenantScopes,
+    });
+  }
+
   async getChangeRequestEvidencePackage(
     changeRequestId: string,
     scope: DataAccessScope = {},

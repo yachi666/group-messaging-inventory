@@ -160,6 +160,16 @@ export class AnalysisRunsController {
     });
   }
 
+  @Get('product-inventory')
+  @RequiresRoles('analysis_reader', 'analysis_runner', 'change_maker', 'change_checker', 'auditor')
+  getProductInventory(
+    @Headers(internalTenantScopeHeader) tenantScopes: string | undefined,
+  ) {
+    return this.analysisRuns.getProductInventory({
+      tenantScopes: parseScopeHeader(tenantScopes),
+    });
+  }
+
   @Get('change-requests/:changeRequestId/evidence-package')
   @RequiresRoles('change_checker', 'auditor')
   getChangeRequestEvidencePackage(

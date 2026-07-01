@@ -581,6 +581,198 @@ export type AuditEvidenceEventRecord = {
   createdAt: string;
 };
 
+export type ProductInventoryTemplateRecord = {
+  uuid: string;
+  templateId: string;
+  platform: string;
+  tenant: string;
+  parentUseCaseId?: string;
+  currentVersion: string;
+  candidateVersion?: string;
+  channel: 'SMS' | 'Email' | 'Push' | 'In-app';
+  market: string;
+  sender: string;
+  mapping: 'Assigned' | 'Unassigned' | 'Suggested' | 'Mapping Change Pending';
+  lifecycle: 'Active' | 'No Traffic' | 'Retired';
+  monthlyVolume: number;
+  lastSeen: string;
+  confidence: number;
+  approval: 'Draft' | 'Pending Approval' | 'Changes Requested' | 'Approved';
+  maskedContent: string;
+  variables: string[];
+};
+
+export type ProductInventoryUseCaseRecord = {
+  id: string;
+  name: string;
+  description: string;
+  classification: 'Regulatory' | 'Servicing' | 'Marketing';
+  markets: string[];
+  platforms: string[];
+  channels: string[];
+  templateIds: string[];
+  messageOwner: string;
+  integratingOwner: string;
+  lifecycle: 'Candidate' | 'Active' | 'Retired';
+  approval: 'Draft' | 'Pending Approval' | 'Changes Requested' | 'Approved';
+  monthlyVolume: number;
+  lastActivity: string;
+  confidence: number;
+  evidenceCount: number;
+  governanceIssues: string[];
+  pendingChanges?: number;
+};
+
+export type ProductInventoryReviewRecord = {
+  id: string;
+  kind: 'Discovery' | 'Approval';
+  type: string;
+  object: string;
+  objectId: string;
+  platform: string;
+  market: string;
+  channel: string;
+  confidence: number;
+  priority: 'Critical' | 'High' | 'Medium' | 'Low';
+  ageing: number;
+  assignee: string;
+  status: 'Open' | 'In Review' | 'Pending Approval' | 'Changes Requested' | 'Resolved';
+  maker?: string;
+  checker?: string;
+};
+
+export type ProductInventoryCandidateUseCaseRecord = {
+  id: string;
+  name: string;
+  status: 'candidate' | 'confirmed' | 'retired';
+  market: string;
+  entity: string;
+  lob: string;
+  platform: 'MDP' | 'SFMC' | 'ICCM' | 'IRIS';
+  channel: 'SMS' | 'Email' | 'Push' | 'In-app';
+  sourceSystem: string;
+  hasTemplate: boolean;
+  templateStorage: string;
+  tenant: string;
+  senderIdentity: string;
+  templateReference: string;
+  templateFormat: string;
+  monthlyVolume: number;
+  deliveryOutcomes: {
+    sent: number;
+    delivered: number;
+    bounced: number;
+    failed: number;
+  };
+  messageOwner: string;
+  integratingSystemOwner: string;
+  contactPoint: string;
+  classification: 'Regulatory' | 'Servicing' | 'Marketing';
+  confidence: number;
+  lifecycleStatus: 'active' | 'no-traffic' | 'demise-pending' | 'demised';
+  makerCheckerStatus: 'draft' | 'pending-checker' | 'approved' | 'rejected';
+  ownerStatus: 'confirmed' | 'pending-checker' | 'needs-owner';
+  auditStatus: 'approved' | 'needs-evidence' | 'pending-checker';
+  evidenceReference: string;
+  latestValidationDate: string;
+  matchExplanation: {
+    rulesHit: string[];
+    clusterId?: string;
+    contentFingerprint?: string;
+  };
+};
+
+export type ProductInventoryProjection = {
+  generatedAt: string;
+  governanceTemplates: ProductInventoryTemplateRecord[];
+  governanceUseCases: ProductInventoryUseCaseRecord[];
+  governanceReviews: ProductInventoryReviewRecord[];
+  candidateUseCases: ProductInventoryCandidateUseCaseRecord[];
+  triageItems: Array<{
+    id: string;
+    type:
+      | 'retired-but-live'
+      | 'new-sender-identity'
+      | 'new-template'
+      | 'unknown-traffic'
+      | 'volume-anomaly';
+    title: string;
+    market: string;
+    platform: 'MDP' | 'SFMC' | 'ICCM' | 'IRIS';
+    channel: 'SMS' | 'Email' | 'Push' | 'In-app';
+    ageingDays: number;
+    confidence: number;
+    recommendedAction: string;
+  }>;
+  evidenceReadiness: Array<{ market: string; complete: number; missing: number }>;
+  auditRecords: Array<{
+    id: string;
+    actor: string;
+    action: string;
+    target: string;
+    timestamp: string;
+    approvalStatus: 'approved' | 'submitted' | 'rejected';
+  }>;
+  analyticsSignals: Array<{
+    id: string;
+    label: string;
+    market: string;
+    platform: 'MDP' | 'SFMC' | 'ICCM' | 'IRIS';
+    channel: 'SMS' | 'Email' | 'Push' | 'In-app';
+    currentValue: string;
+    baselineValue: string;
+    severity: 'high' | 'medium' | 'low';
+    recommendedAction: string;
+  }>;
+  governanceEvents: Array<{
+    id: string;
+    actor: string;
+    event: string;
+    target: string;
+    timestamp: string;
+    scope: string;
+    controlStatus: 'approved' | 'needs-evidence' | 'pending-checker';
+  }>;
+  policyControls: Array<{
+    id: string;
+    label: string;
+    description: string;
+    owner: string;
+    status: 'enabled' | 'monitoring' | 'draft';
+    impact: string;
+  }>;
+  reportQuerySummaries: Array<{
+    timeRange: 'last-30-days' | 'last-90-days' | 'last-6-months';
+    owner: string;
+    classification: 'Regulatory' | 'Servicing' | 'Marketing' | 'All';
+    totalVolume: number;
+    useCaseCount: number;
+    topMarket: string;
+    topChannel: 'SMS' | 'Email' | 'Push' | 'In-app';
+  }>;
+  csvUploadJob: {
+    id: string;
+    fileName: string;
+    status: 'idle' | 'processing' | 'complete';
+    progress: number;
+    rowsReceived: number;
+    templatesDetected: number;
+    readyForAiAnalysis: number;
+    rejectedRows: number;
+  };
+  coverageFlow: Array<{ month: string; matched: number; unknown: number }>;
+  dashboardMetrics: {
+    trafficMatchedPercentage: number;
+    unknownTrafficCount: number;
+    driftExceptionCount: number;
+    ownerConfirmedPercentage: number;
+  };
+};
+
+export type GetProductInventoryRecord = {
+  tenantScopes?: string[];
+};
+
 export type ListAuditEventsRecord = {
   objectType?: string;
   objectId?: string;
@@ -648,6 +840,7 @@ export type AnalysisRunRepository = {
   getChangeRequestEvidencePackage(
     command: GetChangeRequestEvidencePackageRecord,
   ): Promise<ChangeRequestEvidencePackageRecord | null>;
+  getProductInventory(command?: GetProductInventoryRecord): Promise<ProductInventoryProjection>;
   submitChangeRequest(command: SubmitChangeRequestRecord): Promise<MappingChangeRequestRecord>;
   decideChangeRequest(command: DecideChangeRequestRecord): Promise<MappingChangeRequestRecord>;
 };
@@ -1230,6 +1423,218 @@ export class InMemoryAnalysisRunRepository implements AnalysisRunRepository {
       .filter((event) => this.matchesAuditEventTenantScope(event, command.tenantScopes))
       .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
       .slice(0, limit);
+  }
+
+  async getProductInventory(
+    command: GetProductInventoryRecord = {},
+  ): Promise<ProductInventoryProjection> {
+    const results = await this.listAnalysisResults({
+      limit: 100,
+      tenantScopes: command.tenantScopes,
+    });
+    const reviewTasks = await this.listReviewTasks({
+      limit: 100,
+      tenantScopes: command.tenantScopes,
+    });
+    const auditEvents = await this.listAuditEvents({
+      limit: 100,
+      tenantScopes: command.tenantScopes,
+    });
+    const templates = results.map((result, index): ProductInventoryTemplateRecord => ({
+      uuid: result.templateUuid,
+      templateId: result.templateId,
+      platform: 'MDP',
+      tenant: 'local',
+      parentUseCaseId: result.nearestMatch?.templateId ?? `UC-LOCAL-${index + 1}`,
+      currentVersion: result.versionId,
+      channel: result.channel,
+      market: 'UK',
+      sender: 'CMBUK',
+      mapping: result.nearestMatch ? 'Suggested' : 'Unassigned',
+      lifecycle: result.lifecycleStatus === 'demised' ? 'Retired' : 'Active',
+      monthlyVolume: 120000 + index * 23000,
+      lastSeen: result.analyzedAt.slice(0, 10),
+      confidence: result.confidence,
+      approval: result.reviewStatus === 'reviewed' ? 'Approved' : 'Draft',
+      maskedContent: result.maskedMessage,
+      variables: result.placeholders.map((placeholder) => placeholder.replace(/[{}]/g, '')),
+    }));
+    const useCases = templates.map((template, index): ProductInventoryUseCaseRecord => ({
+      id: template.parentUseCaseId ?? `UC-LOCAL-${index + 1}`,
+      name: results[index]?.nearestMatch?.name ?? template.templateId,
+      description: results[index]?.explanation[0] ?? 'Local API-derived use case.',
+      classification: results[index]?.governanceClassification ?? 'Servicing',
+      markets: [template.market],
+      platforms: [template.platform],
+      channels: [template.channel],
+      templateIds: [template.uuid],
+      messageOwner: template.confidence >= 80 ? 'Local Owner' : 'Unassigned',
+      integratingOwner: 'Local Platform',
+      lifecycle: template.confidence >= 85 ? 'Active' : 'Candidate',
+      approval: template.approval,
+      monthlyVolume: template.monthlyVolume,
+      lastActivity: template.lastSeen,
+      confidence: template.confidence,
+      evidenceCount: auditEvents.length,
+      governanceIssues: template.confidence < 80 ? ['Low confidence'] : [],
+    }));
+    const candidateUseCases = useCases.map((useCase, index): ProductInventoryCandidateUseCaseRecord => {
+      const template = templates[index];
+
+      return {
+        id: useCase.id,
+        name: useCase.name,
+        status: useCase.lifecycle === 'Active' ? 'confirmed' : 'candidate',
+        market: 'UK',
+        entity: 'CMB UK',
+        lob: 'WPB',
+        platform: 'MDP',
+        channel: template.channel,
+        sourceSystem: 'Local API repository',
+        hasTemplate: true,
+        templateStorage: 'Local template registry',
+        tenant: template.tenant,
+        senderIdentity: template.sender,
+        templateReference: template.templateId,
+        templateFormat: template.maskedContent,
+        monthlyVolume: useCase.monthlyVolume,
+        deliveryOutcomes: {
+          sent: useCase.monthlyVolume,
+          delivered: Math.round(useCase.monthlyVolume * 0.97),
+          bounced: Math.round(useCase.monthlyVolume * 0.01),
+          failed: Math.round(useCase.monthlyVolume * 0.02),
+        },
+        messageOwner: useCase.messageOwner,
+        integratingSystemOwner: useCase.integratingOwner,
+        contactPoint: 'local-governance@example.com',
+        classification: useCase.classification,
+        confidence: useCase.confidence,
+        lifecycleStatus: 'active',
+        makerCheckerStatus: useCase.approval === 'Approved' ? 'approved' : 'draft',
+        ownerStatus: useCase.messageOwner === 'Unassigned' ? 'needs-owner' : 'confirmed',
+        auditStatus: useCase.governanceIssues.length > 0 ? 'needs-evidence' : 'approved',
+        evidenceReference: auditEvents.length > 0 ? `${auditEvents.length} audit events` : 'Missing',
+        latestValidationDate: new Date().toISOString().slice(0, 10),
+        matchExplanation: {
+          rulesHit: ['local repository', 'analysis result'],
+          clusterId: `CLS-LOCAL-${index + 1}`,
+        },
+      };
+    });
+    const triageItems = candidateUseCases
+      .filter((useCase) => useCase.auditStatus !== 'approved')
+      .map((useCase, index) => ({
+        id: `TRI-LOCAL-${index + 1}`,
+        type: 'unknown-traffic' as const,
+        title: `${useCase.name} needs API evidence review`,
+        market: useCase.market,
+        platform: useCase.platform,
+        channel: useCase.channel,
+        ageingDays: 0,
+        confidence: useCase.confidence,
+        recommendedAction: 'Complete owner and evidence review',
+      }));
+    const totalVolume = candidateUseCases.reduce((sum, useCase) => sum + useCase.monthlyVolume, 0);
+
+    return {
+      generatedAt: new Date().toISOString(),
+      governanceTemplates: templates,
+      governanceUseCases: useCases,
+      governanceReviews: reviewTasks.map((task) => ({
+        id: task.taskId,
+        kind: 'Discovery',
+        type: task.taskType,
+        object: task.objectId,
+        objectId: task.objectId,
+        platform: 'MDP',
+        market: 'UK',
+        channel: 'SMS',
+        confidence: 70,
+        priority: task.priority === 'high' ? 'High' : 'Medium',
+        ageing: 0,
+        assignee: task.assignedTo ?? 'Unassigned',
+        status: task.status === 'Open' ? 'Open' : 'In Review',
+      })),
+      candidateUseCases,
+      triageItems,
+      evidenceReadiness: [{ market: 'UK', complete: triageItems.length === 0 ? 100 : 50, missing: triageItems.length === 0 ? 0 : 50 }],
+      auditRecords: auditEvents.map((event) => ({
+        id: event.auditEventId,
+        actor: event.actorId ?? 'System',
+        action: event.action,
+        target: event.objectId,
+        timestamp: event.createdAt,
+        approvalStatus: 'submitted',
+      })),
+      analyticsSignals: triageItems.map((item) => ({
+        id: item.id.replace('TRI', 'SIG'),
+        label: item.title,
+        market: item.market,
+        platform: item.platform,
+        channel: item.channel,
+        currentValue: `${item.confidence}%`,
+        baselineValue: '90%',
+        severity: item.confidence < 70 ? 'high' : 'medium',
+        recommendedAction: item.recommendedAction,
+      })),
+      governanceEvents: auditEvents.map((event) => ({
+        id: event.auditEventId,
+        actor: event.actorId ?? 'System',
+        event: event.action,
+        target: event.objectId,
+        timestamp: event.createdAt,
+        scope: `${event.objectType}:${event.objectId}`,
+        controlStatus: 'pending-checker',
+      })),
+      policyControls: [
+        {
+          id: 'POL-LOCAL-1',
+          label: 'Local API evidence projection',
+          description: 'Frontend reads inventory state from the API repository.',
+          owner: 'Architecture',
+          status: 'enabled',
+          impact: 'Prevents browser-only mock inventory data.',
+        },
+      ],
+      reportQuerySummaries: [
+        {
+          timeRange: 'last-30-days',
+          owner: 'All',
+          classification: 'All',
+          totalVolume,
+          useCaseCount: useCases.length,
+          topMarket: 'UK',
+          topChannel: 'SMS',
+        },
+      ],
+      csvUploadJob: {
+        id: 'UPL-LOCAL',
+        fileName: 'local-api-derived-inventory.csv',
+        status: 'idle',
+        progress: 0,
+        rowsReceived: templates.length,
+        templatesDetected: templates.length,
+        readyForAiAnalysis: templates.length,
+        rejectedRows: 0,
+      },
+      coverageFlow: [
+        { month: 'May', matched: Math.round(totalVolume * 0.8), unknown: triageItems.length },
+        { month: 'Jun', matched: totalVolume, unknown: triageItems.length },
+      ],
+      dashboardMetrics: {
+        trafficMatchedPercentage: triageItems.length === 0 ? 100 : 75,
+        unknownTrafficCount: triageItems.length,
+        driftExceptionCount: triageItems.length,
+        ownerConfirmedPercentage:
+          candidateUseCases.length === 0
+            ? 0
+            : Math.round(
+                (candidateUseCases.filter((useCase) => useCase.ownerStatus === 'confirmed').length /
+                  candidateUseCases.length) *
+                  100,
+              ),
+      },
+    };
   }
 
   private matchesAuditEventTenantScope(

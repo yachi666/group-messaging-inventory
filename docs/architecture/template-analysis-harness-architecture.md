@@ -588,7 +588,8 @@ Current repository status:
 - `GET /change-requests` supports `status`, bounded `limit`, and tenant/workspace scope filters for maker-checker queues.
 - `GET /review-tasks` exposes analysis review tasks through the API with `status`, `objectType`, `objectId`, `sourceRunId`, `assignedTo`, `limit`, and tenant/workspace scope filters, making `review_tasks` usable by reviewer surfaces without direct table access.
 - `POST /review-tasks/{taskId}/transition` implements the first reviewer task lifecycle API. It supports `Assigned`, `InReview`, `PendingApproval`, `Resolved`, and `Dismissed` transitions, prevents terminal tasks from being reopened, stores assignment/resolution metadata, and writes `review_task_transitioned` audit events.
-- Review Queue Discovery, My Tasks, and Completed tabs read status-filtered template review tasks from `/review-tasks`; My Tasks also sends `assignedTo` for the current reviewer. The queue calls the transition API for claim/start/resolve actions and falls back to local queue data when the API is unavailable.
+- `GET /product-inventory` exposes the live frontend projection for Dashboard, Use Cases, Templates, Workspace, Review Queue, Governance, Settings, and Analytics. It derives template inventory, use case groupings, review summaries, triage, evidence readiness, analytics signals, policy controls, upload status, and dashboard metrics from repository data so browser-side mock inventory imports are not required.
+- Review Queue Discovery, My Tasks, and Completed tabs read status-filtered template review tasks from `/review-tasks`; My Tasks also sends `assignedTo` for the current reviewer. The queue calls the transition API for claim/start/resolve actions and uses the live `/product-inventory` projection when the task-specific endpoint is empty or unavailable.
 - `npm run test:no-infra` is the local and CI entrypoint for the no-infrastructure harness gate set, including both replay-mode golden evaluation and injected provider-adapter evaluation without external model calls.
 - `.github/workflows/ci.yml` runs `npm run test:no-infra` on pull requests and pushes, and `npm run test:ci-workflow` verifies that the workflow and package script continue to include the required gates.
 - `npm run test:release-preflight:local` is the Docker-backed release-candidate gate. It starts local Postgres and Temporal, applies migrations, runs repository and seeded API checks, persists evaluation/release evidence through Postgres and the API, and exercises both successful and provider-failure API -> Temporal -> worker -> Postgres evidence loops. `.github/workflows/release-preflight.yml` exposes the same gate as a manual workflow, and `npm run test:ci-workflow` verifies that this preflight entrypoint keeps the required infrastructure-backed checks.
@@ -1224,11 +1225,11 @@ GET /api/change-requests/{changeRequestId}/evidence-package
 Current repository status:
 
 - Governance Approval fetches pending Change Requests from the API when available.
-- If the local API is unavailable, the screen falls back to the existing mock governance review data.
+- If the pending Change Request endpoint is empty or unavailable, the screen uses the live `/product-inventory` projection rather than browser-side mock governance review data.
 - Checker decisions for API-backed Change Requests call the backend decision command and remove the item from the pending queue after success.
 - AI Template Analysis mapping and lifecycle actions send `submitForApproval: true`; the API resolves the maker from the authenticated `x-actor-id` header and treats request-body actor fields as backwards-compatible legacy input only.
 - Change Request evidence packages expose the CR, proposed patch, source Analysis Run, and audit events for review/export workflows.
-- `npm run test:web-contracts` verifies that the Governance Approval client keeps the pending queue, decision command, and evidence package calls on the shared `apiFetch` + Zod-contract path while retaining explicit mock fallback behavior.
+- `npm run test:web-contracts` verifies that the Governance Approval client keeps the pending queue, decision command, and evidence package calls on the shared `apiFetch` + Zod-contract path, and `npm run test:live-frontend-data` prevents the main frontend surfaces from reintroducing browser-side mock inventory imports.
 
 Response shape should remain close to the frontend contract:
 
@@ -1586,7 +1587,7 @@ These tools can still be useful locally or for experiments, but they should not 
 - Implemented create-and-submit flow for mapping/lifecycle/current-version Change Requests via preferred `submitForApproval` plus authenticated `x-actor-id`; optional body `submitterActorId` remains compatibility-only for older local clients.
 - Persist maker/checker actors, decision reason, timestamps, and audit events.
 - Apply approved mapping/lifecycle/current-version patches to the governed Template and increment `approved_revision`.
-- Implemented Governance Approval screen wiring to pending Change Requests with explicit mock fallback and web-contract verification.
+- Implemented Governance Approval screen wiring to pending Change Requests with live `/product-inventory` projection fallback and web-contract verification.
 - Implemented minimum evidence export package: `GET /change-requests/{id}/evidence-package`.
 
 ### Phase 4: Evaluation Gates

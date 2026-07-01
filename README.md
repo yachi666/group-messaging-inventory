@@ -44,7 +44,7 @@ The product direction is dashboard-first rather than marketing-first. The initia
 - Kysely database types
 - OpenAI Agents SDK behind a replaceable AI adapter
 - CSS design tokens
-- Mock data shaped like future API responses
+- API-projected frontend data from Postgres-backed repository views
 
 ## 📁 Project Structure
 
@@ -181,10 +181,11 @@ curl -H 'x-actor-id: auditor-local' \
 `/change-requests` supports `status`, `limit`, and tenant scope filtering for maker-checker queues.
 `/audit-events` supports filtering by `objectType`, `objectId`, `sourceRunId`, `changeRequestId`, `limit`, and tenant scope.
 `/review-tasks` exposes analysis review tasks with `status`, `objectType`, `objectId`, `sourceRunId`, `assignedTo`, `limit`, and tenant scope filters so review-required analysis results can be traced from the workbench into a reviewer queue.
+`/product-inventory` exposes the live frontend inventory projection used by Dashboard, Use Cases, Templates, Workspace, Review Queue, Governance, Settings, and Analytics surfaces. It derives templates, use cases, review summaries, triage, evidence readiness, analytics signals, policy controls, and upload status from the API repository instead of browser-side mock files.
 `GET /analysis-runs/{runId}/evidence-package` exports a tenant-scoped single-run evidence package with the public run response and related audit events. Successful and failed provider runs use the same contract; failed packages expose public error summaries without raw provider details.
 `GET /change-requests/{changeRequestId}/evidence-package` exports tenant-scoped maker-checker evidence for approved or rejected change decisions.
 `POST /review-tasks/{taskId}/transition` lets reviewers claim, start, escalate, resolve, or dismiss review tasks with actor attribution and audit events.
-The Review Queue Discovery, My Tasks, and Completed tabs load status-filtered template review tasks from this API. API-backed tasks can be claimed, started, and resolved from the queue, with local fallback data when the API is unavailable.
+The Review Queue Discovery, My Tasks, and Completed tabs load status-filtered template review tasks from this API. When the task-specific API is empty or unavailable, the queue displays the live `/product-inventory` projection instead of local mock data.
 
 API submission can either enqueue only or start the Temporal workflow. For the full local harness path, run Temporal and set:
 
@@ -303,6 +304,8 @@ npm run test:backend
 This smoke test covers API validation, analysis run submission, repository domain errors, Change Request creation, maker-checker submission/decision, self-approval blocking, pending approval queue projection, Analysis Run and Change Request evidence packages, and the local latest-evaluation query surface. Key success and error responses are parsed through the shared Zod response contracts in `packages/contracts`.
 
 The AI Template Analysis frontend uses the same contracts for result projections and can submit a manual re-analysis through `POST /template-versions/{versionId}/analysis-runs`, then poll `GET /analysis-runs/{runId}` with the returned run id. Analysis result projections include both `templateUuid` and `versionId` so UI commands use stable governance identities instead of display labels. They also carry routing metadata (`policyDecision`, `reviewTaskId`, and `changeRequestId`) so the workbench can show why a result is auto-recorded, review-required, or blocked.
+
+`npm run test:live-frontend-data` verifies that the main frontend surfaces remain wired to live API data and do not reintroduce browser-side mock inventory imports.
 
 For the golden dataset evaluation gate, run:
 

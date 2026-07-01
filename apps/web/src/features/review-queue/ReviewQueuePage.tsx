@@ -13,8 +13,8 @@ import {
   ShieldCheckIcon,
   SparklesIcon,
 } from '@heroicons/react/24/outline';
-import { governanceReviews, governanceTemplates, governanceUseCases } from '../../data/governanceMock';
 import { CandidateSplitModal } from '../governance/GovernancePages';
+import { useProductInventory } from '../inventory/productInventoryApi';
 import { useI18n } from '../../i18n/LanguageProvider';
 import { getGovernanceActor } from '../../lib/governanceActor';
 import {
@@ -45,21 +45,6 @@ type QueueItem = {
 };
 
 type ReviewTaskQueueTab = 'Discovery Review' | 'My Tasks' | 'Completed';
-
-const fallbackQueueItems: QueueItem[] = [
-  { id: 'UC-76821', taskId: 'UC-76821', name: 'Card repayment reminder', platform: 'MDP', channel: 'SMS', market: 'Hong Kong', confidence: 87, priority: 'High', age: '3d', status: 'Needs review' },
-  { id: 'TPL-55411', taskId: 'TPL-55411', name: 'Order confirmation v3', platform: 'SFMC', channel: 'Email', market: 'UK', confidence: 64, priority: 'Medium', age: '5d', status: 'Needs review' },
-  { id: 'UC-76818', taskId: 'UC-76818', name: 'Password reset email', platform: 'ICCM', channel: 'Email', market: 'Singapore', confidence: 91, priority: 'High', age: '1d', status: 'Pending approval' },
-  { id: 'VER-33109', taskId: 'VER-33109', name: 'Marketing opt-in email v2', platform: 'MDP', channel: 'SMS', market: 'UK', confidence: 77, priority: 'Medium', age: '2d', status: 'Needs review' },
-  { id: 'RL-85512', taskId: 'RL-85512', name: 'Spring promo SMS (Retired)', platform: 'SFMC', channel: 'SMS', market: 'Hong Kong', confidence: 93, priority: 'High', age: '7d', status: 'Overdue' },
-  { id: 'TPL-55398', taskId: 'TPL-55398', name: 'Shipping delay SMS', platform: 'MDP', channel: 'SMS', market: 'Singapore', confidence: 58, priority: 'Low', age: '6d', status: 'Needs review' },
-  { id: 'UC-76790', taskId: 'UC-76790', name: 'Account security alert email', platform: 'ICCM', channel: 'Email', market: 'UK', confidence: 87, priority: 'High', age: '4d', status: 'Needs review' },
-  { id: 'VER-33077', taskId: 'VER-33077', name: 'Welcome series email v2', platform: 'MDP', channel: 'Email', market: 'Hong Kong', confidence: 73, priority: 'Medium', age: '3d', status: 'Pending approval' },
-  { id: 'TPL-55321', taskId: 'TPL-55321', name: 'Two-factor code SMS', platform: 'SFMC', channel: 'SMS', market: 'Singapore', confidence: 61, priority: 'Medium', age: '8d', status: 'Overdue' },
-  { id: 'RL-88401', taskId: 'RL-88401', name: 'Black Friday offer email (Retired)', platform: 'MDP', channel: 'Email', market: 'UK', confidence: 95, priority: 'High', age: '10d', status: 'Overdue' },
-  { id: 'UC-76712', taskId: 'UC-76712', name: 'Loyalty points expiry SMS', platform: 'SFMC', channel: 'SMS', market: 'Singapore', confidence: 68, priority: 'Medium', age: '5d', status: 'Needs review' },
-  { id: 'VER-33012', taskId: 'VER-33012', name: 'Re-engagement email v2', platform: 'ICCM', channel: 'Email', market: 'Singapore', confidence: 79, priority: 'Medium', age: '2d', status: 'Pending approval' },
-];
 
 type ApprovalItem = {
   id: string;
@@ -92,8 +77,11 @@ const currentGovernanceActor = getGovernanceActor();
 export function ReviewQueuePage() {
   const { locale } = useI18n();
   const zh = locale === 'zh-CN';
+  const { data: inventory, error: inventoryError, loading: inventoryLoading } = useProductInventory();
+  const governanceUseCases = inventory?.governanceUseCases ?? [];
+  const governanceTemplates = inventory?.governanceTemplates ?? [];
   const [activeTab, setActiveTab] = useState('Discovery Review');
-  const [selectedId, setSelectedId] = useState(fallbackQueueItems[0].id);
+  const [selectedId, setSelectedId] = useState('');
   const [query, setQuery] = useState('');
   const [notes, setNotes] = useState('Confirmed as a standard servicing reminder for card repayment. Templates and variables align with the existing Repayment Management taxonomy.');
   const [highQuality, setHighQuality] = useState(true);
@@ -105,19 +93,33 @@ export function ReviewQueuePage() {
   const [transitioningTaskId, setTransitioningTaskId] = useState<string | null>(null);
 
   const activeReviewQueueTab = toReviewQueueTab(activeTab);
-  const fallbackQueueSource = useMemo(
-    () => filterFallbackQueueItems(activeReviewQueueTab),
-    [activeReviewQueueTab],
+  const liveQueueSource = useMemo(
+    () => (inventory?.governanceReviews ?? [])
+      .filter((review) => matchesReviewTab(review.status, activeReviewQueueTab))
+      .map((review): QueueItem => ({
+        id: review.id,
+        taskId: review.id,
+        name: review.object,
+        platform: review.platform,
+        channel: review.channel,
+        market: review.market,
+        confidence: review.confidence,
+        priority: review.priority === 'Low' ? 'Low' : review.priority === 'Medium' ? 'Medium' : 'High',
+        age: `${review.ageing}d`,
+        status: toQueueStatusFromReviewStatus(review.status),
+        assignedTo: review.assignee,
+      })),
+    [activeReviewQueueTab, inventory],
   );
-  const queueSource = apiQueueItems ?? fallbackQueueSource;
+  const queueSource = apiQueueItems ?? liveQueueSource;
   const visibleItems = useMemo(() => queueSource.filter((item) => `${item.name} ${item.id} ${item.market}`.toLowerCase().includes(query.toLowerCase())), [query, queueSource]);
-  const selected = queueSource.find((item) => item.id === selectedId) ?? queueSource[0] ?? fallbackQueueSource[0] ?? fallbackQueueItems[0];
+  const selected = queueSource.find((item) => item.id === selectedId) ?? queueSource[0];
   const selectedTaskIsTerminal =
-    selected.reviewTaskStatus === 'Resolved' || selected.reviewTaskStatus === 'Dismissed';
-  const selectedTaskIsBusy = transitioningTaskId === selected.taskId;
+    selected?.reviewTaskStatus === 'Resolved' || selected?.reviewTaskStatus === 'Dismissed';
+  const selectedTaskIsBusy = transitioningTaskId === selected?.taskId;
   const localQueueLabel = activeReviewQueueTab
-    ? `Local ${activeReviewQueueTab.toLowerCase()} queue`
-    : 'Local review queue';
+    ? `Live ${activeReviewQueueTab.toLowerCase()} projection`
+    : 'Live review projection';
 
   function loadReviewTasks() {
     const controller = new AbortController();
@@ -141,7 +143,7 @@ export function ReviewQueuePage() {
       })
       .catch(() => {
         setApiQueueItems(null);
-        setReviewTaskNotice('Review task API unavailable. Showing local discovery queue.');
+        setReviewTaskNotice('Review task API unavailable. Showing live inventory projection.');
       })
       .finally(() => {
         setIsLoadingReviewTasks(false);
@@ -162,9 +164,9 @@ export function ReviewQueuePage() {
 
   useEffect(() => {
     if (!queueSource.some((item) => item.id === selectedId)) {
-      setSelectedId(queueSource[0]?.id ?? fallbackQueueSource[0]?.id ?? fallbackQueueItems[0].id);
+      setSelectedId(queueSource[0]?.id ?? '');
     }
-  }, [fallbackQueueSource, queueSource, selectedId]);
+  }, [queueSource, selectedId]);
 
   function flash(message: string) {
     setNotice(message);
@@ -175,8 +177,12 @@ export function ReviewQueuePage() {
     status: 'Assigned' | 'InReview' | 'Resolved',
     reason: string,
   ) {
+    if (!selected) {
+      return;
+    }
+
     if (!selected.isApiBacked) {
-      flash('Connect to the Review Task API to update this local queue item');
+      flash('Connect to the Review Task API to update this projected queue item');
       return;
     }
 
@@ -207,26 +213,57 @@ export function ReviewQueuePage() {
     return <GovernanceApprovalWorkbench activeTab={activeTab} onTabChange={setActiveTab} />;
   }
 
+  if (inventoryLoading) {
+    return <section className="review-workbench"><div className="dashboard-loading" role="status">Loading live review queue…</div></section>;
+  }
+
+  if (inventoryError) {
+    return <section className="review-workbench"><div className="g-empty" role="alert"><strong>Live review queue API unavailable</strong><span>{inventoryError}</span></div></section>;
+  }
+
+  const reviewTabs = (
+    <div className="review-tabs" role="tablist">
+      {['Discovery Review', 'Governance Approval', 'My Tasks', 'Completed'].map((tab) => (
+        <button className={activeTab === tab ? 'review-tab-active' : ''} key={tab} onClick={() => setActiveTab(tab)} role="tab" type="button">{tab}</button>
+      ))}
+    </div>
+  );
+
+  const reviewHeader = (
+    <header className="review-header">
+      <div>
+        <h1>{zh ? '审核队列' : 'Review Queue'}</h1>
+        <p>{zh ? '审核系统发现的对象，并基于证据作出治理决策。' : 'Review discovered items and make evidence-backed governance decisions.'}</p>
+      </div>
+      <div className="review-metrics" aria-label="Queue metrics">
+        <Metric value={String(queueSource.length)} label="Total" />
+        <Metric value={String(queueSource.filter((item) => item.status === 'Needs review').length)} label="Needs review" />
+        <Metric value={String(queueSource.filter((item) => item.status === 'Overdue').length)} label="Overdue" />
+        <Metric value={String(queueSource.filter((item) => item.assignedTo === currentGovernanceActor.actorId).length)} label="Assigned to me" />
+      </div>
+    </header>
+  );
+
+  if (!selected) {
+    return (
+      <section className="review-workbench">
+        {reviewHeader}
+        {reviewTabs}
+        <div className="approval-sync-banner" role="status">
+          <span>{reviewTaskNotice ?? localQueueLabel}</span>
+          <button data-testid="review-task-refresh" disabled={isLoadingReviewTasks} onClick={() => loadReviewTasks()} type="button">
+            <ArrowPathIcon />{isLoadingReviewTasks ? 'Refreshing' : 'Refresh review tasks'}
+          </button>
+        </div>
+        <div className="g-empty"><strong>No live review items</strong><span>The API returned an empty review queue for this tab.</span></div>
+      </section>
+    );
+  }
+
   return (
     <section className="review-workbench">
-      <header className="review-header">
-        <div>
-          <h1>{zh ? '审核队列' : 'Review Queue'}</h1>
-          <p>{zh ? '审核系统发现的对象，并基于证据作出治理决策。' : 'Review discovered items and make evidence-backed governance decisions.'}</p>
-        </div>
-        <div className="review-metrics" aria-label="Queue metrics">
-          <Metric value="128" label="Total" />
-          <Metric value="42" label="Needs review" />
-          <Metric value="28" label="Overdue" />
-          <Metric value="18" label="Assigned to me" />
-        </div>
-      </header>
-
-      <div className="review-tabs" role="tablist">
-        {['Discovery Review', 'Governance Approval', 'My Tasks', 'Completed'].map((tab) => (
-          <button className={activeTab === tab ? 'review-tab-active' : ''} key={tab} onClick={() => setActiveTab(tab)} role="tab" type="button">{tab}</button>
-        ))}
-      </div>
+      {reviewHeader}
+      {reviewTabs}
 
       <div className="approval-sync-banner" role="status">
         <span>{reviewTaskNotice ?? (apiQueueItems === null ? localQueueLabel : `API ${activeReviewQueueTab?.toLowerCase() ?? 'review'} tasks`)}</span>
@@ -315,7 +352,7 @@ export function ReviewQueuePage() {
         <div><button onClick={() => flash('Draft saved')} type="button">Save Draft</button><button className="submit-button" onClick={() => flash('Submitted to Governance Approval')} type="button">Submit for Approval</button></div>
       </footer>
       {notice ? <div className="review-toast" role="status">{notice}</div> : null}
-      {splitting ? <CandidateSplitModal useCase={governanceUseCases[0]} templates={governanceTemplates.filter((template) => governanceUseCases[0].templateIds.includes(template.uuid))} onClose={() => setSplitting(false)} onSubmit={() => { setSplitting(false); flash('Split approval package submitted'); }} /> : null}
+      {splitting && governanceUseCases[0] ? <CandidateSplitModal useCase={governanceUseCases[0]} templates={governanceTemplates.filter((template) => governanceUseCases[0]?.templateIds.includes(template.uuid))} onClose={() => setSplitting(false)} onSubmit={() => { setSplitting(false); flash('Split approval package submitted'); }} /> : null}
     </section>
   );
 }
@@ -347,16 +384,25 @@ function fetchReviewTasksForTab(tab: ReviewTaskQueueTab | null, signal?: AbortSi
   return fetchReviewTasksByStatuses(['Open'], signal);
 }
 
-function filterFallbackQueueItems(tab: ReviewTaskQueueTab | null) {
+function matchesReviewTab(status: string, tab: ReviewTaskQueueTab | null) {
   if (tab === 'My Tasks') {
-    return fallbackQueueItems.filter((item) => item.status === 'Pending approval');
+    return status === 'Assigned' || status === 'In Review' || status === 'Pending Approval';
   }
 
   if (tab === 'Completed') {
-    return fallbackQueueItems.filter((item) => item.status === 'Overdue');
+    return status === 'Resolved' || status === 'Dismissed';
   }
 
-  return fallbackQueueItems.filter((item) => item.status === 'Needs review');
+  return status !== 'Resolved' && status !== 'Dismissed';
+}
+
+function toQueueStatusFromReviewStatus(status: string): QueueStatus {
+  if (status === 'Assigned') return 'Assigned';
+  if (status === 'In Review') return 'In review';
+  if (status === 'Pending Approval') return 'Pending approval';
+  if (status === 'Resolved') return 'Resolved';
+  if (status === 'Dismissed') return 'Dismissed';
+  return 'Needs review';
 }
 
 function belongsToQueueTab(item: QueueItem, tab: ReviewTaskQueueTab | null) {
@@ -440,13 +486,30 @@ function formatTaskAge(createdAt: string) {
 
 function GovernanceApprovalWorkbench({ activeTab, onTabChange }: { activeTab: string; onTabChange: (tab: string) => void }) {
   const { locale } = useI18n(); const zh = locale === 'zh-CN';
-  const fallbackApprovals = useMemo(
-    () => governanceReviews.filter((review) => review.kind === 'Approval') as ApprovalItem[],
-    [],
+  const { data: inventory, error: inventoryError, loading: inventoryLoading } = useProductInventory();
+  const liveApprovals = useMemo(
+    () => (inventory?.governanceReviews ?? [])
+      .filter((review) => review.kind === 'Approval')
+      .map((review): ApprovalItem => ({
+        id: review.id,
+        type: review.type,
+        object: review.object,
+        objectId: review.objectId,
+        platform: review.platform,
+        market: review.market,
+        channel: review.channel,
+        confidence: review.confidence,
+        priority: review.priority === 'Low' ? 'Low' : review.priority === 'Medium' ? 'Medium' : 'High',
+        ageing: review.ageing,
+        status: review.status,
+        maker: review.maker ?? review.assignee,
+        checker: review.checker,
+      })),
+    [inventory],
   );
   const [apiApprovals, setApiApprovals] = useState<ApprovalItem[] | null>(null);
-  const approvals = apiApprovals ?? fallbackApprovals;
-  const [selectedId, setSelectedId] = useState(fallbackApprovals[0].id);
+  const approvals = apiApprovals ?? liveApprovals;
+  const [selectedId, setSelectedId] = useState('');
   const [decision, setDecision] = useState<'Approve' | 'Request changes' | 'Reject' | null>(null);
   const [comment, setComment] = useState('');
   const [isDeciding, setIsDeciding] = useState(false);
@@ -481,7 +544,7 @@ function GovernanceApprovalWorkbench({ activeTab, onTabChange }: { activeTab: st
       })
       .catch(() => {
         setApiApprovals(null);
-        setApprovalQueueNotice('Approval API unavailable. Showing local mock approvals.');
+        setApprovalQueueNotice('Approval API unavailable. Showing live inventory projection.');
       })
       .finally(() => {
         setIsLoadingApprovals(false);
@@ -501,6 +564,14 @@ function GovernanceApprovalWorkbench({ activeTab, onTabChange }: { activeTab: st
       setSelectedId(approvals[0].id);
     }
   }, [approvals, selectedId]);
+
+  if (inventoryLoading) {
+    return <section className="review-workbench governance-approval-workbench"><div className="dashboard-loading" role="status">Loading live approvals…</div></section>;
+  }
+
+  if (inventoryError) {
+    return <section className="review-workbench governance-approval-workbench"><div className="g-empty" role="alert"><strong>Live approval API unavailable</strong><span>{inventoryError}</span></div></section>;
+  }
 
   async function confirmDecision() {
     if (!decision) {
@@ -549,7 +620,7 @@ function GovernanceApprovalWorkbench({ activeTab, onTabChange }: { activeTab: st
     try {
       setEvidencePackage(await fetchChangeRequestEvidencePackage(selected.id));
     } catch {
-      setApprovalQueueNotice('Evidence package API unavailable. Showing local preview.');
+      setApprovalQueueNotice('Evidence package API unavailable. Showing live projection preview.');
       setEvidencePackage(createFallbackEvidencePackage(selected));
     } finally {
       setIsLoadingEvidence(false);
@@ -560,13 +631,14 @@ function GovernanceApprovalWorkbench({ activeTab, onTabChange }: { activeTab: st
     return <section className="review-workbench governance-approval-workbench">
       <header className="review-header"><div><h1>{zh ? '审核队列' : 'Review Queue'}</h1><p>{zh ? '当前没有待审批事项。' : 'There are no approval requests waiting for a checker decision.'}</p></div><div className="review-metrics"><Metric value="0" label={zh ? '待审批' : 'Pending'} /><Metric value="0" label={zh ? '今日到期' : 'Due today'} /><Metric value="0" label={zh ? '要求修改' : 'Changes requested'} /><Metric value="0" label={zh ? '已超时' : 'Overdue'} /></div></header>
       <div className="review-tabs" role="tablist">{['Discovery Review', 'Governance Approval', 'My Tasks', 'Completed'].map((tab) => <button className={activeTab === tab ? 'review-tab-active' : ''} key={tab} onClick={() => onTabChange(tab)} role="tab" type="button">{tab}</button>)}</div>
+      <div className="approval-sync-banner" role="status"><span>{approvalQueueNotice ?? (apiApprovals === null ? 'Live approval projection' : 'API approval queue')}</span><button data-testid="approval-refresh" disabled={isLoadingApprovals} onClick={() => loadPendingApprovals()} type="button"><ArrowPathIcon />{isLoadingApprovals ? 'Refreshing' : 'Refresh approvals'}</button></div>
     </section>;
   }
 
   return <section className="review-workbench governance-approval-workbench">
     <header className="review-header"><div><h1>{zh ? '审核队列' : 'Review Queue'}</h1><p>{zh ? '集中处理人工调查与治理审批。' : 'Review discovered items and make evidence-backed governance decisions.'}</p></div><div className="review-metrics"><Metric value="12" label={zh ? '待审批' : 'Pending'} /><Metric value="4" label={zh ? '今日到期' : 'Due today'} /><Metric value="3" label={zh ? '要求修改' : 'Changes requested'} /><Metric value="2" label={zh ? '已超时' : 'Overdue'} /></div></header>
     <div className="review-tabs" role="tablist">{['Discovery Review', 'Governance Approval', 'My Tasks', 'Completed'].map((tab) => <button className={activeTab === tab ? 'review-tab-active' : ''} key={tab} onClick={() => onTabChange(tab)} role="tab" type="button">{tab}</button>)}</div>
-    <div className="approval-sync-banner" role="status"><span>{approvalQueueNotice ?? (apiApprovals === null ? 'Local approval data' : 'API approval queue')}</span><button data-testid="approval-refresh" disabled={isLoadingApprovals} onClick={() => loadPendingApprovals()} type="button"><ArrowPathIcon />{isLoadingApprovals ? 'Refreshing' : 'Refresh approvals'}</button></div>
+    <div className="approval-sync-banner" role="status"><span>{approvalQueueNotice ?? (apiApprovals === null ? 'Live approval projection' : 'API approval queue')}</span><button data-testid="approval-refresh" disabled={isLoadingApprovals} onClick={() => loadPendingApprovals()} type="button"><ArrowPathIcon />{isLoadingApprovals ? 'Refreshing' : 'Refresh approvals'}</button></div>
     <div className="approval-grid">
       <aside className="approval-queue"><div className="queue-tools"><label><MagnifyingGlassIcon /><input placeholder="Search approvals" /></label><button type="button"><FunnelIcon />Filters <span>2</span></button></div><div className="approval-list">{approvals.map((review) => <button className={selected.id === review.id ? 'active' : ''} key={review.id} onClick={() => { setSelectedId(review.id); setDecision(null); }}><span className={`priority priority-${review.priority.toLowerCase()}`}>{review.priority}</span><div><strong>{review.object}</strong><small>{review.type} · {review.id}</small><small>{review.market} · Maker: {review.maker}</small></div><b>{review.ageing}d</b></button>)}</div></aside>
       <main className="approval-case">

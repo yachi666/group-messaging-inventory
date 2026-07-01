@@ -88,6 +88,7 @@ const requiredNoInfraCommands = [
   'npm run test:evals:release-persistence:local',
   'npm run test:evals:latest-api-mapping:local',
   'npm run test:web-contracts',
+  'npm run test:live-frontend-data',
   'npm run test:ci-workflow',
   'npm run test:deploy-config',
   'npm run build',

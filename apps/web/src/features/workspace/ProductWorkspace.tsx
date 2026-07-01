@@ -1,17 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { StatusChip } from '../../components/StatusChip';
-import {
-  analyticsSignals,
-  auditRecords,
-  candidateUseCases,
-  csvUploadJob,
-  evidenceReadiness,
-  governanceEvents,
-  policyControls,
-  reportQuerySummaries,
-  triageItems,
-} from '../../data/mockInventory';
 import type {
   CandidateUseCase,
   Classification,
@@ -24,7 +13,7 @@ import type {
   SignalSeverity,
 } from '../../domain/inventory';
 import { useAiChat } from '../ai/AiChatProvider';
-import { fetchAuditEvents } from './auditApi';
+import { useProductInventory } from '../inventory/productInventoryApi';
 import { useI18n } from '../../i18n/LanguageProvider';
 import type { MessageKey } from '../../i18n/messages';
 import { formatPercentage, formatVolume } from '../../lib/format';
@@ -281,11 +270,25 @@ export function ProductWorkspace({ activeView }: ProductWorkspaceProps) {
 
 function InventoryPage() {
   const { locale, t } = useI18n();
+  const { data: inventory, error, loading } = useProductInventory();
+  const candidateUseCases = useMemo(
+    () => inventory?.candidateUseCases ?? [],
+    [inventory],
+  );
   const [filter, setFilter] = useState<InventoryFilter>('all');
   const [registryRole, setRegistryRole] = useState<RegistryRole>('maker');
   const [registryUseCases, setRegistryUseCases] =
-    useState<ReadonlyArray<CandidateUseCase>>(candidateUseCases);
-  const [selectedUseCaseId, setSelectedUseCaseId] = useState(candidateUseCases[0].id);
+    useState<ReadonlyArray<CandidateUseCase>>([]);
+  const [selectedUseCaseId, setSelectedUseCaseId] = useState('');
+
+  useEffect(() => {
+    setRegistryUseCases(candidateUseCases);
+    setSelectedUseCaseId((current) =>
+      candidateUseCases.some((useCase) => useCase.id === current)
+        ? current
+        : candidateUseCases[0]?.id ?? '',
+    );
+  }, [candidateUseCases]);
 
   const visibleUseCases = useMemo(
     () => registryUseCases.filter((useCase) => matchesInventoryFilter(useCase, filter)),
@@ -296,6 +299,18 @@ function InventoryPage() {
     registryUseCases.find((useCase) => useCase.id === selectedUseCaseId) ??
     visibleUseCases[0] ??
     registryUseCases[0];
+
+  if (loading) {
+    return <div className="workspace-loading" role="status">Loading live inventory…</div>;
+  }
+
+  if (error) {
+    return <div className="empty-state" role="alert"><strong>Live inventory API unavailable</strong><span>{error}</span></div>;
+  }
+
+  if (!selectedUseCase) {
+    return <div className="empty-state"><strong>{t('inventory.emptyTitle')}</strong><span>{t('inventory.emptyBody')}</span></div>;
+  }
 
   function submitTemplateChange(useCaseId: string, draft: TemplateRegistryDraft) {
     setRegistryUseCases((currentUseCases) =>
@@ -650,12 +665,33 @@ function UseCaseInspector({
 
 function TriagePage() {
   const { t } = useI18n();
-  const [selectedTriageId, setSelectedTriageId] = useState(triageItems[0].id);
+  const { data: inventory, error, loading } = useProductInventory();
+  const triageItems = inventory?.triageItems ?? [];
+  const metrics = inventory?.dashboardMetrics;
+  const [selectedTriageId, setSelectedTriageId] = useState('');
   const [reviewedIds, setReviewedIds] = useState<ReadonlySet<string>>(() => new Set());
+
+  useEffect(() => {
+    setSelectedTriageId((current) =>
+      triageItems.some((item) => item.id === current) ? current : triageItems[0]?.id ?? '',
+    );
+  }, [triageItems]);
 
   const openItems = triageItems.filter((item) => !reviewedIds.has(item.id));
   const selectedItem =
     triageItems.find((item) => item.id === selectedTriageId) ?? openItems[0] ?? triageItems[0];
+
+  if (loading) {
+    return <div className="workspace-loading" role="status">Loading live triage…</div>;
+  }
+
+  if (error) {
+    return <div className="empty-state" role="alert"><strong>Live triage API unavailable</strong><span>{error}</span></div>;
+  }
+
+  if (!selectedItem) {
+    return <div className="empty-state"><strong>{t('triage.openItems')}</strong><span>0</span></div>;
+  }
 
   function markReviewed() {
     setReviewedIds((currentIds) => {
@@ -678,9 +714,9 @@ function TriagePage() {
         <div className="workspace-main">
           <section className="kpi-grid">
             <MetricLite label={t('triage.openItems')} tone="warning" value={String(openItems.length)} />
-            <MetricLite label={t('triage.readyForChecker')} tone="success" value="7" />
-            <MetricLite label={t('kpi.unknownTraffic')} tone="warning" value="126" />
-            <MetricLite label={t('kpi.driftExceptions')} tone="danger" value="18" />
+            <MetricLite label={t('triage.readyForChecker')} tone="success" value={String(triageItems.filter((item) => item.confidence >= 85).length)} />
+            <MetricLite label={t('kpi.unknownTraffic')} tone="warning" value={String(metrics?.unknownTrafficCount ?? 0)} />
+            <MetricLite label={t('kpi.driftExceptions')} tone="danger" value={String(metrics?.driftExceptionCount ?? 0)} />
           </section>
 
           <div className="queue-list" data-testid="triage-queue">
@@ -767,9 +803,21 @@ function TriagePage() {
 
 function EvidencePage() {
   const { locale, t } = useI18n();
+  const { data: inventory, error, loading } = useProductInventory();
+  const candidateUseCases = inventory?.candidateUseCases ?? [];
+  const evidenceReadiness = inventory?.evidenceReadiness ?? [];
+  const auditRecords = inventory?.auditRecords ?? [];
   const missingEvidence = candidateUseCases.filter(
     (useCase) => useCase.auditStatus === 'needs-evidence',
   );
+
+  if (loading) {
+    return <div className="workspace-loading" role="status">Loading live evidence…</div>;
+  }
+
+  if (error) {
+    return <div className="empty-state" role="alert"><strong>Live evidence API unavailable</strong><span>{error}</span></div>;
+  }
 
   return (
     <>
@@ -886,11 +934,25 @@ function EvidencePage() {
 
 function AnalyticsPage() {
   const { locale, t } = useI18n();
+  const { data: inventory, error, loading } = useProductInventory();
+  const candidateUseCases = inventory?.candidateUseCases ?? [];
+  const analyticsSignals = inventory?.analyticsSignals ?? [];
+  const evidenceReadiness = inventory?.evidenceReadiness ?? [];
+  const reportQuerySummaries = inventory?.reportQuerySummaries ?? [];
   const [timeRange, setTimeRange] = useState<ReportTimeRange>('last-6-months');
   const [ownerFilter, setOwnerFilter] = useState('All');
   const [classificationFilter, setClassificationFilter] =
     useState<QueryClassificationFilter>('All');
   const { isReportExportReady, isReportGenerated, runQuery, setIsReportExportReady } = useAiChat();
+
+  if (loading) {
+    return <div className="workspace-loading" role="status">Loading live analytics…</div>;
+  }
+
+  if (error) {
+    return <div className="empty-state" role="alert"><strong>Live analytics API unavailable</strong><span>{error}</span></div>;
+  }
+
   const highRiskSignals = analyticsSignals.filter((signal) => signal.severity === 'high').length;
   const ownerGaps = candidateUseCases.filter((useCase) => useCase.ownerStatus !== 'confirmed').length;
   const evidenceGaps = candidateUseCases.filter(
@@ -907,7 +969,15 @@ function AnalyticsPage() {
         summary.classification === classificationFilter,
     ) ??
     reportQuerySummaries.find((summary) => summary.timeRange === 'last-6-months') ??
-    reportQuerySummaries[0];
+    reportQuerySummaries[0] ?? {
+      timeRange,
+      owner: 'All',
+      classification: 'All',
+      totalVolume: 0,
+      useCaseCount: 0,
+      topMarket: 'n/a',
+      topChannel: 'SMS',
+    };
   const visibleUseCases = candidateUseCases.filter(
     (useCase) =>
       (ownerFilter === 'All' || useCase.messageOwner === ownerFilter) &&
@@ -935,7 +1005,7 @@ function AnalyticsPage() {
         <MetricLite label={t('analytics.highRiskSignals')} tone="danger" value={String(highRiskSignals)} />
         <MetricLite label={t('analytics.ownerGaps')} tone="warning" value={String(ownerGaps)} />
         <MetricLite label={t('analytics.evidenceGaps')} tone="danger" value={String(evidenceGaps)} />
-        <MetricLite label={t('analytics.readyMarkets')} tone="success" value="1 / 4" />
+        <MetricLite label={t('analytics.readyMarkets')} tone="success" value={`${evidenceReadiness.filter((item) => item.complete >= 80).length} / ${Math.max(evidenceReadiness.length, 1)}`} />
       </section>
 
       <section className="query-panel" data-testid="analytics-query-panel">
@@ -1177,23 +1247,16 @@ function AnalyticsPage() {
 
 function AuditTrailPage() {
   const { t } = useI18n();
-  const [events, setEvents] = useState<ReadonlyArray<GovernanceEvent>>(governanceEvents);
+  const { data: inventory, error, loading } = useProductInventory();
+  const events: ReadonlyArray<GovernanceEvent> = inventory?.governanceEvents ?? [];
 
-  useEffect(() => {
-    const controller = new AbortController();
+  if (loading) {
+    return <div className="workspace-loading" role="status">Loading live audit trail…</div>;
+  }
 
-    fetchAuditEvents(controller.signal)
-      .then((loadedEvents) => {
-        if (loadedEvents.length > 0) {
-          setEvents(loadedEvents);
-        }
-      })
-      .catch(() => {
-        setEvents(governanceEvents);
-      });
-
-    return () => controller.abort();
-  }, []);
+  if (error) {
+    return <div className="empty-state" role="alert"><strong>Live audit trail API unavailable</strong><span>{error}</span></div>;
+  }
 
   return (
     <>
@@ -1277,18 +1340,38 @@ function AuditTrailPage() {
 
 function SettingsPage() {
   const { t } = useI18n();
-  const [uploadJob, setUploadJob] = useState<CsvUploadJob>(csvUploadJob);
+  const { data: inventory, error, loading } = useProductInventory();
+  const policyControls = inventory?.policyControls ?? [];
+  const [uploadJob, setUploadJob] = useState<CsvUploadJob | null>(null);
+
+  useEffect(() => {
+    if (inventory?.csvUploadJob) {
+      setUploadJob(inventory.csvUploadJob);
+    }
+  }, [inventory]);
 
   function startCsvUpload() {
+    if (!uploadJob) {
+      return;
+    }
+
     setUploadJob({
-      ...csvUploadJob,
+      ...uploadJob,
       status: 'complete',
       progress: 100,
-      rowsReceived: 1840,
-      templatesDetected: 18,
-      readyForAiAnalysis: 16,
-      rejectedRows: 2,
     });
+  }
+
+  if (loading) {
+    return <div className="workspace-loading" role="status">Loading live settings…</div>;
+  }
+
+  if (error) {
+    return <div className="empty-state" role="alert"><strong>Live settings API unavailable</strong><span>{error}</span></div>;
+  }
+
+  if (!uploadJob) {
+    return <div className="empty-state"><strong>{t('settings.csvUpload')}</strong><span>No upload job returned by API.</span></div>;
   }
 
   return (

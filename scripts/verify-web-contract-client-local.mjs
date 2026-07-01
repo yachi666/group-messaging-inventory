@@ -180,14 +180,15 @@ for (const expectedSource of [
   "fetchReviewTasksByStatuses(['Assigned', 'InReview', 'PendingApproval'], {",
   'assignedTo: currentGovernanceActor.actorId',
   "fetchReviewTasksByStatuses(['Resolved', 'Dismissed'], signal)",
-  'filterFallbackQueueItems(activeReviewQueueTab)',
+  'useProductInventory()',
+  'liveQueueSource',
   'await transitionReviewTask({',
   'tasks.map(toQueueItem)',
   'data-testid="review-task-claim"',
   'data-testid="review-task-start"',
   'data-testid="review-task-resolve"',
   'updateQueueItemsForActiveTab(items, updatedItem, activeReviewQueueTab)',
-  'Review task API unavailable. Showing local discovery queue.',
+  'Review task API unavailable. Showing live inventory projection.',
   'data-testid="review-task-refresh"',
   'fetchPendingChangeRequests(controller.signal)',
   'changeRequests.map(toApprovalItem)',
@@ -200,8 +201,12 @@ for (const expectedSource of [
   }
 }
 
-if (!reviewQueuePage.includes('Approval API unavailable. Showing local mock approvals.')) {
-  throw new Error('ReviewQueuePage.tsx should keep the local mock fallback message explicit.');
+if (!reviewQueuePage.includes('Approval API unavailable. Showing live inventory projection.')) {
+  throw new Error('ReviewQueuePage.tsx should keep the live projection fallback message explicit.');
+}
+
+if (reviewQueuePage.includes('fallbackQueueItems') || reviewQueuePage.includes('governanceMock')) {
+  throw new Error('ReviewQueuePage.tsx must not depend on browser-side mock queue data.');
 }
 
 for (const [fileName, source] of [

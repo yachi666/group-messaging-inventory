@@ -13,20 +13,16 @@ import {
 } from 'recharts';
 
 import { StatusChip } from '../../components/StatusChip';
-import { governanceTemplates, governanceUseCases } from '../../data/governanceMock';
 import type { GovernanceTemplate } from '../../domain/governance';
 import { useI18n } from '../../i18n/LanguageProvider';
 import { formatPercentage, formatVolume } from '../../lib/format';
+import { useProductInventory } from '../inventory/productInventoryApi';
 
 type PeriodMode = 'month' | 'year';
 type BreakdownDimension = 'market' | 'platform' | 'channel';
 type PlatformFilter = 'all' | string;
 type ChannelFilter = 'all' | string;
 type MarketFilter = 'all' | string;
-
-const platformOptions = ['all', 'MDP', 'SFMC', 'ICCM', 'IRIS'] as const;
-const channelOptions = ['all', 'SMS', 'Email', 'Push'] as const;
-const marketOptions = ['all', 'UK', 'Hong Kong', 'Singapore'] as const;
 
 const breakdownColors = ['#1f5f54', '#56b5a5', '#d5a756', '#7e8ac7', '#b86d68'];
 
@@ -208,11 +204,26 @@ function ChartCanvas({ ariaLabel, children, className }: ChartCanvasProps) {
 export function DashboardPage({ onNavigate }: DashboardPageProps) {
   const { locale } = useI18n();
   const c = copy[locale];
+  const { data: inventory, error, loading } = useProductInventory();
   const [periodMode, setPeriodMode] = useState<PeriodMode>('month');
   const [dimension, setDimension] = useState<BreakdownDimension>('market');
   const [marketFilter, setMarketFilter] = useState<MarketFilter>('all');
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
+  const governanceTemplates = inventory?.governanceTemplates ?? [];
+  const governanceUseCases = inventory?.governanceUseCases ?? [];
+  const platformOptions = useMemo(
+    () => ['all', ...Array.from(new Set(governanceTemplates.map((item) => item.platform))).sort()],
+    [governanceTemplates],
+  );
+  const channelOptions = useMemo(
+    () => ['all', ...Array.from(new Set(governanceTemplates.map((item) => item.channel))).sort()],
+    [governanceTemplates],
+  );
+  const marketOptions = useMemo(
+    () => ['all', ...Array.from(new Set(governanceTemplates.map((item) => item.market))).sort()],
+    [governanceTemplates],
+  );
 
   const filteredTemplates = useMemo(
     () => governanceTemplates.filter((item) => matchesFilters(item, marketFilter, platformFilter, channelFilter)),
@@ -274,6 +285,14 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     if (dimension === 'market') setMarketFilter(label);
     if (dimension === 'platform') setPlatformFilter(label as PlatformFilter);
     if (dimension === 'channel') setChannelFilter(label as ChannelFilter);
+  }
+
+  if (loading) {
+    return <div className="dashboard-loading" role="status">Loading live inventory data…</div>;
+  }
+
+  if (error) {
+    return <div className="traffic-empty" role="alert">Live inventory API unavailable: {error}</div>;
   }
 
   return (

@@ -7,10 +7,6 @@ import {
   type SubmitAnalysisRunResponse,
 } from '@gmi/contracts';
 
-import {
-  fallbackLatestAnalysisEvaluation,
-  initialAnalysisResults,
-} from './analysisData';
 import type {
   AiTemplateAnalysisResult,
   LatestAnalysisEvaluation,
@@ -153,12 +149,4 @@ export async function createLifecycleChangeRequest(input: {
   if (!response.ok) {
     throw new Error(`Failed to create lifecycle change request: ${response.status}`);
   }
-}
-
-export function getFallbackAnalysisResults(): ReadonlyArray<AiTemplateAnalysisResult> {
-  return initialAnalysisResults;
-}
-
-export function getFallbackLatestAnalysisEvaluation(): LatestAnalysisEvaluation {
-  return fallbackLatestAnalysisEvaluation;
 }

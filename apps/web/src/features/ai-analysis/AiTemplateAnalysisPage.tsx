@@ -22,11 +22,8 @@ import {
   fetchAnalysisRun,
   fetchAnalysisResults,
   fetchLatestAnalysisEvaluation,
-  getFallbackAnalysisResults,
-  getFallbackLatestAnalysisEvaluation,
   submitTemplateReanalysisRun,
 } from './analysisApi';
-import { initialAnalysisResults } from './analysisData';
 import type {
   AiMessageType,
   AiTemplateAnalysisResult,
@@ -196,21 +193,17 @@ function getPlaceholderExample(placeholder: string) {
 
 export function AiTemplateAnalysisPage() {
   const { t } = useI18n();
-  const [results, setResults] = useState<ReadonlyArray<AiTemplateAnalysisResult>>(
-    initialAnalysisResults,
-  );
-  const [selectedId, setSelectedId] = useState<string>(initialAnalysisResults[0]?.id ?? '');
+  const [results, setResults] = useState<ReadonlyArray<AiTemplateAnalysisResult>>([]);
+  const [selectedId, setSelectedId] = useState<string>('');
   const [isEditingOwner, setIsEditingOwner] = useState(false);
   const [ownerDraft, setOwnerDraft] = useState('');
   const [noticeKey, setNoticeKey] = useState<MessageKey | null>(null);
   const [isEvidenceOpen, setIsEvidenceOpen] = useState(false);
   const [showAllMatches, setShowAllMatches] = useState(true);
   const [showLifecycle, setShowLifecycle] = useState(false);
-  const [dataSource, setDataSource] = useState<'mock' | 'api'>('mock');
-  const [latestEvaluation, setLatestEvaluation] = useState<LatestAnalysisEvaluation>(
-    getFallbackLatestAnalysisEvaluation(),
-  );
-  const [evaluationSource, setEvaluationSource] = useState<'mock' | 'api'>('mock');
+  const [dataSource, setDataSource] = useState<'loading' | 'api' | 'unavailable'>('loading');
+  const [latestEvaluation, setLatestEvaluation] = useState<LatestAnalysisEvaluation | null>(null);
+  const [evaluationSource, setEvaluationSource] = useState<'loading' | 'api' | 'unavailable'>('loading');
   const [activeAnalysisRun, setActiveAnalysisRun] = useState<ActiveAnalysisRun | null>(null);
 
   useEffect(() => {
@@ -218,10 +211,6 @@ export function AiTemplateAnalysisPage() {
 
     fetchAnalysisResults(controller.signal)
       .then((apiResults) => {
-        if (apiResults.length === 0) {
-          return;
-        }
-
         setResults(apiResults);
         setSelectedId((currentSelectedId) =>
           apiResults.some((result) => result.id === currentSelectedId)
@@ -231,8 +220,9 @@ export function AiTemplateAnalysisPage() {
         setDataSource('api');
       })
       .catch(() => {
-        setResults(getFallbackAnalysisResults());
-        setDataSource('mock');
+        setResults([]);
+        setSelectedId('');
+        setDataSource('unavailable');
       });
 
     return () => controller.abort();
@@ -247,8 +237,8 @@ export function AiTemplateAnalysisPage() {
         setEvaluationSource('api');
       })
       .catch(() => {
-        setLatestEvaluation(getFallbackLatestAnalysisEvaluation());
-        setEvaluationSource('mock');
+        setLatestEvaluation(null);
+        setEvaluationSource('unavailable');
       });
 
     return () => controller.abort();
@@ -419,7 +409,8 @@ export function AiTemplateAnalysisPage() {
       try {
         await confirmAnalysisRun(selectedResult.id);
       } catch {
-        // Keep the local review flow usable even when the API is unavailable.
+        setNoticeKey('analysis.noticeChangeRequestLocalOnly');
+        return;
       }
     }
 
@@ -445,7 +436,8 @@ export function AiTemplateAnalysisPage() {
         });
         approvalSubmitted = true;
       } catch {
-        // Keep the local review flow usable even when the API is unavailable.
+        setNoticeKey('analysis.noticeChangeRequestLocalOnly');
+        return;
       }
     }
 
@@ -474,7 +466,8 @@ export function AiTemplateAnalysisPage() {
         });
         approvalSubmitted = true;
       } catch {
-        // Keep the local review flow usable even when the API is unavailable.
+        setNoticeKey('analysis.noticeChangeRequestLocalOnly');
+        return;
       }
     }
 
@@ -510,6 +503,14 @@ export function AiTemplateAnalysisPage() {
     setNoticeKey('analysis.noticeCopied');
   }
 
+  if (dataSource === 'loading') {
+    return <section className="analysis-page analysis-workbench-page" data-testid="ai-template-analysis-page"><div className="dashboard-loading" role="status">Loading live analysis results…</div></section>;
+  }
+
+  if (!selectedResult) {
+    return <section className="analysis-page analysis-workbench-page" data-testid="ai-template-analysis-page"><div className="traffic-empty" role="alert">{dataSource === 'unavailable' ? 'Live analysis API unavailable.' : 'No live analysis results returned by API.'}</div></section>;
+  }
+
   const visibleMatches = showAllMatches ? nearbyMatches : nearbyMatches.slice(0, 3);
   const variableDensity = Math.round(
     (selectedResult.placeholders.length / Math.max(1, selectedResult.extractedPattern.split(' ').length)) *
@@ -524,7 +525,7 @@ export function AiTemplateAnalysisPage() {
           <span aria-hidden="true">/</span>
           <span>{t('analysis.templateLabel')} {selectedResult.templateId}</span>
           <span aria-hidden="true">/</span>
-          <span data-testid="analysis-data-source">{dataSource === 'api' ? 'API' : 'Mock'}</span>
+          <span data-testid="analysis-data-source">{dataSource === 'api' ? 'API' : 'Unavailable'}</span>
         </div>
         <div className="analysis-title-row">
           <div className="analysis-title-group">
@@ -582,14 +583,14 @@ export function AiTemplateAnalysisPage() {
         </div>
       ) : null}
 
-      <section className="analysis-release-gate" data-testid="analysis-release-gate">
+      {latestEvaluation ? <section className="analysis-release-gate" data-testid="analysis-release-gate">
         <div className="analysis-release-status">
           <span>{t('analysis.releaseGate')}</span>
           <StatusChip tone={getReleaseGateTone(latestEvaluation.release.status)}>
             {latestEvaluation.release.status}
           </StatusChip>
           <small>
-            {evaluationSource === 'api' ? 'API' : 'Mock'} ·{' '}
+            {evaluationSource === 'api' ? 'API' : 'Unavailable'} ·{' '}
             {getEvaluationEvidenceLabel(latestEvaluation)} ·{' '}
             {latestEvaluation.release.releaseId}
           </small>
@@ -620,7 +621,7 @@ export function AiTemplateAnalysisPage() {
           <span>{latestEvaluation.release.pipeline.modelProvider} · {latestEvaluation.release.pipeline.modelName}</span>
           <code>{latestEvaluation.release.evidenceHash}</code>
         </div>
-      </section>
+      </section> : <section className="analysis-release-gate" data-testid="analysis-release-gate"><div className="traffic-empty" role="status">{evaluationSource === 'loading' ? 'Loading live release gate…' : 'No live release gate evidence returned by API.'}</div></section>}
 
       <section className="analysis-recent-strip" data-testid="analysis-results-table">
         <strong>{t('analysis.recentResults')}</strong>
