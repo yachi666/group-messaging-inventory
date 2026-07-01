@@ -26,22 +26,6 @@ type MarketFilter = 'all' | string;
 
 const breakdownColors = ['#1f5f54', '#56b5a5', '#d5a756', '#7e8ac7', '#b86d68'];
 
-const monthlyTraffic = [
-  { label: 'Jan', volume: 1_180_000, previous: 1_120_000 },
-  { label: 'Feb', volume: 1_260_000, previous: 1_160_000 },
-  { label: 'Mar', volume: 1_350_000, previous: 1_210_000 },
-  { label: 'Apr', volume: 1_480_000, previous: 1_320_000 },
-  { label: 'May', volume: 1_610_000, previous: 1_450_000 },
-  { label: 'Jun', volume: 1_749_900, previous: 1_540_000 },
-] as const;
-
-const yearlyTraffic = [
-  { label: '2023', volume: 16_840_000, previous: 15_120_000 },
-  { label: '2024', volume: 19_460_000, previous: 16_840_000 },
-  { label: '2025', volume: 22_780_000, previous: 19_460_000 },
-  { label: '2026 YTD', volume: 11_034_000, previous: 9_660_000 },
-] as const;
-
 const copy = {
   en: {
     title: 'Messaging traffic analytics',
@@ -62,26 +46,26 @@ const copy = {
     activeUseCases: 'Active use cases',
     deliveryRate: 'Delivery rate',
     dailyAverage: 'Average daily volume',
-    versus: 'vs previous period',
+    matchedShare: 'matched traffic',
     templatesNote: 'Templates with traffic this period',
     useCasesNote: 'Business scenarios producing traffic',
     deliveryNote: 'Delivered across selected scope',
     dailyNote: 'Across business days',
     trendTitle: 'Traffic trend',
-    trendMonth: 'Monthly message volume in 2026',
-    trendYear: 'Annual message volume, 2023–2026',
-    current: 'Current period',
-    previous: 'Previous period',
+    trendMonth: 'API-projected monthly matched and unknown traffic',
+    trendYear: 'API-projected YTD matched and unknown traffic',
+    current: 'Matched traffic',
+    previous: 'Unknown traffic',
     breakdownTitle: 'Traffic mix',
     breakdownKicker: 'Switch the dimension to understand contribution',
     topTemplates: 'Most active templates',
     topTemplatesKicker: 'Ranked by message volume in the selected scope',
     template: 'Template',
     volume: 'Volume',
-    change: 'Change',
+    change: 'Confidence',
     insightTitle: 'Business signals',
-    insightGrowth: 'Traffic is growing steadily',
-    insightGrowthBody: 'June volume is above the comparable previous period.',
+    insightGrowth: 'Matched traffic coverage',
+    insightGrowthBody: 'Matched and unknown traffic are projected from the live API inventory.',
     insightConcentration: 'Volume is concentrated',
     insightConcentrationBody: 'The leading segment contributes more than half of selected traffic.',
     insightTemplate: 'Template activity is healthy',
@@ -108,26 +92,26 @@ const copy = {
     activeUseCases: '活跃业务场景',
     deliveryRate: '送达率',
     dailyAverage: '日均流量',
-    versus: '较上一周期',
+    matchedShare: '已匹配流量',
     templatesNote: '本周期内产生流量的模板',
     useCasesNote: '本周期内产生流量的业务场景',
     deliveryNote: '所选范围内已送达消息',
     dailyNote: '按工作日计算',
     trendTitle: '流量趋势',
-    trendMonth: '2026 年月度消息量',
-    trendYear: '2023–2026 年度消息量',
-    current: '当前周期',
-    previous: '对比周期',
+    trendMonth: 'API 投影的月度已匹配与未知流量',
+    trendYear: 'API 投影的年初至今已匹配与未知流量',
+    current: '已匹配流量',
+    previous: '未知流量',
     breakdownTitle: '流量构成',
     breakdownKicker: '切换维度，查看各部分的贡献',
     topTemplates: '最活跃模板',
     topTemplatesKicker: '按所选范围内的消息量排序',
     template: '模板',
     volume: '流量',
-    change: '变化',
+    change: '置信度',
     insightTitle: '业务信号',
-    insightGrowth: '流量保持稳定增长',
-    insightGrowthBody: '6 月流量高于可比周期。',
+    insightGrowth: '流量匹配覆盖',
+    insightGrowthBody: '已匹配与未知流量来自实时 API 清单投影。',
     insightConcentration: '流量集中度较高',
     insightConcentrationBody: '贡献最高的分组占所选流量的一半以上。',
     insightTemplate: '模板活跃度健康',
@@ -212,6 +196,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>('all');
   const governanceTemplates = inventory?.governanceTemplates ?? [];
   const governanceUseCases = inventory?.governanceUseCases ?? [];
+  const coverageFlow = inventory?.coverageFlow ?? [];
   const platformOptions = useMemo(
     () => ['all', ...Array.from(new Set(governanceTemplates.map((item) => item.platform))).sort()],
     [governanceTemplates],
@@ -227,20 +212,27 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
 
   const filteredTemplates = useMemo(
     () => governanceTemplates.filter((item) => matchesFilters(item, marketFilter, platformFilter, channelFilter)),
-    [channelFilter, marketFilter, platformFilter],
+    [channelFilter, governanceTemplates, marketFilter, platformFilter],
   );
   const allVolume = governanceTemplates.reduce((sum, item) => sum + item.monthlyVolume, 0);
   const selectedVolume = filteredTemplates.reduce((sum, item) => sum + item.monthlyVolume, 0);
   const scopeRatio = allVolume === 0 ? 0 : selectedVolume / allVolume;
-  const sourceTraffic = periodMode === 'month' ? monthlyTraffic : yearlyTraffic;
-  const traffic = sourceTraffic.map((item) => ({
-    ...item,
-    volume: Math.round(item.volume * scopeRatio),
-    previous: Math.round(item.previous * scopeRatio),
+  const monthlyTraffic = coverageFlow.map((item) => ({
+    label: item.month,
+    volume: Math.round(item.matched * scopeRatio),
+    previous: Math.round(item.unknown * scopeRatio),
   }));
-  const currentVolume = traffic.at(-1)?.volume ?? 0;
-  const previousVolume = traffic.at(-1)?.previous ?? 0;
-  const growth = previousVolume === 0 ? 0 : ((currentVolume - previousVolume) / previousVolume) * 100;
+  const generatedYear = inventory?.generatedAt ? new Date(inventory.generatedAt).getUTCFullYear() : new Date().getUTCFullYear();
+  const yearlyMatched = monthlyTraffic.reduce((sum, item) => sum + item.volume, 0);
+  const yearlyUnknown = monthlyTraffic.reduce((sum, item) => sum + item.previous, 0);
+  const traffic = periodMode === 'month'
+    ? monthlyTraffic
+    : [{ label: `${generatedYear} YTD`, volume: yearlyMatched, previous: yearlyUnknown }];
+  const latestTraffic = traffic.at(-1);
+  const currentVolume = latestTraffic ? latestTraffic.volume + latestTraffic.previous : selectedVolume;
+  const matchedVolume = latestTraffic?.volume ?? selectedVolume;
+  const unknownVolume = latestTraffic?.previous ?? 0;
+  const matchedShare = currentVolume === 0 ? 0 : (matchedVolume / currentVolume) * 100;
   const activeTemplates = filteredTemplates.filter(
     (item) => item.lifecycle === 'Active' && item.monthlyVolume > 0,
   ).length;
@@ -340,7 +332,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
       <p className="traffic-scope"><strong>{c.selectedScope}</strong><span>{scopeLabel}</span></p>
 
       <section className="traffic-kpis" aria-label={c.title}>
-        <article><span>{c.totalVolume}</span><strong>{formatVolume(currentVolume, locale)}</strong><small className="positive">+{growth.toFixed(1)}% {c.versus}</small></article>
+        <article><span>{c.totalVolume}</span><strong>{formatVolume(currentVolume, locale)}</strong><small className="positive">{matchedShare.toFixed(1)}% {c.matchedShare}</small></article>
         <article><span>{c.activeTemplates}</span><strong>{activeTemplates}</strong><small>{c.templatesNote}</small></article>
         <article><span>{c.activeUseCases}</span><strong>{activeUseCases}</strong><small>{c.useCasesNote}</small></article>
         <article><span>{c.dailyAverage}</span><strong>{formatVolume(periodMode === 'month' ? currentVolume / 22 : currentVolume / 125, locale)}</strong><small>{c.dailyNote}</small></article>
@@ -352,7 +344,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
             <div><h2 className="card-title">{c.trendTitle}</h2><p className="card-kicker">{periodMode === 'month' ? c.trendMonth : c.trendYear}</p></div>
             <div className="traffic-legend"><span><i className="current" />{c.current}</span><span><i />{c.previous}</span></div>
           </div>
-          {traffic.length > 0 && currentVolume > 0 ? (
+          {traffic.length > 0 && (matchedVolume + unknownVolume) > 0 ? (
             <ChartCanvas ariaLabel={c.trendTitle} className="traffic-chart-canvas">
               {({ height, width }) => (
                 <BarChart data={traffic} height={height} margin={{ top: 24, right: 8, bottom: 0, left: 4 }} width={width}>
@@ -436,9 +428,9 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           <div className="card-header"><div><h2 className="card-title">{c.topTemplates}</h2><p className="card-kicker">{c.topTemplatesKicker}</p></div><StatusChip tone="info">{activeTemplates} {c.activeTemplates}</StatusChip></div>
           <div className="traffic-template-table" role="table">
             <div className="traffic-template-row traffic-template-head" role="row"><span>{c.template}</span><span>{c.market}</span><span>{c.platform}</span><span>{c.volume}</span><span>{c.change}</span></div>
-            {rankedTemplates.map((item, index) => (
+            {rankedTemplates.map((item) => (
               <div className="traffic-template-row" key={item.uuid} role="row">
-                <button className="traffic-template-name" onClick={() => onNavigate?.('templates', item.uuid)} type="button"><strong>{item.templateId}</strong><small>{item.sender}</small></button><span>{item.market}</span><span>{item.platform}</span><span>{formatVolume(item.monthlyVolume, locale)}</span>{(() => { const change = 12.4 - index * 2.1; return <span className={change >= 0 ? 'positive' : 'negative'}>{change >= 0 ? '+' : ''}{change.toFixed(1)}%</span>; })()}
+                <button className="traffic-template-name" onClick={() => onNavigate?.('templates', item.uuid)} type="button"><strong>{item.templateId}</strong><small>{item.sender}</small></button><span>{item.market}</span><span>{item.platform}</span><span>{formatVolume(item.monthlyVolume, locale)}</span><span className={item.confidence >= 85 ? 'positive' : 'negative'}>{item.confidence}%</span>
               </div>
             ))}
             {rankedTemplates.length === 0 ? <div className="traffic-empty">{c.noData}</div> : null}
@@ -447,7 +439,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
 
         <article className="card traffic-insights-card">
           <div className="card-header"><h2 className="card-title">{c.insightTitle}</h2></div>
-          <div className="traffic-signal"><span>01</span><div><strong>{c.insightGrowth}</strong><p>{periodMode === 'month' ? 'June' : '2026 YTD'} +{growth.toFixed(1)}% · {c.insightGrowthBody}</p></div></div>
+          <div className="traffic-signal"><span>01</span><div><strong>{c.insightGrowth}</strong><p>{latestTraffic?.label ?? scopeLabel} · {matchedShare.toFixed(1)}% · {c.insightGrowthBody}</p></div></div>
           <div className="traffic-signal"><span>02</span><div><strong>{c.insightConcentration}</strong><p>{breakdown[0]?.label ?? '—'} · {breakdown[0]?.share.toFixed(1) ?? '0'}% · {c.insightConcentrationBody}</p></div></div>
           <div className="traffic-signal"><span>03</span><div><strong>{c.insightTemplate}</strong><p>{activeTemplates} {c.activeTemplates} · {topTemplate?.templateId ?? '—'} {topTemplateShare.toFixed(1)}% · {c.insightTemplateBody}</p></div></div>
         </article>

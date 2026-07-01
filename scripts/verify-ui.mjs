@@ -79,6 +79,11 @@ await page.getByRole('status').getByText(/Live approval projection|Loaded .*from
 // Dashboard and Administration remain navigable from the same shell.
 await page.getByTestId('nav-dashboard').click();
 await page.getByRole('heading', { name: 'Messaging traffic analytics' }).waitFor();
+await page.waitForFunction(() => [...document.querySelectorAll('.traffic-kpis article strong')].some((node) => node.textContent?.trim() !== '0'));
+const dashboardKpis = await page.locator('.traffic-kpis article strong').allTextContents();
+if (dashboardKpis.every((value) => value.trim() === '0')) {
+  throw new Error('Dashboard did not render non-zero live API metrics.');
+}
 await page.getByTestId('nav-administration').click();
 await page.getByRole('heading', { name: 'Administration' }).waitFor();
 await page.getByRole('button', { name: 'Model Configuration' }).click();
