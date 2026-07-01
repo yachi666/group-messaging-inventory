@@ -80,18 +80,21 @@ try {
   );
 
   const idempotencyKey = `harness-provider-failure-smoke-${Date.now()}`;
+  const versionId = `tv-harness-provider-failure-${Date.now()}`;
+  const submitBody = {
+    triggerType: 'manual_reanalysis',
+    reason: 'Temporal provider failure smoke test',
+    effort: 'normal',
+    requestedOutputs: [],
+  };
+  const submitHeaders = {
+    'idempotency-key': idempotencyKey,
+    ...governanceHeaders,
+  };
   const submitResponse = await postJson(
-    `${baseUrl}/template-versions/tv-harness-provider-failure-${Date.now()}/analysis-runs`,
-    {
-      triggerType: 'manual_reanalysis',
-      reason: 'Temporal provider failure smoke test',
-      effort: 'normal',
-      requestedOutputs: [],
-    },
-    {
-      'idempotency-key': idempotencyKey,
-      ...governanceHeaders,
-    },
+    `${baseUrl}/template-versions/${versionId}/analysis-runs`,
+    submitBody,
+    submitHeaders,
   );
 
   assertEqual(submitResponse.status, 'Queued', 'submit status');
@@ -115,6 +118,46 @@ try {
   const evidence = await readFailureEvidence(submitResponse.runId);
   assertEqual(evidence.analysisOutputs, 0, 'analysis_outputs count');
   assertEqual(evidence.failedAuditEvents, 1, 'analysis_run_failed audit_events count');
+
+  const duplicateSubmitResponse = await postJson(
+    `${baseUrl}/template-versions/${versionId}/analysis-runs`,
+    submitBody,
+    submitHeaders,
+  );
+  assertEqual(
+    duplicateSubmitResponse.runId,
+    submitResponse.runId,
+    'duplicate failure idempotency run id',
+  );
+  assertEqual(
+    duplicateSubmitResponse.status,
+    'Failed',
+    'duplicate failure idempotency current status',
+  );
+  assertEqual(
+    duplicateSubmitResponse.workflow.driver,
+    'temporal',
+    'duplicate failure idempotency workflow driver',
+  );
+  assertEqual(
+    duplicateSubmitResponse.workflow.workflowId,
+    submitResponse.workflow.workflowId,
+    'duplicate failure idempotency workflow id',
+  );
+  assertEqual(
+    duplicateSubmitResponse.workflow.started,
+    false,
+    'duplicate failure idempotency workflow started',
+  );
+
+  const duplicateEvidence = await readFailureEvidence(submitResponse.runId);
+  assertEqual(duplicateEvidence.analysisOutputs, 0, 'duplicate analysis_outputs count');
+  assertEqual(
+    duplicateEvidence.failedAuditEvents,
+    1,
+    'duplicate analysis_run_failed audit_events count',
+  );
+  assertEqual(duplicateEvidence.errors.length, 1, 'duplicate persisted error count');
 
   const auditEvents = await getJson(
     `${baseUrl}/audit-events?sourceRunId=${encodeURIComponent(submitResponse.runId)}`,

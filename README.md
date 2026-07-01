@@ -438,7 +438,7 @@ npm run infra:up
 npm run test:harness:temporal:provider-failure
 ```
 
-This smoke points the OpenAI-compatible adapter at an unavailable local provider endpoint, then verifies the API exposes a `Failed` run with a public `errors` summary, `/audit-events` exposes the `analysis_run_failed` ledger entry, and Postgres contains structured `errors_json`. The AI Template Analysis workbench consumes that summary when a re-analysis run fails, so reviewers see the failure class without raw provider payloads or direct database access; detailed provider evidence remains in Postgres for audit/debug workflows.
+This smoke points the OpenAI-compatible adapter at an unavailable local provider endpoint, then verifies the API exposes a `Failed` run with a public `errors` summary, `/audit-events` exposes the `analysis_run_failed` ledger entry, and Postgres contains structured `errors_json`. It also retries the same `idempotency-key` after failure to prove failed terminal runs are reused without starting a duplicate workflow or writing duplicate failure evidence. The AI Template Analysis workbench consumes that summary when a re-analysis run fails, so reviewers see the failure class without raw provider payloads or direct database access; detailed provider evidence remains in Postgres for audit/debug workflows.
 
 In Postgres-backed mode, analysis runs remain `Queued`, `Running`, `Failed`, or `Succeeded` according to the stored run state. API responses include `output` and policy routing only after the worker records `analysis_outputs`. If provider analysis ultimately fails, the worker records a failed run with structured error metadata and an audit event before preserving Temporal retry/failure semantics.
 
