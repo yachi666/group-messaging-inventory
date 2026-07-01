@@ -158,6 +158,7 @@ Common variables:
 | `TEMPORAL_NAMESPACE` | Temporal namespace | `default` |
 | `TEMPORAL_TASK_QUEUE` | Temporal task queue | `template-analysis` |
 | `AI_PROVIDER` | `noop`, `openai`, or `openai-compatible` | `noop` |
+| `AI_PROVIDER_READINESS_MODE` | `config`-style lightweight provider readiness by default; set `connectivity` to probe the provider models endpoint | unset |
 | `READINESS_TIMEOUT_MS` | Dependency probe timeout | `1000` |
 
 Use the deterministic local provider for normal development:
@@ -191,6 +192,26 @@ npm run dev:worker
 ```
 
 Provider-specific request metadata can be supplied with `OPENAI_COMPATIBLE_EXTRA_BODY_JSON`, which must be a JSON object. Secrets should stay in the environment; do not commit real API keys.
+
+For a DeepSeek-style OpenAI-compatible provider, use the provider base URL without `/chat/completions`:
+
+```bash
+AI_PROVIDER=openai-compatible
+OPENAI_COMPATIBLE_BASE_URL=https://api.deepseek.com
+OPENAI_COMPATIBLE_API_KEY=...
+OPENAI_COMPATIBLE_MODEL=deepseek-v4-flash
+OPENAI_COMPATIBLE_PROVIDER_NAME=deepseek
+OPENAI_COMPATIBLE_EXTRA_BODY_JSON='{"thinking":{"type":"enabled"},"reasoning_effort":"high"}'
+```
+
+For production preflight, make `/ready` prove real provider connectivity instead of only checking configuration:
+
+```bash
+AI_PROVIDER_READINESS_MODE=connectivity npm run dev:api
+curl http://127.0.0.1:4000/ready
+```
+
+Connectivity mode calls the configured provider's `/models` endpoint with a bounded timeout and never logs the API key.
 
 ## API and Authorization
 

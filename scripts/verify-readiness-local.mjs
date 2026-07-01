@@ -1,5 +1,10 @@
 import { readinessResponseSchema } from '@gmi/contracts';
+import { readFileSync } from 'node:fs';
 import { HealthService } from '../apps/api/dist/modules/health.service.js';
+
+const aiProviderFixture = JSON.parse(
+  readFileSync('scripts/fixtures/ai-provider-readiness.json', 'utf8'),
+);
 
 const readyService = new HealthService({
   env: {
@@ -65,6 +70,83 @@ readinessResponseSchema.parse(localOnly);
 assertEqual(localOnly.status, 'ready', 'local-only aggregate status');
 assertComponent(localOnly, 'database', 'skipped', false);
 assertComponent(localOnly, 'workflow', 'up', false);
+
+const configuredProviderService = new HealthService({
+  env: {
+    ...aiProviderFixture.configuredOpenAiCompatible,
+  },
+});
+
+const configuredProvider = await configuredProviderService.getReadiness();
+readinessResponseSchema.parse(configuredProvider);
+assertEqual(configuredProvider.status, 'ready', 'configured provider aggregate status');
+assertComponent(configuredProvider, 'ai-provider', 'up', true);
+assertIncludes(
+  getComponent(configuredProvider, 'ai-provider').detail,
+  'connectivity check is disabled',
+  'configured provider detail',
+);
+
+let observedProviderCheck;
+const connectivityProviderService = new HealthService({
+  env: {
+    ...aiProviderFixture.connectivityOpenAiCompatible,
+    READINESS_TIMEOUT_MS: '50',
+  },
+  checkAiProvider: async (input) => {
+    observedProviderCheck = input;
+  },
+});
+
+const connectedProvider = await connectivityProviderService.getReadiness();
+readinessResponseSchema.parse(connectedProvider);
+assertEqual(connectedProvider.status, 'ready', 'connected provider aggregate status');
+assertComponent(connectedProvider, 'ai-provider', 'up', true);
+assertEqual(observedProviderCheck.provider, 'openai-compatible', 'connectivity provider name');
+assertEqual(observedProviderCheck.baseUrl, 'https://api.deepseek.com', 'connectivity base url');
+assertEqual(observedProviderCheck.model, 'deepseek-v4-flash', 'connectivity model');
+assertEqual(observedProviderCheck.apiKey, 'fixture-provider-key', 'connectivity api key handoff');
+assertIncludes(
+  getComponent(connectedProvider, 'ai-provider').detail,
+  'connectivity check succeeded',
+  'connectivity success detail',
+);
+
+const failedProviderService = new HealthService({
+  env: {
+    ...aiProviderFixture.connectivityOpenAiCompatible,
+    READINESS_TIMEOUT_MS: '50',
+  },
+  checkAiProvider: async () => {
+    throw new Error('provider models endpoint unavailable');
+  },
+});
+
+const failedProvider = await failedProviderService.getReadiness();
+readinessResponseSchema.parse(failedProvider);
+assertEqual(failedProvider.status, 'degraded', 'failed provider aggregate status');
+assertComponent(failedProvider, 'ai-provider', 'degraded', true);
+assertIncludes(
+  getComponent(failedProvider, 'ai-provider').detail,
+  'provider models endpoint unavailable',
+  'connectivity failure detail',
+);
+
+const missingCredentialProviderService = new HealthService({
+  env: {
+    ...aiProviderFixture.missingCredential,
+  },
+});
+
+const missingCredentialProvider = await missingCredentialProviderService.getReadiness();
+readinessResponseSchema.parse(missingCredentialProvider);
+assertEqual(missingCredentialProvider.status, 'degraded', 'missing credential provider status');
+assertComponent(missingCredentialProvider, 'ai-provider', 'degraded', true);
+assertIncludes(
+  getComponent(missingCredentialProvider, 'ai-provider').detail,
+  'credentials are missing',
+  'missing credential provider detail',
+);
 
 console.log('Readiness local smoke passed.');
 
